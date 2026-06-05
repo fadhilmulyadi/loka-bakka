@@ -8,18 +8,26 @@ import ChildDashboardView from '@/components/ibu/child-dashboard-view'
 export default function IbuDashboardPage() {
   const [ibuData, setIbuData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [score, setScore] = useState(60)
   const [doneCount, setDoneCount] = useState(4)
 
   useEffect(() => {
     let mounted = true
-    getIbuData().then(data => {
-      if (mounted) {
-        setIbuData(data)
-        setLoading(false)
-      }
-    })
-    
+    getIbuData()
+      .then(data => {
+        if (mounted) {
+          setIbuData(data)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setError(true)
+          setLoading(false)
+        }
+      })
+
     return () => { mounted = false }
   }, [])
 
@@ -46,6 +54,18 @@ export default function IbuDashboardPage() {
   if (loading) return (
     <div className="flex-1 flex items-center justify-center bg-white">
       <div className="w-8 h-8 border-4 border-[#3B93E6] border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  if (error || !ibuData) return (
+    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white">
+      <div className="w-16 h-16 rounded-full bg-[#F1F7FE] flex items-center justify-center mb-4">
+        <span className="text-3xl">🏥</span>
+      </div>
+      <h2 className="text-[16px] font-semibold text-[#1F2937]">Data tidak tersedia</h2>
+      <p className="text-[13px] text-[#697079] mt-2 max-w-[240px] leading-relaxed">
+        Silakan hubungi kader posyandu untuk mendaftarkan akun Anda.
+      </p>
     </div>
   )
 

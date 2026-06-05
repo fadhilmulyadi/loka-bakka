@@ -79,9 +79,9 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
             <User className="w-[34px] h-[34px] text-white/95" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[17px] font-semibold text-[#1F2937] tracking-tight leading-tight">Halo, Bunda {data.nama}!</h1>
-            <p className="text-[11.5px] font-normal text-[#697079] mt-[3px] leading-[1.4]">
-              Hari ini usia kandunganmu <b className="text-[#1178D4] font-semibold">{pregnancyData.weeksPregnant} minggu</b>. Yuk, berikan si kecil yang terbaik hari ini.
+            <h1 className="text-[20px] font-bold text-[#1F2937] tracking-tight leading-tight">Halo, Bunda {data.nama}!</h1>
+            <p className="text-[14px] font-medium text-[#697079] mt-[4px] leading-[1.4]">
+              Hari ini usia kandunganmu <b className="text-[#1178D4] font-bold">{pregnancyData.weeksPregnant} minggu</b>. Yuk, berikan si kecil yang terbaik hari ini.
             </p>
           </div>
           <button 
@@ -101,7 +101,7 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
           <div className="absolute -right-[30px] -bottom-[60px] w-[190px] h-[190px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.16),transparent_68%)] -z-10" />
           <div className="absolute -left-[40px] -top-[50px] w-[130px] h-[130px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.1),transparent_70%)] -z-10" />
           
-          <span className="relative inline-flex items-center gap-1.5 bg-white/20 border border-white/30 px-3 py-1 rounded-full text-[11px] font-semibold">
+          <span className="relative inline-flex items-center gap-1.5 bg-white/20 border border-white/30 px-3 py-1 rounded-full text-[12px] font-semibold">
             <Flame className="w-[13px] h-[13px]" />
             Trimester 2 · Sedang Berjalan
           </span>
@@ -109,33 +109,33 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
             <span className="text-[52px] font-bold leading-[0.9] tracking-tighter">{pregnancyData.weeksPregnant}</span>
             <span className="text-[17px] font-medium opacity-90 pb-1.5">Minggu Kehamilan</span>
           </div>
-          <p className="text-[11.5px] font-normal opacity-85 mt-2 max-w-[230px] leading-relaxed">
+          <p className="text-[13px] font-normal opacity-85 mt-2 max-w-[230px] leading-relaxed">
             Si kecil kini sebesar buah jagung — mulai bisa mendengar suara Bunda.
           </p>
           
           <div className="flex gap-2.5 mt-4">
             <div className="flex-1 bg-white/10 border border-white/20 rounded-[14px] p-3">
-              <div className="flex items-center gap-1.5 text-[10px] font-medium opacity-85">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium opacity-85">
                 <Calendar className="w-[13px] h-[13px]" />
                 Perkiraan Lahir
               </div>
               <div className="text-[18px] font-bold mt-1 tracking-tight">
-                {pregnancyData.dueDate.split(' ')[0]} {pregnancyData.dueDate.split(' ')[1]}<small className="text-[11px] font-medium opacity-85 ml-1"> {pregnancyData.dueDate.split(' ')[2]}</small>
+                {pregnancyData.dueDate.split(' ')[0]} {pregnancyData.dueDate.split(' ')[1]}<small className="text-[12px] font-medium opacity-85 ml-1"> {pregnancyData.dueDate.split(' ')[2]}</small>
               </div>
             </div>
             <div className="flex-1 bg-white/10 border border-white/20 rounded-[14px] p-3">
-              <div className="flex items-center gap-1.5 text-[10px] font-medium opacity-85">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium opacity-85">
                 <Clock className="w-[13px] h-[13px]" />
                 Hitung Mundur
               </div>
               <div className="text-[18px] font-bold mt-1 tracking-tight">
-                112<small className="text-[11px] font-medium opacity-85 ml-1"> hari lagi</small>
+                112<small className="text-[12px] font-medium opacity-85 ml-1"> hari lagi</small>
               </div>
             </div>
           </div>
           
           <div className="mt-3.5">
-            <div className="flex justify-between text-[9.5px] font-medium opacity-80 mb-1.5">
+            <div className="flex justify-between text-[11px] font-medium opacity-80 mb-1.5">
               <span>Perjalanan kehamilan</span>
               <span>60%</span>
             </div>
@@ -147,8 +147,8 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
 
         {/* SCORE */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
-          <h2 className="text-[14px] font-semibold text-[#1F2937]">Skor Aktif Harian</h2>
-          <Link href="/ibu/tugas" className="text-[11px] font-semibold text-[#1178D4] flex items-center gap-0.5">
+          <h2 className="text-[15px] font-semibold text-[#1F2937]">Skor Aktif Harian</h2>
+          <Link href="/ibu/tugas" className="text-[12px] font-semibold text-[#1178D4] flex items-center gap-0.5">
             Lihat Tugas <ChevronRight className="w-[13px] h-[13px]" strokeWidth={2.4} />
           </Link>
         </div>
@@ -165,17 +165,17 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-[23px] font-bold text-[#0A487F] leading-none tracking-tight">{score}</span>
-              <span className="text-[9px] font-medium text-[#697079] mt-0.5">/100</span>
+              <span className="text-[10px] font-medium text-[#697079] mt-0.5">/100</span>
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[11px] font-medium text-[#697079]">Kepatuhan tugas hari ini</div>
+            <div className="text-[12px] font-medium text-[#697079]">Kepatuhan tugas hari ini</div>
             <div className="text-[15px] font-semibold text-[#1F2937] mt-0.5 leading-tight">
               <b className="text-[#1178D4] font-bold">{doneCount}</b> dari 6 tugas selesai
             </div>
-            <Link 
-              href="/ibu/tugas" 
-              className="inline-flex items-center gap-1.5 mt-2.5 px-3 py-1.5 rounded-[10px] bg-[#1178D4] text-white text-[11.5px] font-semibold shadow-[0_6px_14px_-7px_rgba(17,120,212,0.7)] active:bg-[#0F6CBF] transition-colors"
+            <Link
+              href="/ibu/tugas"
+              className="inline-flex items-center gap-1.5 mt-2.5 px-3 py-2 rounded-[10px] bg-[#1178D4] text-white text-[13px] font-semibold shadow-[0_6px_14px_-7px_rgba(17,120,212,0.7)] active:bg-[#0F6CBF] transition-colors"
             >
               Lihat Tugas Harian <ChevronRight className="w-[13px] h-[13px]" strokeWidth={2.4} />
             </Link>
@@ -184,7 +184,7 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
 
         {/* RISK */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
-          <h2 className="text-[14px] font-semibold text-[#1F2937]">Indikator Risiko Stunting</h2>
+          <h2 className="text-[15px] font-semibold text-[#1F2937]">Indikator Risiko Stunting</h2>
         </div>
         <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
           <div className="mt-1">
@@ -202,33 +202,33 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
               })()}
             </div>
             <div className="flex justify-between mt-2">
-              <span className="text-[9.5px] font-semibold text-[#1E9E62] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current">Aman</span>
-              <span className="text-[9.5px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Perlu Perhatian</span>
-              <span className="text-[9.5px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Risiko Tinggi</span>
+              <span className="text-[11px] font-semibold text-[#1E9E62] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current">Aman</span>
+              <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Perlu Perhatian</span>
+              <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Risiko Tinggi</span>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
             <div className="flex-1 bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[10px] font-medium text-[#697079]">LILA</div>
-              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">{pregnancyData.lila}<small className="text-[9px] font-medium text-[#697079] ml-0.5"> cm</small></div>
-              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[8.5px] font-bold">Normal</span>
+              <div className="text-[11px] font-medium text-[#697079]">LILA</div>
+              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">{pregnancyData.lila}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> cm</small></div>
+              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[10px] font-bold">Normal</span>
             </div>
             <div className="flex-1 bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[10px] font-medium text-[#697079]">Hb</div>
-              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">{pregnancyData.hb}<small className="text-[9px] font-medium text-[#697079] ml-0.5"> g/dL</small></div>
-              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[8.5px] font-bold">Normal</span>
+              <div className="text-[11px] font-medium text-[#697079]">Hb</div>
+              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">{pregnancyData.hb}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> g/dL</small></div>
+              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[10px] font-bold">Normal</span>
             </div>
             <div className="flex-1 bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[10px] font-medium text-[#697079]">Kenaikan BB</div>
+              <div className="text-[11px] font-medium text-[#697079]">Kenaikan BB</div>
               <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">
-                +{pregnancyData.bbGain}<small className="text-[9px] font-medium text-[#697079] ml-0.5"> kg</small>
+                +{pregnancyData.bbGain}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> kg</small>
               </div>
               {pregnancyData.targetGainMin != null && (
-                <div className="text-[8px] text-[#697079] mt-0.5 leading-tight">
+                <div className="text-[10px] text-[#697079] mt-0.5 leading-tight">
                   dari {pregnancyData.targetGainMin}–{pregnancyData.targetGainMax} kg
                 </div>
               )}
-              <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-bold ${
+              <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                 pregnancyData.isOnTrack === false
                   ? 'bg-[#FFF7E6] text-[#8A6100]'
                   : 'bg-[#E7F7EF] text-[#1E9E62]'
@@ -238,11 +238,11 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
             </div>
           </div>
           <div className="flex items-center justify-between gap-2.5 mt-4">
-            <span className="flex items-center gap-1.5 text-[9.5px] text-[#989DA3] font-normal leading-tight max-w-[135px]">
+            <span className="flex items-center gap-1.5 text-[11px] text-[#989DA3] font-normal leading-tight max-w-[135px]">
               <RefreshCw className="w-3 h-3 shrink-0" />
               Data diperbarui setiap kunjungan rutin.
             </span>
-            <Link href="/ibu/status" className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[13px] bg-gradient-to-br from-[#2B93E6] to-[#1178D4] text-white text-[13px] font-semibold shadow-[0_10px_20px_-8px_rgba(17,120,212,0.7)] active:scale-95 transition-all">
+            <Link href="/ibu/status" className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[13px] bg-gradient-to-br from-[#2B93E6] to-[#1178D4] text-white text-[14px] font-semibold shadow-[0_10px_20px_-8px_rgba(17,120,212,0.7)] active:scale-95 transition-all">
               Lihat Perkembangan BB <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
             </Link>
           </div>
@@ -250,7 +250,7 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
 
         {/* STATUS NOTIF */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
-          <h2 className="text-[14px] font-semibold text-[#1F2937]">Pesan Harian</h2>
+          <h2 className="text-[15px] font-semibold text-[#1F2937]">Pesan Harian</h2>
         </div>
         {(() => {
           const level = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
@@ -261,11 +261,11 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
                 <s.Icon className="w-[17px] h-[17px] text-white" strokeWidth={2.3} />
               </div>
               <div className="min-w-0">
-                <div className={`text-[12.5px] font-semibold ${s.textColor} leading-tight flex items-center gap-2`}>
+                <div className={`text-[13px] font-semibold ${s.textColor} leading-tight flex items-center gap-2`}>
                   {s.label}
-                  <span className="text-[8px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white opacity-80">SAAT INI</span>
+                  <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white opacity-80">SAAT INI</span>
                 </div>
-                <div className="text-[11.5px] font-normal text-[#4C545F] mt-1 leading-relaxed">
+                <div className="text-[13px] font-normal text-[#4C545F] mt-1 leading-relaxed">
                   {s.message}
                 </div>
               </div>
@@ -275,16 +275,16 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
 
         {/* SHORTCUTS */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
-          <h2 className="text-[14px] font-semibold text-[#1F2937]">Pintasan</h2>
+          <h2 className="text-[15px] font-semibold text-[#1F2937]">Pintasan</h2>
         </div>
         <div className="flex gap-3">
           <Link href="/ibu/edukasi" className="flex-1 bg-white border border-[#E4EDE7] rounded-[16px] p-3.5 shadow-[0_4px_12px_-8px_rgba(9,30,66,0.14)] active:translate-y-0.5 transition-all">
             <div className="w-[38px] h-[38px] rounded-[12px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center mb-2.5">
               <BookOpen className="w-[21px] h-[21px]" strokeWidth={1.8} />
             </div>
-            <div className="text-[13px] font-semibold text-[#1F2937] leading-tight">Edukasi</div>
-            <div className="text-[10.5px] font-normal text-[#697079] mt-1 leading-snug">Materi Trimester 2 untukmu</div>
-            <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-[#1178D4]">
+            <div className="text-[14px] font-semibold text-[#1F2937] leading-tight">Edukasi</div>
+            <div className="text-[12px] font-normal text-[#697079] mt-1 leading-snug">Materi Trimester 2 untukmu</div>
+            <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-[#1178D4]">
               Buka <ChevronRight className="w-3 h-3" strokeWidth={2.4} />
             </span>
           </Link>
@@ -292,11 +292,11 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
             <div className="w-[38px] h-[38px] rounded-[12px] bg-[#EAF6EF] text-[#1E9E62] flex items-center justify-center mb-2.5">
               <CheckSquare className="w-[21px] h-[21px]" strokeWidth={1.8} />
             </div>
-            <div className="text-[13px] font-semibold text-[#1F2937] leading-tight">Tugas Harian</div>
-            <div className="text-[10.5px] font-normal text-[#697079] mt-1 leading-snug">
+            <div className="text-[14px] font-semibold text-[#1F2937] leading-tight">Tugas Harian</div>
+            <div className="text-[12px] font-normal text-[#697079] mt-1 leading-snug">
               {6 - doneCount === 0 ? 'Semua tugas selesai 🎉' : `${6 - doneCount} tugas belum selesai`}
             </div>
-            <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-semibold text-[#1178D4]">
+            <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-[#1178D4]">
               Buka <ChevronRight className="w-3 h-3" strokeWidth={2.4} />
             </span>
           </Link>
