@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import { 
-  Bell, Calendar, Clock, ChevronRight, 
-  Check, AlertTriangle, Flame, BookOpen, 
-  CheckSquare, User, Search, RefreshCw
+import {
+  Bell, Calendar, Clock, ChevronRight,
+  Check, AlertTriangle, Flame, BookOpen,
+  CheckSquare, User, RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -67,7 +67,7 @@ export default function IbuDashboardPage() {
     let mounted = true
     getIbuData().then(data => {
       if (mounted) {
-        setIbuData(data as any)
+        setIbuData(data)
         setLoading(false)
       }
     })

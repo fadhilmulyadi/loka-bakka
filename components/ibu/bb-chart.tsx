@@ -104,8 +104,9 @@ export function BBChart({ profile, visits }: BBChartProps) {
             dataKey="weight"
             stroke="#1178D4"
             strokeWidth={2}
-            dot={(props: any) => {
-              const { cx, cy, index } = props
+            dot={(props) => {
+              const { cx, cy } = props as { cx: number; cy: number; index: number }
+              const index = (props as { cx: number; cy: number; index: number }).index
               const isOnTrack = data[index]?.isOnTrack ?? true
               return (
                 <circle
