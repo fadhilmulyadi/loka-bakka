@@ -1,0 +1,136 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+model Posyandu {
+  id        String   @id @default(cuid())
+  nama      String
+  alamat    String
+  kelurahan String
+  kecamatan String
+  kota      String
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+
+  kaders      Kader[]
+  ibus        Ibu[]
+  pengukurans Pengukuran[]
+  skirinings  SkriningShamil[]
+}
+
+model Kader {
+  id         String   @id @default(cuid())
+  nama       String
+  username   String   @unique
+  password   String
+  posyanduId String
+  createdAt  DateTime @default(now())
+
+  posyandu    Posyandu         @relation(fields: [posyanduId], references: [id])
+  pengukurans Pengukuran[]
+  skrinings   SkriningShamil[]
+}
+
+model Ibu {
+  id          String   @id @default(cuid())
+  nama        String
+  username    String   @unique
+  pin         String
+  noHp        String?
+  tanggalLahir DateTime?
+  alamat      String?
+  posyanduId  String
+  createdAt   DateTime @default(now())
+
+  posyandu          Posyandu         @relation(fields: [posyanduId], references: [id])
+  anaks             Anak[]
+  skrinings         SkriningShamil[]
+  pregnancyProfile  PregnancyProfile?
+  pregnancyVisits   PregnancyVisit[]
+}
+
+model Anak {
+  id           String   @id @default(cuid())
+  nama         String
+  tanggalLahir DateTime
+  jenisKelamin String
+  ibuId        String
+  createdAt    DateTime @default(now())
+
+  ibu         Ibu          @relation(fields: [ibuId], references: [id])
+  pengukurans Pengukuran[]
+}
+
+model Pengukuran {
+  id          String   @id @default(cuid())
+  anakId      String
+  posyanduId  String
+  kaderId     String
+  beratBadan  Float
+  tinggiBadan Float
+  zScoreTBU   Float
+  zScoreBBU   Float
+  zScoreBBTB  Float
+  statusTBU   String
+  statusBBU   String
+  statusBBTB  String
+  tanggal     DateTime @default(now())
+
+  anak     Anak     @relation(fields: [anakId], references: [id])
+  posyandu Posyandu @relation(fields: [posyanduId], references: [id])
+  kader    Kader    @relation(fields: [kaderId], references: [id])
+}
+
+model SkriningShamil {
+  id         String   @id @default(cuid())
+  ibuId      String
+  posyanduId String
+  kaderId    String
+  skorRisiko Int
+  kategori   String
+  jawaban    Json
+  tanggal    DateTime @default(now())
+
+  ibu      Ibu      @relation(fields: [ibuId], references: [id])
+  posyandu Posyandu @relation(fields: [posyanduId], references: [id])
+  kader    Kader    @relation(fields: [kaderId], references: [id])
+}
+
+model PregnancyProfile {
+  id                String   @id @default(cuid())
+  ibuId             String   @unique
+  ibu               Ibu      @relation(fields: [ibuId], references: [id], onDelete: Cascade)
+  bbPrepregnancyKg  Float
+  heightCm          Float
+  imtPrepregnancy   Float
+  imtCategory       String
+  targetGainMinKg   Float
+  targetGainMaxKg   Float
+  weeklyGainMinKg   Float
+  weeklyGainMaxKg   Float
+  createdAt         DateTime @default(now())
+}
+
+model PregnancyVisit {
+  id              String   @id @default(cuid())
+  ibuId           String
+  ibu             Ibu      @relation(fields: [ibuId], references: [id], onDelete: Cascade)
+  visitDate       DateTime
+  currentWeightKg Float
+  weightGainKg    Float
+  lilaCm          Float
+  hbGdl           Float
+  isOnTrack       Boolean
+  createdAt       DateTime @default(now())
+}
