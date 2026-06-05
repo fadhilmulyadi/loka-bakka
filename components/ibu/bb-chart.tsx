@@ -72,20 +72,23 @@ export function BBChart({ profile, visits }: BBChartProps) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={180}>
-        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8" />
+      <ResponsiveContainer width="100%" height={200}>
+        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8" vertical={false} />
           <XAxis
             dataKey="label"
             tick={{ fontSize: 10, fill: '#697079' }}
             tickLine={false}
             axisLine={false}
+            padding={{ left: 10, right: 10 }}
+            minTickGap={10}
           />
           <YAxis
             domain={[yMin, yMax]}
             tick={{ fontSize: 10, fill: '#697079' }}
             tickLine={false}
             axisLine={false}
+            width={35}
           />
           <Tooltip
             contentStyle={{ fontSize: 11, borderRadius: 10, border: '1px solid #E4EDE7', boxShadow: 'none' }}
@@ -95,7 +98,7 @@ export function BBChart({ profile, visits }: BBChartProps) {
             y1={targetMin}
             y2={targetMax}
             fill="#E7F7EF"
-            fillOpacity={0.8}
+            fillOpacity={0.4}
             stroke="#C3E9D4"
             strokeWidth={1}
           />
