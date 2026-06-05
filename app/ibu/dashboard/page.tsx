@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Bell, Calendar, Clock, ChevronRight,
   Check, AlertTriangle, Flame, BookOpen,
@@ -46,10 +47,12 @@ const STATUS_MESSAGES: Record<RiskLevel, {
 }
 
 export default function IbuDashboardPage() {
+  const router = useRouter()
   const [doneCount, setDoneCount] = useState(4)
   const [score, setScore] = useState(60)
   const [ibuData, setIbuData] = useState<{
     nama: string
+    isPregnant: boolean
     weeksPregnant: number
     dueDate: string
     riskStatus: string
@@ -74,6 +77,12 @@ export default function IbuDashboardPage() {
     
     return () => { mounted = false }
   }, [])
+
+  useEffect(() => {
+    if (!loading && ibuData && !ibuData.isPregnant) {
+      router.replace("/ibu/anak")
+    }
+  }, [loading, ibuData, router])
 
   useEffect(() => {
     // Shared state logic if needed
