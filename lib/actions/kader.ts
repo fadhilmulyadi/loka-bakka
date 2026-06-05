@@ -567,6 +567,7 @@ export async function createIbu(data: {
   noHp?: string
   tanggalLahir?: string
   alamat?: string
+  isHamil?: boolean
 }) {
   const posyanduId = await getValidatedPosyanduId()
 
@@ -583,6 +584,7 @@ export async function createIbu(data: {
       noHp: data.noHp ?? null,
       tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
       alamat: data.alamat ?? null,
+      isHamil: data.isHamil ?? false,
       posyanduId: posyanduId,
     },
     select: { id: true, nama: true, username: true },
