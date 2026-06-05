@@ -50,6 +50,7 @@ model Ibu {
   noHp        String?
   tanggalLahir DateTime?
   alamat      String?
+  isHamil     Boolean   @default(false)
   posyanduId  String
   createdAt   DateTime @default(now())
 
