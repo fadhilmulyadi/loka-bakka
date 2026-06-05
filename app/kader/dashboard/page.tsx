@@ -145,6 +145,7 @@ interface DashboardStats {
 }
 
 interface RecentMeasurement {
+  id: string
   waktu: string
   posyandu: string
   nama: string
@@ -160,6 +161,7 @@ interface WeeklyData {
 }
 
 interface UncheckedChild {
+  id: string
   nama: string
   usia: string
   posyandu: string

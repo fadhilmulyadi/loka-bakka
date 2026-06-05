@@ -48,6 +48,7 @@ type Status = "Normal" | "Berisiko" | "Stunting"
 
 type Child = {
   no: number
+  id: string
   nama: string
   sex: "L" | "P"
   usia: string
