@@ -126,10 +126,12 @@ Halaman baru. Menampilkan:
 
 Sekarang dashboard crash/kosong kalau `PregnancyProfile` tidak ada. Perbaikan:
 
-| Kondisi | Yang Ditampilkan |
+| Kondisi | Yang Terjadi |
 |---|---|
-| Tidak hamil (tidak ada PregnancyProfile) | Welcome card + "Anak Saya" (kosong jika belum ada anak) — tanpa section kehamilan |
+| Tidak hamil (tidak ada PregnancyProfile) | Langsung redirect ke halaman anak `/ibu/anak` |
 | Hamil (ada PregnancyProfile) | Tampilan pregnancy dashboard yang ada sekarang |
+
+Perubahan di `app/ibu/dashboard/page.tsx`: cek `PregnancyProfile` saat load — kalau tidak ada, `router.replace("/ibu/anak")`.
 
 Perubahan di `getIbuData()`: kembalikan field `isPregnant: boolean` berdasarkan ada/tidaknya `PregnancyProfile`.
 
