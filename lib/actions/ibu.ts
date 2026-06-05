@@ -35,7 +35,7 @@ export async function getIbuData() {
 
   if (!ibu) return null
 
-  const isPregnant = !!ibu.pregnancyProfile
+  const isPregnant = ibu.isHamil
   const lastSkrining = ibu.skrinings[0]
   const pregnancyProfile = ibu.pregnancyProfile
   const lastVisit = ibu.pregnancyVisits[0] ?? null
@@ -80,6 +80,39 @@ export async function getIbuData() {
     isPregnant,
     pregnancyData,
     childData,
+  }
+}
+
+export async function getIbuProfile() {
+  const session = await auth()
+  if (!session || session.user.role !== "ibu") {
+    throw new Error("Unauthorized")
+  }
+
+  const ibu = await prisma.ibu.findUnique({
+    where: { id: session.user.id },
+    include: {
+      posyandu: true,
+      pregnancyProfile: true,
+      skrinings: {
+        orderBy: { tanggal: "desc" },
+        take: 1,
+      },
+    },
+  })
+
+  if (!ibu) return null
+
+  return {
+    nama: ibu.nama,
+    noHp: ibu.noHp,
+    tanggalLahir: ibu.tanggalLahir,
+    alamat: ibu.alamat,
+    posyandu: ibu.posyandu.nama,
+    kelurahan: ibu.posyandu.kelurahan,
+    kecamatan: ibu.posyandu.kecamatan,
+    isPregnant: ibu.isHamil,
+    lastSkrining: ibu.skrinings[0] ?? null,
   }
 }
 
