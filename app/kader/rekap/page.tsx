@@ -280,7 +280,7 @@ export default function RekapPosyanduPage() {
                       >
                         <TableCell className="text-[14px] pl-2 text-[#173753]">{row.no}</TableCell>
                         <TableCell className="text-[14px] font-medium text-[#173753]">
-                          <Link href={`/kader/anak/${row.no}`} className="hover:text-[#52A9E3] transition-colors">
+                          <Link href={`/kader/anak/${row.id}`} className="hover:text-[#52A9E3] transition-colors">
                             {row.nama}
                           </Link>
                         </TableCell>

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
+import { revalidatePath } from "next/cache"
 
 export async function getChildren() {
   const session = await auth()
@@ -193,6 +194,7 @@ export async function getRecentMeasurements() {
   })
 
   return measurements.map((m) => ({
+    id: m.anakId,
     waktu: new Date(m.tanggal).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
     posyandu: "Posyandu " + (session.user.posyanduId ? "Melati" : ""), // session.user doesn't have posyanduName in DefaultSession
     nama: m.anak.nama,
@@ -280,6 +282,7 @@ export async function getUncheckedChildren() {
     const ageStr = `${years > 0 ? years + " tahun " : ""}${months} bulan`
 
     return {
+      id: anak.id,
       nama: anak.nama,
       usia: ageStr,
       posyandu: "Melati", // Should ideally be from DB but keeping simple for now
@@ -326,7 +329,9 @@ export async function getChildDetail(id: string) {
     gender: anak.jenisKelamin === "L" ? "Laki-laki" : "Perempuan",
     birthDate: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(birthDate),
     age: `${ageMonths} bulan`,
+    ageMo: ageMonths,
     posyandu: anak.ibu.posyandu.nama,
+    posyanduId: anak.ibu.posyandu.id,
     desa: anak.ibu.posyandu.kelurahan,
     address: anak.ibu.alamat || "-",
     childOrder: "-", // Not in schema, keeping as placeholder
@@ -338,7 +343,6 @@ export async function getChildDetail(id: string) {
     latestCheckDate: lastPengukuran ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(lastPengukuran.tanggal)) : "-",
     latestTB: lastPengukuran?.tinggiBadan || 0,
     latestBB: lastPengukuran?.beratBadan || 0,
-    zScoreBBU: lastPengukuran ? `${lastPengukuran.zScoreBBU.toFixed(1)} SD` : "-",
     zScoreTBU: lastPengukuran ? `${lastPengukuran.zScoreTBU.toFixed(1)} SD` : "-",
     bbTB: lastPengukuran?.statusBBTB || "-",
     examiner: lastPengukuran?.kader.nama || "-",
@@ -347,12 +351,64 @@ export async function getChildDetail(id: string) {
       usia: `${(new Date(p.tanggal).getFullYear() - birthDate.getFullYear()) * 12 + (new Date(p.tanggal).getMonth() - birthDate.getMonth())} bln`,
       bb: p.beratBadan,
       tb: p.tinggiBadan,
-      zBb: p.zScoreBBU.toFixed(1),
       zTb: p.zScoreTBU.toFixed(1),
       status: p.statusTBU,
       latest: p.id === lastPengukuran?.id,
     })),
   }
+}
+
+import { calcHeightZScore, stuntingLabel } from "@/lib/growth-standards/stunting-calc"
+
+export async function savePengukuran(data: {
+  anakId: string
+  beratBadan: number
+  tinggiBadan: number
+}) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const anak = await prisma.anak.findUnique({
+    where: { id: data.anakId },
+    include: { ibu: true }
+  })
+
+  if (!anak) throw new Error("Anak not found")
+
+  const birthDate = new Date(anak.tanggalLahir)
+  const now = new Date()
+  const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
+
+  // Calculate Z-Score TBU (Stunting)
+  const sex = anak.jenisKelamin as "L" | "P"
+  const zTBU = calcHeightZScore(data.tinggiBadan, ageMonths, sex)
+
+  // Placeholders for other Z-scores for now
+  const zBBU = 0.0
+  const zBBTB = 0.0
+
+  const result = await prisma.pengukuran.create({
+    data: {
+      anakId: data.anakId,
+      posyanduId: session.user.posyanduId!,
+      kaderId: session.user.id!,
+      beratBadan: data.beratBadan,
+      tinggiBadan: data.tinggiBadan,
+      zScoreTBU: zTBU.zScore,
+      zScoreBBU: zBBU,
+      zScoreBBTB: zBBTB,
+      statusTBU: stuntingLabel[zTBU.status],
+      statusBBU: "Normal",
+      statusBBTB: "Normal",
+      tanggal: now,
+    }
+  })
+
+  revalidatePath(`/kader/anak/${data.anakId}`)
+  revalidatePath("/kader/dashboard")
+  revalidatePath("/kader/rekap")
+
+  return result
 }
 
 export async function getKelurahanStats() {
@@ -435,6 +491,28 @@ export async function getKelurahanStats() {
   return Array.from(kelurahanMap.values())
 }
 
+async function getValidatedPosyanduId() {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") {
+    throw new Error("Unauthorized")
+  }
+
+  const posyanduId = session.user.posyanduId
+  if (!posyanduId) {
+    console.error("DEBUG: posyanduId is missing in session", session.user)
+    throw new Error("POSYANDU_ID_MISSING")
+  }
+
+  // Verify posyandu exists to avoid foreign key violations
+  const posyandu = await prisma.posyandu.findUnique({ where: { id: posyanduId } })
+  if (!posyandu) {
+    console.error(`DEBUG: posyanduId ${posyanduId} from session not found in database. This might happen if the database was reset but the session is stale.`)
+    throw new Error("POSYANDU_NOT_FOUND")
+  }
+
+  return posyanduId
+}
+
 export async function createChild(data: {
   nama: string
   sex: string
@@ -444,12 +522,7 @@ export async function createChild(data: {
   telp?: string
   alamat?: string
 }) {
-  const session = await auth()
-  if (!session || session.user.role !== "kader") {
-    throw new Error("Unauthorized")
-  }
-
-  const posyanduId = session.user.posyanduId
+  const posyanduId = await getValidatedPosyanduId()
 
   // 1. Upsert Ibu
   const ibu = await prisma.ibu.upsert({
@@ -480,6 +553,10 @@ export async function createChild(data: {
     },
   })
 
+  revalidatePath("/kader/dashboard")
+  revalidatePath("/kader/rekap")
+  revalidatePath(`/kader/ibu/${ibu.id}`)
+
   return anak
 }
 
@@ -491,15 +568,14 @@ export async function createIbu(data: {
   tanggalLahir?: string
   alamat?: string
 }) {
-  const session = await auth()
-  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+  const posyanduId = await getValidatedPosyanduId()
 
   const existing = await prisma.ibu.findUnique({ where: { username: data.username } })
   if (existing) throw new Error("USERNAME_TAKEN")
 
   const hashed = await bcrypt.hash(data.password, 10)
 
-  return prisma.ibu.create({
+  const result = await prisma.ibu.create({
     data: {
       nama: data.nama,
       username: data.username,
@@ -507,10 +583,15 @@ export async function createIbu(data: {
       noHp: data.noHp ?? null,
       tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
       alamat: data.alamat ?? null,
-      posyanduId: session.user.posyanduId,
+      posyanduId: posyanduId,
     },
     select: { id: true, nama: true, username: true },
   })
+
+  revalidatePath("/kader/rekap")
+  revalidatePath("/kader/dashboard")
+
+  return result
 }
 
 export async function getIbuById(id: string) {

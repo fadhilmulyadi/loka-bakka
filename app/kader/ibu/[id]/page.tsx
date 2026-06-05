@@ -192,7 +192,9 @@ export default function IbuProfilePage() {
                             {anak.nama.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[#173753] truncate">{anak.nama}</p>
+                            <Link href={`/kader/anak/${anak.id}`} className="hover:text-[#52A9E3] transition-colors">
+                              <p className="text-sm font-medium text-[#173753] truncate">{anak.nama}</p>
+                            </Link>
                             <p className="text-xs text-muted-foreground">{usia} · {anak.jenisKelamin === "L" ? "Laki-laki" : "Perempuan"}</p>
                           </div>
                           {last && (
