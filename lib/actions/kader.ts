@@ -591,7 +591,7 @@ export async function createIbu(data: {
       data: {
         nama: data.nama,
         username: data.username,
-        pin: hashed,
+        password: hashed,
         noHp: data.noHp ?? null,
         tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
         alamat: data.alamat ?? null,
