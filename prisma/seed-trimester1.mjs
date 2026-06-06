@@ -20,16 +20,17 @@ async function main() {
     if (posyanduRes.rows.length === 0) throw new Error("No Posyandu found.")
     const posyanduId = posyanduRes.rows[0].id
 
-    const pinHash = await bcrypt.hash("1234567", 10)
+    const passwordHash = await bcrypt.hash("1234567", 10)
     const ibuId = 'ibu-tm1-test'
     
     await client.query(`
-      INSERT INTO "Ibu" (id, nama, username, pin, "noHp", alamat, "posyanduId")
+      INSERT INTO "Ibu" (id, nama, username, password, "noHp", alamat, "posyanduId")
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (id) DO UPDATE SET
         nama = EXCLUDED.nama,
-        username = EXCLUDED.username
-    `, [ibuId, 'Ibu Trimester Satu', 'ibu.tm1', pinHash, '08999999999', 'Jl. Test No. 1', posyanduId])
+        username = EXCLUDED.username,
+        password = EXCLUDED.password
+    `, [ibuId, 'Ibu Trimester Satu', 'ibu.tm1', passwordHash, '08999999999', 'Jl. Test No. 1', posyanduId])
     
     const hpht = "2026-04-15"
     await client.query(`

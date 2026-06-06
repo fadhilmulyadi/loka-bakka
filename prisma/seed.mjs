@@ -44,18 +44,18 @@ async function main() {
     `, ['cmq1kader001', 'Zee Asadel', 'zee.asadel', passwordHash, posyanduId])
 
     // 3. Upsert Ibu
-    const pinHash = await bcrypt.hash("1234", 10)
+    const passwordHash = await bcrypt.hash("1234", 10)
     const ibuRes = await client.query(`
-      INSERT INTO "Ibu" (id, nama, username, pin, "noHp", alamat, "posyanduId")
+      INSERT INTO "Ibu" (id, nama, username, password, "noHp", alamat, "posyanduId")
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (username) DO UPDATE SET
         nama = EXCLUDED.nama,
-        pin = EXCLUDED.pin,
+        password = EXCLUDED.password,
         "noHp" = EXCLUDED."noHp",
         alamat = EXCLUDED.alamat,
         "posyanduId" = EXCLUDED."posyanduId"
       RETURNING id
-    `, ['cmq1ibu001', 'Andi Pratama', 'andi.pratama', pinHash, '081234567890', 'Jl. Sehat No. 1', posyanduId])
+    `, ['cmq1ibu001', 'Andi Pratama', 'andi.pratama', passwordHash, '081234567890', 'Jl. Sehat No. 1', posyanduId])
     
     const ibuId = ibuRes.rows[0].id
 
