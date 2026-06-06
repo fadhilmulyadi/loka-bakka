@@ -3,10 +3,9 @@ import { heightForAgeBoys, heightForAgeGirls } from './height-for-age'
 export type Sex = 'L' | 'P'
 
 export type StuntingStatus =
-  | 'severely_stunted'  // z < -3
-  | 'stunted'           // -3 <= z < -2
-  | 'normal'            // -2 <= z < +2
-  | 'tall'              // z >= +2
+  | 'stunting'          // < -3
+  | 'risiko_stunting'   // -3 <= z < -2
+  | 'normal'            // z >= -2
 
 export interface StuntingResult {
   zScore: number
@@ -42,23 +41,20 @@ export function calcHeightZScore(
 }
 
 export function getStuntingStatus(zScore: number): StuntingStatus {
-  if (zScore < -3) return 'severely_stunted'
-  if (zScore < -2) return 'stunted'
-  if (zScore >= 2) return 'tall'
+  if (zScore < -3) return 'stunting'
+  if (zScore < -2) return 'risiko_stunting'
   return 'normal'
 }
 
 /** Label bahasa Indonesia untuk ditampilkan di UI */
 export const stuntingLabel: Record<StuntingStatus, string> = {
-  severely_stunted: 'Sangat Pendek',
-  stunted: 'Pendek (Stunting)',
+  stunting: 'Stunting',
+  risiko_stunting: 'Risiko Stunting',
   normal: 'Normal',
-  tall: 'Tinggi',
 }
 
 export const stuntingColor: Record<StuntingStatus, string> = {
-  severely_stunted: '#ef4444',  // red-500
-  stunted: '#f97316',           // orange-500
+  stunting: '#ef4444',  // red-500
+  risiko_stunting: '#eab308', // yellow-500 (or orange-500 if preferred)
   normal: '#22c55e',            // green-500
-  tall: '#3b82f6',              // blue-500
 }
