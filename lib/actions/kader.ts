@@ -542,7 +542,7 @@ export async function createChild(data: {
     create: {
       nama: data.ibu,
       username: data.ibuUsername,
-      pin: "$2a$10$7zV.k6uG9fH9xV5fB.Z3u.oYv9z5Y.yYv.Z3u.oYv9z5Y.yYv.y", // Default hashed PIN '1234'
+      password: "$2a$10$7zV.k6uG9fH9xV5fB.Z3u.oYv9z5Y.yYv.Z3u.oYv9z5Y.yYv.y", // Default hashed password '1234'
       noHp: data.telp,
       alamat: data.alamat,
       posyanduId,
