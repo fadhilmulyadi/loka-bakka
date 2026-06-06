@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { heightForAgeBoys, heightForAgeGirls } from '@/lib/growth-standards/height-for-age'
 
@@ -41,7 +41,7 @@ export function TBUChart({ sex, measurements }: TBUChartProps) {
           <YAxis tick={{ fontSize: 10, fill: '#697079' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
           <Tooltip contentStyle={{ fontSize: 11, borderRadius: 10 }} />
           <Line type="monotone" dataKey="height" stroke="#1178D4" strokeWidth={2} name="TB Aktual" />
-          <ReferenceLine dataKey="median" stroke="#1E9E62" strokeDasharray="3 3" name="Median WHO" />
+          <Line type="monotone" dataKey="median" stroke="#1E9E62" strokeDasharray="3 3" dot={false} strokeWidth={1} name="Median WHO" />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
