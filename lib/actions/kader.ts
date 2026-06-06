@@ -672,6 +672,6 @@ export async function getIbuById(id: string) {
 
   if (!ibu || ibu.posyanduId !== session.user.posyanduId) throw new Error("Not found")
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { pin: _pin, ...rest } = ibu
+  const { password: _password, ...rest } = ibu
   return { ...rest, posyandu: ibu.posyandu.nama }
 }
