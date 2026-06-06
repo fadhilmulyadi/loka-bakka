@@ -20,7 +20,7 @@ async function main() {
     if (posyanduRes.rows.length === 0) throw new Error("No Posyandu found.")
     const posyanduId = posyanduRes.rows[0].id
 
-    const pinHash = await bcrypt.hash("1234", 10)
+    const pinHash = await bcrypt.hash("1234567", 10)
     const ibuId = 'ibu-tm1-test'
     
     await client.query(`

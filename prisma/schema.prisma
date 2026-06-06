@@ -46,7 +46,7 @@ model Ibu {
   id          String   @id @default(cuid())
   nama        String
   username    String   @unique
-  pin         String
+  password    String
   noHp        String?
   tanggalLahir DateTime?
   alamat      String?

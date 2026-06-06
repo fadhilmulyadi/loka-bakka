@@ -58,19 +58,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       id: "ibu",
       credentials: {
         username: { label: "Username", type: "text" },
-        pin: { label: "PIN", type: "password" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.pin) return null
+        if (!credentials?.username || !credentials?.password) return null
 
         const ibu = await prisma.ibu.findUnique({
           where: { username: credentials.username as string },
-          select: { id: true, nama: true, pin: true, posyanduId: true },
+          select: { id: true, nama: true, password: true, posyanduId: true },
         })
 
         if (!ibu) return null
 
-        const valid = await bcrypt.compare(credentials.pin as string, ibu.pin)
+        const valid = await bcrypt.compare(credentials.password as string, ibu.password)
         if (!valid) return null
 
         return {
