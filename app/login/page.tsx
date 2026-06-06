@@ -31,7 +31,7 @@ export default function LoginPage() {
     let redirectTo = "/kader/dashboard"
     let result = await signIn("kader", { username, password, redirect: false })
     if (!result || result.error) {
-      result = await signIn("ibu", { username, pin: password, redirect: false })
+      result = await signIn("ibu", { username, password, redirect: false })
       redirectTo = "/dashboard"
     }
 
