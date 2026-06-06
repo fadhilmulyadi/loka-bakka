@@ -115,7 +115,12 @@ const posyanduRanking = [
   { nama: "Posyandu Tulip", nilai: 7 },
 ]
 
+import { StatusBadge } from "@/components/status-badge"
+
+// ... (existing imports)
+
 function statusBadge(status: string) {
+  // Keeping for compatibility if needed elsewhere
   const map: Record<string, string> = {
     "Normal": "bg-green-100 text-green-800",
     "Stunting Berat": "bg-red-100 text-red-800",
@@ -460,9 +465,7 @@ export default function KaderDashboardPage() {
                             </Link>
                           </TableCell>
                           <TableCell>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(row.status)}`}>
-                              {row.status}
-                            </span>
+                            <StatusBadge status={row.status} />
                           </TableCell>
                           <TableCell>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tindakBadge(row.tindak)}`}>

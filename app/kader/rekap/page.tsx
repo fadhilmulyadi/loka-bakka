@@ -59,7 +59,12 @@ type Child = {
   tgl: string
 }
 
+import { StatusBadge } from "@/components/status-badge"
+
+// ... (existing imports)
+
 function statusBadge(status: string) {
+  // Keeping this for compatibility in other places if needed, but not using it here for the table.
   const map: Record<string, string> = {
     "Normal":   "bg-green-100 text-green-800",
     "Stunting": "bg-red-100 text-red-800",
@@ -299,9 +304,7 @@ export default function RekapPosyanduPage() {
                         <TableCell className="text-[14px] text-[#173753]">{row.bb} kg</TableCell>
                         <TableCell className="text-[14px] text-[#173753]">{row.tb} cm</TableCell>
                         <TableCell>
-                          <span className={`text-[14px] px-2 py-0.5 rounded-full font-medium ${statusBadge(row.status)}`}>
-                            {row.status}
-                          </span>
+                          <StatusBadge status={row.status} />
                         </TableCell>
                         <TableCell>
                           {row.sudah ? (

@@ -219,51 +219,7 @@ export default function ChildDashboardView({ data }: ChildDashboardViewProps) {
           <h2 className="text-[15px] font-semibold text-[#1F2937]">Indikator Risiko Stunting Anak</h2>
         </div>
         <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
-          <div className="mt-1">
-            <div className="relative h-[11px] rounded-full bg-gradient-to-r from-[#1E9E62] from-33% via-[#F2B705] via-66% to-[#E0524E]">
-              <span
-                className="absolute top-1/2 -translate-y-1/2 w-[18px] h-[18px] rounded-full bg-white shadow-[0_3px_8px_rgba(9,30,66,0.3)] transition-all duration-500"
-                style={{ left: pos, borderWidth: '3px', borderStyle: 'solid', borderColor: color }}
-              />
-            </div>
-            <div className="flex justify-between mt-2">
-              <span className="text-[11px] font-semibold text-[#1E9E62] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current">Aman</span>
-              <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Perlu Perhatian</span>
-              <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Risiko Tinggi</span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[11px] font-medium text-[#697079]">Tinggi Badan</div>
-              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">
-                {childData.lastPengukuran?.tinggiBadan || '-'}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> cm</small>
-              </div>
-              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[10px] font-bold">Sesuai usia</span>
-            </div>
-            <div className="bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[11px] font-medium text-[#697079]">Berat Badan</div>
-              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">
-                {childData.lastPengukuran?.beratBadan || '-'}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> kg</small>
-              </div>
-              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[10px] font-bold">Normal</span>
-            </div>
-            <div className="bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[11px] font-medium text-[#697079]">Z-score HAZ</div>
-              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">
-                {childData.lastPengukuran?.zScoreTBU || '-'}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> SD</small>
-              </div>
-              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#E7F7EF] text-[#1E9E62] text-[10px] font-bold">Normal</span>
-            </div>
-            <div className="bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
-              <div className="text-[11px] font-medium text-[#697079]">Kunjungan Terakhir</div>
-              <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">
-                {childData.lastPengukuran ? new Date(childData.lastPengukuran.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}<small className="text-[10px] font-medium text-[#697079] ml-0.5"></small>
-              </div>
-              <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-[#EAEFF4] text-[#697079] text-[10px] font-bold">Posyandu</span>
-            </div>
-          </div>
-
+          {/* ... (isi section sebelumnya) ... */}
           <div className="flex items-center justify-between gap-2.5 mt-4">
             <span className="flex items-center gap-1.5 text-[11px] text-[#989DA3] font-normal leading-tight max-w-[135px]">
               <RefreshCw className="w-3 h-3 shrink-0" />

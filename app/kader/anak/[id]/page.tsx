@@ -32,7 +32,9 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { getStatusStyle } from "@/lib/status-styles"
 import { getChildDetail } from "@/lib/actions/kader"
+import { StatusBadge } from "@/components/status-badge"
 
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer
@@ -79,27 +81,7 @@ const WHO_DATA = Array.from({ length: 25 }, (_, i) => ({
 const NAVY = "#173753"
 const ACCENT = "#52A9E3"
 
-// ============ COMPONENTS ============
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { bg: string; text: string; dot: string }> = {
-    Normal:          { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E" },
-    Stunting:        { bg: "#FCE8E6", text: "#D93025", dot: "#D93025" },
-    "Risiko Stunting": { bg: "#FFF4E5", text: "#B06000", dot: "#B06000" },
-    "Gizi Kurang":   { bg: "#F3E8FD", text: "#8E24AA", dot: "#8E24AA" },
-    Buruk:           { bg: "#FCE8E6", text: "#D93025", dot: "#D93025" },
-  }
-  const s = map[status] ?? { bg: "#F3F4F6", text: "#6B7280", dot: "#9CA3AF" }
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-0.5"
-      style={{ background: s.bg, color: s.text }}
-    >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.dot }} />
-      {status}
-    </span>
-  )
-}
+// ... (existing imports)
 
 // ============ MAIN PAGE ============
 
@@ -298,13 +280,18 @@ export default function ChildDetailPage() {
             </CardHeader>
 
             <CardContent className="pt-2 px-4 pb-4 flex flex-col h-full">
-              <div className="flex items-center gap-3 bg-[#F0FDF4] border border-[#DCFCE7] rounded-[10px] px-3.5 py-3 mb-4 mt-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#16A34A] shrink-0" />
-                <div>
-                  <p className="text-[15px] font-bold text-[#15803D] leading-none mb-0.5">{childDataState.status}</p>
-                  <p className="text-[11.5px] text-[#16A34A]">Diperiksa: {childDataState.latestCheckDate}</p>
-                </div>
-              </div>
+              {(() => {
+                const s = getStatusStyle(childDataState.status)
+                return (
+                  <div className="flex items-center gap-3 rounded-[10px] px-3.5 py-3 mb-4 mt-2 border" style={{ background: s.bg, borderColor: s.border }}>
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.dot }} />
+                    <div>
+                      <p className="text-[15px] font-bold leading-none mb-0.5" style={{ color: s.text }}>{childDataState.status}</p>
+                      <p className="text-[11.5px]" style={{ color: s.text }}>Diperiksa: {childDataState.latestCheckDate}</p>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <div className="space-y-2.5 flex-1">
                 {[
@@ -370,7 +357,7 @@ export default function ChildDetailPage() {
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Area
                       type="monotone"
-                      dataKey="wtSD2"
+                      dataKey="htSD2"
                       stroke="#E5E7EB"
                       fill="#F3F4F6"
                       strokeWidth={1}
@@ -379,7 +366,7 @@ export default function ChildDetailPage() {
                     />
                     <Area
                       type="monotone"
-                      dataKey="wtMedian"
+                      dataKey="htMedian"
                       stroke="#10B981"
                       fill="#ECFDF5"
                       strokeWidth={1.5}
@@ -388,13 +375,13 @@ export default function ChildDetailPage() {
                     />
                     <Area
                       type="monotone"
-                      dataKey="wtActual"
-                      stroke={NAVY}
+                      dataKey="htActual"
+                      stroke={ACCENT}
                       strokeWidth={3}
                       fill="url(#colorActual)"
-                      dot={{ r: 4, fill: NAVY, strokeWidth: 2, stroke: "#fff" }}
-                      activeDot={{ r: 6, fill: NAVY, strokeWidth: 2, stroke: "#fff" }}
-                      name="Berat Aktual"
+                      dot={{ r: 4, fill: ACCENT, strokeWidth: 2, stroke: "#fff" }}
+                      activeDot={{ r: 6, fill: ACCENT, strokeWidth: 2, stroke: "#fff" }}
+                      name="Tinggi Aktual"
                     />
                   </AreaChart>
                 </ResponsiveContainer>

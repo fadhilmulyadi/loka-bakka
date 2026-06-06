@@ -36,6 +36,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { getIbuById } from "@/lib/actions/kader"
+import { calculateGestationalAge, calculateHPL, MONTHS_ID as UTILS_MONTHS } from "@/lib/pregnancy-utils"
 
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, LineChart, Line
@@ -282,39 +283,49 @@ export default function IbuProfilePage() {
             </CardHeader>
 
             <CardContent className="pt-4 px-4 pb-4 flex-1">
-              {ibu.isHamil ? (
-                <div className="space-y-4">
-                  <div className="bg-pink-50 border border-pink-100 rounded-xl p-3">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[11px] font-bold text-pink-700">USIA KEHAMILAN</span>
-                      <span className="text-[14px] font-bold text-pink-800">— Minggu</span>
-                    </div>
-                    <div className="w-full bg-pink-200/50 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-pink-500 h-full rounded-full" style={{ width: '0%' }} />
-                    </div>
-                    <p className="text-[10px] text-pink-600 mt-2 font-medium">Trimester — · Perkiraan Lahir: —</p>
-                  </div>
+              {ibu.isHamil ? (() => {
+                    const hpht = ibu.pregnancyProfile?.hpht;
+                    if (!hpht) return null;
 
-                  <div className="space-y-3 pt-2">
-                    {[
-                      { label: "Berat Badan Pre-Kehamilan", value: `${ibu.pregnancyProfile?.bbPrepregnancyKg || "—"} kg` },
-                      { label: "Target Kenaikan", value: `${ibu.pregnancyProfile?.targetGainMinKg || "—"} - ${ibu.pregnancyProfile?.targetGainMaxKg || "—"} kg` },
-                      { 
-                        label: "Kenaikan Saat Ini", 
-                        value: ibu.pregnancyVisits?.length > 0 
-                          ? `+${ibu.pregnancyVisits[ibu.pregnancyVisits.length - 1].weightGainKg} kg` 
-                          : "0 kg", 
-                        color: "text-green-600" 
-                      },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center">
-                        <span className="text-[12px] text-slate-500 font-medium">{item.label}</span>
-                        <span className={cn("text-[13px] font-bold text-[#173753]", item.color)}>{item.value}</span>
+                    const age = calculateGestationalAge(new Date(hpht));
+                    const hpl = calculateHPL(new Date(hpht));
+                    const trimester = age <= 12 ? 1 : age <= 27 ? 2 : 3;
+                    const hplStr = `${hpl.getDate()} ${MONTHS_ID[hpl.getMonth()]} ${hpl.getFullYear()}`;
+                    const progress = Math.min((age / 40) * 100, 100);
+
+                    return (
+                      <div className="space-y-4">
+                        <div className="bg-pink-50 border border-pink-100 rounded-xl p-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-[11px] font-bold text-pink-700">USIA KEHAMILAN</span>
+                            <span className="text-[14px] font-bold text-pink-800">{age} Minggu</span>
+                          </div>
+                          <div className="w-full bg-pink-200/50 rounded-full h-1.5 overflow-hidden">
+                            <div className="bg-pink-500 h-full rounded-full" style={{ width: `${progress}%` }} />
+                          </div>
+                          <p className="text-[10px] text-pink-600 mt-2 font-medium">Trimester {trimester} · Perkiraan Lahir: {hplStr}</p>
+                        </div>
+                        <div className="space-y-3 pt-2">
+                          {[
+                            { label: "Berat Badan Pre-Kehamilan", value: `${ibu.pregnancyProfile?.bbPrepregnancyKg || "—"} kg` },
+                            { label: "Target Kenaikan", value: `${ibu.pregnancyProfile?.targetGainMinKg || "—"} - ${ibu.pregnancyProfile?.targetGainMaxKg || "—"} kg` },
+                            { 
+                              label: "Kenaikan Saat Ini", 
+                              value: ibu.pregnancyVisits?.length > 0 
+                                ? `+${ibu.pregnancyVisits[ibu.pregnancyVisits.length - 1].weightGainKg} kg` 
+                                : "0 kg", 
+                              color: "text-green-600" 
+                            },
+                          ].map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center">
+                              <span className="text-[12px] text-slate-500 font-medium">{item.label}</span>
+                              <span className={cn("text-[13px] font-bold text-[#173753]", item.color)}>{item.value}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
+                    );
+                  })() : (
                 <div className="space-y-4">
                   <div className="bg-[#F0FDF4] border border-[#DCFCE7] rounded-xl p-4 text-center">
                     <p className="text-[10px] font-bold text-[#15803D] uppercase tracking-widest mb-1">Hasil Skrining Terakhir</p>
