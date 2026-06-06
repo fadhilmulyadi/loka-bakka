@@ -149,7 +149,7 @@ export default function LoginPage() {
                     >
                       Password
                     </label>
-                    <div className={inputShellClassName}>
+                    <div className={`${inputShellClassName} min-w-0`}>
                       <span
                         className={`${inputAddonClassName} rounded-l-[6px] rounded-r-none border-r-0 pl-[14px] pr-[2.5px]`}
                       >
@@ -163,7 +163,7 @@ export default function LoginPage() {
                         placeholder="Masukan password"
                         required
                         autoComplete="current-password"
-                        className={`${inputFieldClassName} rounded-none border-x-0`}
+                        className={`${inputFieldClassName} min-w-0 rounded-none border-x-0`}
                       />
                       <button
                         type="button"
