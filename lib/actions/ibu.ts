@@ -42,13 +42,13 @@ export async function getIbuData() {
 
   // Data Kehamilan
   const pregnancyData = isPregnant ? {
-    weeksPregnant: 24, // TODO: Hitung dari HPHT jika ada
-    dueDate: "12 Sep 2026",
+    weeksPregnant: 0, // TODO: Hitung dari HPHT jika ada
+    dueDate: "—",
     riskStatus: lastSkrining?.kategori || "Aman",
-    riskScore: lastSkrining?.skorRisiko || 16,
-    lila: lastVisit?.lilaCm ?? 25.1,
-    hb: lastVisit?.hbGdl ?? 11.8,
-    bbGain: lastVisit?.weightGainKg ?? 6.5,
+    riskScore: lastSkrining?.skorRisiko || 0,
+    lila: lastVisit?.lilaCm ?? 0,
+    hb: lastVisit?.hbGdl ?? 0,
+    bbGain: lastVisit?.weightGainKg ?? 0,
     isOnTrack: lastVisit?.isOnTrack ?? null,
     targetGainMin: pregnancyProfile?.targetGainMinKg ?? null,
     targetGainMax: pregnancyProfile?.targetGainMaxKg ?? null,

@@ -24,6 +24,7 @@ import {
   Bell,
   LogOut,
   ChevronDown,
+  Baby,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -272,7 +273,7 @@ export default function CatatKunjunganPage() {
         <div className="flex items-center gap-2 flex-none">
           <div className="flex items-center gap-2 px-4 h-8 text-xs text-[#173753] bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
             <Clock className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{time || <span className="text-gray-300 italic font-normal">(Belum diisi)</span>}</span>
+            <span className="tabular-nums font-medium">{time || <span className="text-gray-300 italic font-normal text-sm">—</span>}</span>
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8 bg-white rounded-full shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80">
             <Bell className="w-4 h-4" />
@@ -312,7 +313,7 @@ export default function CatatKunjunganPage() {
             </Avatar>
             <div>
               <p className="text-xs text-[#173753] font-medium leading-none">{session?.user?.name ?? "Zee Asadel"}</p>
-              <p className="text-xs font-medium text-muted-foreground mt-0.5">Kader {childData.posyandu}</p>
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">Kader Posyandu {childData.posyandu?.split(" · ")[0]}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -329,14 +330,19 @@ export default function CatatKunjunganPage() {
                 {childData.name[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-lg font-medium text-[#173753] leading-tight">{childData.name}</div>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-sm font-semibold text-[#173753]">{childData.age}</span>
-                  <span className="h-3 w-px bg-gray-300" />
-                  <span className="text-sm text-muted-foreground">{childData.gender}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-medium text-[#173753] leading-tight">{childData.name}</h2>
                 </div>
-                <div className="text-xs text-muted-foreground mt-0.5">{childData.posyandu} · {childData.desa}</div>
-                <div className="text-[10px] font-mono text-muted-foreground/50 mt-0.5 tracking-wide">{childData.id}</div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg">
+                    <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                    {childData.age}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg">
+                    <Baby className={cn("w-3.5 h-3.5", childData.gender === 'Perempuan' ? "text-pink-400" : "text-blue-400")} />
+                    {childData.gender}
+                  </div>
+                </div>
               </div>
               <div className="text-right shrink-0 border-l border-gray-200 pl-4">
                 <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Pemeriksaan terakhir</div>
@@ -358,23 +364,22 @@ export default function CatatKunjunganPage() {
           {/* Hasil pengukuran */}
           <SectionCard title="Hasil pengukuran">
             {/* Source toggle */}
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-xs text-muted-foreground font-medium">Sumber data</span>
-              <div className="flex rounded-lg overflow-hidden border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-widest">Metode Penginputan</span>
+              <div className="flex p-1 rounded-xl bg-slate-100 gap-1">
                 {(["alat", "manual"] as const).map((s) => (
                   <button
                     key={s}
                     type="button"
                     onClick={() => setSource(s)}
                     className={cn(
-                      "px-3 py-1.5 text-xs font-medium transition-colors",
+                      "px-4 py-1.5 text-[10px] font-medium uppercase tracking-widest rounded-lg transition-all",
                       source === s
-                        ? "text-white"
-                        : "text-muted-foreground hover:text-[#173753] hover:bg-gray-50",
+                        ? "bg-[#52A9E3] text-white shadow-sm"
+                        : "text-[#173753] hover:bg-[#52A9E3]/10",
                     )}
-                    style={source === s ? { background: NAVY } : {}}
                   >
-                    {s === "alat" ? "Dari alat" : "Input manual"}
+                    {s === "alat" ? "Auto-Sync" : "Manual"}
                   </button>
                 ))}
               </div>
@@ -382,34 +387,19 @@ export default function CatatKunjunganPage() {
 
             {/* Device sync banner */}
             {source === "alat" && (
-              <div
-                className="flex items-start gap-3 px-4 py-3 rounded-xl mb-4 border border-green-100"
-                style={{ background: "rgba(30,142,62,0.05)" }}
-              >
-                <div
-                  className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ background: "rgba(30,142,62,0.12)" }}
-                >
-                  <Wifi className="h-4 w-4 text-[#1E8E3E]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-[#173753]">
-                      Terhubung ke alat{" "}
-                      <span className="font-mono text-[#1E8E3E]">#PSY-203</span>
-                    </span>
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                      style={{ background: "#E6F4EA", color: "#1E8E3E" }}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" />
-                      Live
-                    </span>
+              <div className="flex items-start justify-between p-4 rounded-2xl mb-6 bg-blue-50/50 border border-blue-100 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-100 text-blue-600 shrink-0">
+                    <Wifi className="w-4 h-4 animate-pulse" />
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Data diterima pukul{" "}
-                    <b className="font-semibold text-[#173753]">14:08</b>{" "}
-                    hari ini · Periksa kembali sebelum menyimpan
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-medium text-[#173753]">Terhubung ke Antropometri Kit</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-green-500 text-white text-[9px] font-medium uppercase tracking-tighter">Live</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5 font-medium leading-relaxed">
+                      Menunggu data dari perangkat bluetooth... Pastikan alat dalam keadaan menyala.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -420,20 +410,23 @@ export default function CatatKunjunganPage() {
             <MeasureRow icon={Scale}  label="Berat badan"  metric="bb" value={bb} onChange={setBb} unit="kg" />
 
             {/* Overall status */}
-            <div
-              className="flex items-center justify-between mt-4 px-4 py-3 rounded-xl"
-              style={{
-                background:
-                  overall === "baik"
-                    ? "rgba(30,142,62,0.07)"
-                    : overall === "cukup"
-                    ? "rgba(176,96,0,0.08)"
-                    : "rgba(217,48,37,0.07)",
-              }}
-            >
-              <span className="text-sm text-[#173753] font-medium">
-                Interpretasi status gizi kunjungan ini
-              </span>
+            <div className={cn(
+              "mt-6 p-4 rounded-2xl flex items-center justify-between transition-colors",
+              overall === "baik" ? "bg-green-50/50 border border-green-100" : 
+              overall === "cukup" ? "bg-amber-50/50 border border-amber-100" : 
+              "bg-red-50/50 border border-red-100"
+            )}>
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center",
+                  overall === "baik" ? "bg-green-100 text-green-600" :
+                  overall === "cukup" ? "bg-amber-100 text-amber-600" :
+                  "bg-red-100 text-red-600"
+                )}>
+                  <Info className="w-4 h-4" />
+                </div>
+                <span className="text-[13px] font-medium text-[#173753]">Analisis Kesehatan Kunjungan</span>
+              </div>
               <StatusPill status={overall} />
             </div>
           </SectionCard>
@@ -444,10 +437,10 @@ export default function CatatKunjunganPage() {
 
           {/* Summary card */}
           <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl">
-            <CardHeader className="pb-1.5 border-b border-gray-100 px-4">
+            <CardHeader className="pb-1 border-b border-gray-100 px-4">
               <CardTitle className="text-[16px] font-medium text-[#173753]">Ringkasan kunjungan</CardTitle>
             </CardHeader>
-            <CardContent className="pt-2 px-4">
+            <CardContent className="pt-0 px-4">
               {/* Measurements */}
               <div className="space-y-0 mb-4">
                 {[
@@ -463,7 +456,7 @@ export default function CatatKunjunganPage() {
                     </span>
                     <span className="text-right">
                       <span className="text-xl font-bold text-[#173753] tabular-nums">
-                        {m.value || <span className="text-gray-300 italic font-normal text-sm">(Belum diisi)</span>}
+                        {m.value || <span className="text-gray-300 italic font-normal text-sm">—</span>}
                       </span>
                       {m.value && <span className="text-xs text-muted-foreground ml-1">{m.unit}</span>}
                       <Delta now={m.value} prev={m.prev} unit={m.unit} />

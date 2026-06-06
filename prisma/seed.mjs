@@ -1,108 +1,112 @@
 import "dotenv/config"
-
-import { PrismaPg } from "@prisma/adapter-pg"
+import pkg from "pg"
 import bcrypt from "bcryptjs"
-import { PrismaClient } from "../app/generated/prisma/index.js"
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
-const prisma = new PrismaClient({ adapter })
+const { Pool } = pkg
+
+// Gunakan DIRECT_URL untuk seeding karena lebih stabil untuk banyak operasi sekaligus
+const pool = new Pool({
+  connectionString: process.env.DIRECT_URL || process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+})
 
 async function main() {
-  const posyandu =
-    (await prisma.posyandu.findFirst({
-      where: {
-        nama: "Posyandu Melati",
-        alamat: "Jl. Melati No. 1",
-      },
-    })) ??
-    (await prisma.posyandu.create({
-      data: {
-        nama: "Posyandu Melati",
-        alamat: "Jl. Melati No. 1",
-        kelurahan: "Melati",
-        kecamatan: "Kecamatan Sehat",
-        kota: "Kota Sehat",
-        latitude: -5.1477,
-        longitude: 119.4327,
-      },
-    }))
+  const client = await pool.connect()
+  try {
+    console.log("Seeding started via RAW SQL (Direct Supabase)...")
 
-  await prisma.kader.upsert({
-    where: { username: "zee.asadel" },
-    update: {
-      nama: "Zee Asadel",
-      password: await bcrypt.hash("password123", 10),
-      posyanduId: posyandu.id,
-    },
-    create: {
-      nama: "Zee Asadel",
-      username: "zee.asadel",
-      password: await bcrypt.hash("password123", 10),
-      posyanduId: posyandu.id,
-    },
-  })
+    // 1. Upsert Posyandu
+    const posyanduRes = await client.query(`
+      INSERT INTO "Posyandu" (id, nama, alamat, kelurahan, kecamatan, kota, latitude, longitude)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (id) DO UPDATE SET
+        nama = EXCLUDED.nama,
+        alamat = EXCLUDED.alamat,
+        kelurahan = EXCLUDED.kelurahan,
+        kecamatan = EXCLUDED.kecamatan,
+        kota = EXCLUDED.kota
+      RETURNING id
+    `, ['cmq1posyandu001', 'Posyandu Melati', 'Jl. Melati No. 1', 'Melati', 'Kecamatan Sehat', 'Kota Sehat', -5.1477, 119.4327])
+    
+    const posyanduId = posyanduRes.rows[0].id
 
-  await prisma.ibu.upsert({
-    where: { username: "andi.pratama" },
-    update: {
-      nama: "Andi Pratama",
-      pin: await bcrypt.hash("1234", 10),
-      noHp: "081234567890",
-      alamat: "Jl. Sehat No. 1",
-      posyanduId: posyandu.id,
-    },
-    create: {
-      nama: "Andi Pratama",
-      username: "andi.pratama",
-      pin: await bcrypt.hash("1234", 10),
-      noHp: "081234567890",
-      alamat: "Jl. Sehat No. 1",
-      posyanduId: posyandu.id,
-    },
-  })
+    // 2. Upsert Kader
+    const passwordHash = await bcrypt.hash("password123", 10)
+    await client.query(`
+      INSERT INTO "Kader" (id, nama, username, password, "posyanduId")
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (username) DO UPDATE SET
+        nama = EXCLUDED.nama,
+        password = EXCLUDED.password,
+        "posyanduId" = EXCLUDED."posyanduId"
+    `, ['cmq1kader001', 'Zee Asadel', 'zee.asadel', passwordHash, posyanduId])
 
-  const ibu = await prisma.ibu.findUnique({ where: { username: "andi.pratama" } })
+    // 3. Upsert Ibu
+    const pinHash = await bcrypt.hash("1234", 10)
+    const ibuRes = await client.query(`
+      INSERT INTO "Ibu" (id, nama, username, pin, "noHp", alamat, "posyanduId")
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (username) DO UPDATE SET
+        nama = EXCLUDED.nama,
+        pin = EXCLUDED.pin,
+        "noHp" = EXCLUDED."noHp",
+        alamat = EXCLUDED.alamat,
+        "posyanduId" = EXCLUDED."posyanduId"
+      RETURNING id
+    `, ['cmq1ibu001', 'Andi Pratama', 'andi.pratama', pinHash, '081234567890', 'Jl. Sehat No. 1', posyanduId])
+    
+    const ibuId = ibuRes.rows[0].id
 
-  // Pregnancy profile (IMT Normal: 52kg / 1.58² = 20.83)
-  await prisma.pregnancyProfile.upsert({
-    where: { ibuId: ibu.id },
-    update: {},
-    create: {
-      ibuId: ibu.id,
-      bbPrepregnancyKg: 52,
-      heightCm: 158,
-      imtPrepregnancy: 20.83,
-      imtCategory: "normal",
-      targetGainMinKg: 11.3,
-      targetGainMaxKg: 15.9,
-      weeklyGainMinKg: 0.36,
-      weeklyGainMaxKg: 0.45,
-    },
-  })
+    // 4. Upsert Pregnancy Profile
+    await client.query(`
+      INSERT INTO "PregnancyProfile" (
+        id, "ibuId", hpht, "bbPrepregnancyKg", "heightCm", 
+        "imtPrepregnancy", "imtCategory", "targetGainMinKg", 
+        "targetGainMaxKg", "weeklyGainMinKg", "weeklyGainMaxKg"
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT ("ibuId") DO UPDATE SET
+        hpht = EXCLUDED.hpht,
+        "bbPrepregnancyKg" = EXCLUDED."bbPrepregnancyKg",
+        "heightCm" = EXCLUDED."heightCm",
+        "imtPrepregnancy" = EXCLUDED."imtPrepregnancy",
+        "imtCategory" = EXCLUDED."imtCategory",
+        "targetGainMinKg" = EXCLUDED."targetGainMinKg",
+        "targetGainMaxKg" = EXCLUDED."targetGainMaxKg",
+        "weeklyGainMinKg" = EXCLUDED."weeklyGainMinKg",
+        "weeklyGainMaxKg" = EXCLUDED."weeklyGainMaxKg"
+    `, [
+      'cmq1preg001', ibuId, new Date("2026-01-01"), 52, 158, 
+      20.83, 'normal', 11.3, 15.9, 0.36, 0.45
+    ])
 
-  // Hapus kunjungan lama agar seed idempoten
-  await prisma.pregnancyVisit.deleteMany({ where: { ibuId: ibu.id } })
+    // 5. Delete and Insert Pregnancy Visits
+    await client.query('DELETE FROM "PregnancyVisit" WHERE "ibuId" = $1', [ibuId])
 
-  // 4 kunjungan sample (urutan lama ke baru)
-  const visits = [
-    { visitDate: new Date("2026-04-01"), currentWeightKg: 53.5, weightGainKg: 1.5,  lilaCm: 25.2, hbGdl: 12.0, isOnTrack: true  },
-    { visitDate: new Date("2026-04-30"), currentWeightKg: 55.5, weightGainKg: 3.5,  lilaCm: 25.0, hbGdl: 11.8, isOnTrack: true  },
-    { visitDate: new Date("2026-05-05"), currentWeightKg: 57.0, weightGainKg: 5.0,  lilaCm: 24.8, hbGdl: 10.9, isOnTrack: false },
-    { visitDate: new Date("2026-06-02"), currentWeightKg: 60.5, weightGainKg: 8.5,  lilaCm: 25.1, hbGdl: 11.8, isOnTrack: true  },
-  ]
+    const visits = [
+      { visitDate: new Date("2026-04-01"), currentWeightKg: 53.5, weightGainKg: 1.5,  lilaCm: 25.2, hbGdl: 12.0, isOnTrack: true  },
+      { visitDate: new Date("2026-04-30"), currentWeightKg: 55.5, weightGainKg: 3.5,  lilaCm: 25.0, hbGdl: 11.8, isOnTrack: true  },
+      { visitDate: new Date("2026-05-05"), currentWeightKg: 57.0, weightGainKg: 5.0,  lilaCm: 24.8, hbGdl: 10.9, isOnTrack: false },
+      { visitDate: new Date("2026-06-02"), currentWeightKg: 60.5, weightGainKg: 8.5,  lilaCm: 25.1, hbGdl: 11.8, isOnTrack: true  },
+    ]
 
-  for (const v of visits) {
-    await prisma.pregnancyVisit.create({ data: { ibuId: ibu.id, ...v } })
+    let visitCounter = 1
+    for (const v of visits) {
+      await client.query(`
+        INSERT INTO "PregnancyVisit" ("id", "ibuId", "visitDate", "currentWeightKg", "weightGainKg", "lilaCm", "hbGdl", "isOnTrack")
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [`visit-${visitCounter++}`, ibuId, v.visitDate, v.currentWeightKg, v.weightGainKg, v.lilaCm, v.hbGdl, v.isOnTrack])
+    }
+
+    console.log("Seed successful via Direct SQL")
+  } catch (err) {
+    console.error("Seed failed:", err)
+  } finally {
+    client.release()
+    await pool.end()
   }
-
-  console.log("Seed berhasil")
 }
 
 main()
-  .catch((error) => {
-    console.error(error)
-    process.exitCode = 1
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })

@@ -103,14 +103,14 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
           
           <span className="relative inline-flex items-center gap-1.5 bg-white/20 border border-white/30 px-3 py-1 rounded-full text-[12px] font-semibold">
             <Flame className="w-[13px] h-[13px]" />
-            Trimester 2 · Sedang Berjalan
+            {pregnancyData.weeksPregnant > 0 ? 'Trimester 2 · Sedang Berjalan' : 'Trimester — · Belum Ada Data'}
           </span>
           <div className="flex items-end gap-2 mt-3">
-            <span className="text-[52px] font-bold leading-[0.9] tracking-tighter">{pregnancyData.weeksPregnant}</span>
+            <span className="text-[52px] font-bold leading-[0.9] tracking-tighter">{pregnancyData.weeksPregnant > 0 ? pregnancyData.weeksPregnant : '—'}</span>
             <span className="text-[17px] font-medium opacity-90 pb-1.5">Minggu Kehamilan</span>
           </div>
           <p className="text-[13px] font-normal opacity-85 mt-2 max-w-[230px] leading-relaxed">
-            Si kecil kini sebesar buah jagung — mulai bisa mendengar suara Bunda.
+            {pregnancyData.weeksPregnant > 0 ? 'Si kecil kini sebesar buah jagung — mulai bisa mendengar suara Bunda.' : 'Minta bidan atau kader untuk mencatat HPHT Anda.'}
           </p>
           
           <div className="flex gap-2.5 mt-4">
@@ -120,7 +120,11 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
                 Perkiraan Lahir
               </div>
               <div className="text-[18px] font-bold mt-1 tracking-tight">
-                {pregnancyData.dueDate.split(' ')[0]} {pregnancyData.dueDate.split(' ')[1]}<small className="text-[12px] font-medium opacity-85 ml-1"> {pregnancyData.dueDate.split(' ')[2]}</small>
+                {pregnancyData.dueDate === "—" ? "—" : (
+                  <>
+                    {pregnancyData.dueDate.split(' ')[0]} {pregnancyData.dueDate.split(' ')[1]}<small className="text-[12px] font-medium opacity-85 ml-1"> {pregnancyData.dueDate.split(' ')[2]}</small>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex-1 bg-white/10 border border-white/20 rounded-[14px] p-3">
@@ -129,7 +133,7 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
                 Hitung Mundur
               </div>
               <div className="text-[18px] font-bold mt-1 tracking-tight">
-                112<small className="text-[12px] font-medium opacity-85 ml-1"> hari lagi</small>
+                {pregnancyData.dueDate === "—" ? "—" : "112"}<small className="text-[12px] font-medium opacity-85 ml-1">{pregnancyData.dueDate === "—" ? "" : " hari lagi"}</small>
               </div>
             </div>
           </div>
@@ -137,10 +141,10 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
           <div className="mt-3.5">
             <div className="flex justify-between text-[11px] font-medium opacity-80 mb-1.5">
               <span>Perjalanan kehamilan</span>
-              <span>60%</span>
+              <span>{pregnancyData.weeksPregnant > 0 ? '60%' : '—'}</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full bg-white transition-all duration-500" style={{ width: '60%' }} />
+              <div className="h-full bg-white transition-all duration-500" style={{ width: pregnancyData.weeksPregnant > 0 ? '60%' : '0%' }} />
             </div>
           </div>
         </section>

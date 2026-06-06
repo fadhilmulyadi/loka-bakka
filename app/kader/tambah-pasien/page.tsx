@@ -6,6 +6,7 @@ import Link from "next/link"
 import {
   ChevronRight, ChevronDown, Check, ArrowRight,
   Search, TriangleAlert, Clock, Bell, LogOut,
+  User, Baby,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,8 +15,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { createIbu } from "@/lib/actions/kader"
+import { calculateIMT, getIMTCategory, getIOMTargets } from "@/lib/growth-standards/imt-calc"
 
 const MONTHS_ID = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"]
+const FULL_MONTHS_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 const ACCENT = "#52A9E3"
 
 function useTime() {
@@ -41,6 +44,11 @@ interface FormState {
   noHp: string
   tanggalLahir: string
   alamat: string
+  isHamil: boolean
+  hpht: string
+  bbPrepregnancyKg: string
+  heightCm: string
+  currentWeightKg: string
 }
 
 const requiredFields = ["nama", "username", "password"] as const
@@ -60,25 +68,35 @@ function FormField({ label, required, hint, children }: {
   )
 }
 
-function TextInput({ value, onChange, placeholder, type = "text" }: {
-  value: string; onChange: (v: string) => void; placeholder?: string; type?: string
+function TextInput({ value, onChange, placeholder, type = "text", suffix }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string; suffix?: string
 }) {
   return (
-    <Input
-      type={type}
-      value={value}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-10 text-sm border-gray-200 focus-visible:ring-1 focus-visible:ring-[#52A9E3] focus-visible:border-[#52A9E3] rounded-lg text-[#173753] placeholder:text-gray-300"
-    />
+    <div className="relative">
+      <Input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className={cn(
+          "h-10 text-sm border-gray-200 focus-visible:ring-1 focus-visible:ring-[#52A9E3] focus-visible:border-[#52A9E3] rounded-lg text-[#173753] placeholder:text-gray-300",
+          suffix && "pr-10"
+        )}
+      />
+      {suffix && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground pointer-events-none">
+          {suffix}
+        </span>
+      )}
+    </div>
   )
 }
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl">
-      <CardHeader className="pb-1.5 border-b border-gray-100 px-4">
-        <CardTitle className="text-[16px] font-medium text-[#173753]">{title}</CardTitle>
+    <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden">
+      <CardHeader className="pb-1.5 border-b border-[#F0F0F0] px-4">
+        <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-2 px-4">{children}</CardContent>
     </Card>
@@ -92,14 +110,43 @@ export default function TambahPasienPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [f, setF] = useState<FormState>({
-    nama: "", username: "", password: "", noHp: "", tanggalLahir: "", alamat: "",
+    nama: "", username: "", password: "", noHp: "", tanggalLahir: "", alamat: "", isHamil: false,
+    hpht: "", bbPrepregnancyKg: "", heightCm: "", currentWeightKg: "",
   })
 
-  const set = (k: keyof FormState) => (v: string) =>
+  const set = (k: keyof FormState) => (v: string | boolean) =>
     setF((prev) => ({ ...prev, [k]: v }))
 
-  const filled = requiredFields.filter((k) => !!f[k]).length
-  const complete = filled === requiredFields.length && f.password.length >= 6
+  // Pregnancy calculations
+  const preg = (() => {
+    if (!f.isHamil || !f.hpht) return null
+    const hpht = new Date(f.hpht)
+    const now = new Date()
+    const diffTime = now.getTime() - hpht.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    const weeks = Math.floor(diffDays / 7)
+    
+    const edd = new Date(hpht)
+    edd.setDate(edd.getDate() + 280)
+    
+    let trimester = 1
+    if (weeks >= 28) trimester = 3
+    else if (weeks >= 14) trimester = 2
+
+    const imt = (f.bbPrepregnancyKg && f.heightCm) 
+      ? calculateIMT(Number(f.bbPrepregnancyKg), Number(f.heightCm)) 
+      : null
+    const targets = imt ? getIOMTargets(getIMTCategory(imt)) : null
+    const currentGain = (f.currentWeightKg && f.bbPrepregnancyKg)
+      ? Number(f.currentWeightKg) - Number(f.bbPrepregnancyKg)
+      : null
+
+    return { weeks, edd, trimester, targets, currentGain }
+  })()
+
+  const filled = requiredFields.filter((k) => !!f[k as RequiredKey]).length
+  const pregComplete = !f.isHamil || (!!f.hpht && !!f.bbPrepregnancyKg && !!f.heightCm)
+  const complete = filled === requiredFields.length && f.password.length >= 6 && pregComplete
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -113,6 +160,11 @@ export default function TambahPasienPage() {
         noHp: f.noHp || undefined,
         tanggalLahir: f.tanggalLahir || undefined,
         alamat: f.alamat || undefined,
+        isHamil: f.isHamil,
+        hpht: f.isHamil ? f.hpht : undefined,
+        bbPrepregnancyKg: f.isHamil ? Number(f.bbPrepregnancyKg) : undefined,
+        heightCm: f.isHamil ? Number(f.heightCm) : undefined,
+        currentWeightKg: f.isHamil ? Number(f.currentWeightKg) : undefined,
       })
       setSaved(true)
       setTimeout(() => router.push(`/kader/ibu/${ibu.id}`), 1000)
@@ -211,6 +263,80 @@ export default function TambahPasienPage() {
                 </div>
               </div>
             </SectionCard>
+
+            <SectionCard title="Status kehamilan">
+              <div className="grid grid-cols-2 gap-3 py-1 mb-2">
+                {([
+                  { value: false, label: "Tidak hamil", Icon: User },
+                  { value: true,  label: "Sedang hamil", Icon: Baby  },
+                ] as { value: boolean; label: string; Icon: React.ElementType }[]).map(({ value, label, Icon }) => {
+                  const selected = f.isHamil === value
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => set("isHamil")(value)}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 rounded-xl border-2 py-4 px-3 transition-all text-sm font-medium",
+                        selected
+                          ? "border-[#52A9E3] bg-[#EBF2F8] text-[#52A9E3]"
+                          : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+                      )}
+                    >
+                      <Icon className="w-6 h-6" strokeWidth={1.8} />
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {f.isHamil && (
+                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-gray-100">
+                  <div className="col-span-2 bg-[#F8FAFC] p-4 rounded-xl border border-blue-50/50">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-[#52A9E3] uppercase tracking-wider mb-1">Usia Kehamilan</p>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-2xl font-bold text-[#173753]">{preg?.weeks ?? "—"}</span>
+                          <span className="text-sm font-medium text-[#173753]/60">Minggu</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">
+                          {preg ? `Trimester ${preg.trimester} · Perkiraan Lahir: ${preg.edd.getDate()} ${MONTHS_ID[preg.edd.getMonth()]} ${preg.edd.getFullYear()}` : "Input HPHT untuk kalkulasi"}
+                        </p>
+                      </div>
+                      <div className="h-12 w-[1px] bg-gray-200" />
+                      <div className="flex-1 pl-2">
+                        <p className="text-[10px] font-bold text-[#52A9E3] uppercase tracking-wider mb-1">Target Kenaikan</p>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xl font-bold text-[#173753]">
+                            {preg?.targets ? `${preg.targets.totalGainMinKg}-${preg.targets.totalGainMaxKg}` : "—"}
+                          </span>
+                          <span className="text-sm font-medium text-[#173753]/60">kg</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">
+                          Kenaikan saat ini: <span className={cn("font-bold", (preg?.currentGain ?? 0) > 0 ? "text-green-600" : "text-[#173753]")}>
+                            {preg?.currentGain != null ? `${preg.currentGain.toFixed(1)} kg` : "—"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <FormField label="HPHT (Haid Terakhir)" required hint="Kalkulasi usia & EDD">
+                    <TextInput value={f.hpht} onChange={set("hpht")} type="date" />
+                  </FormField>
+                  <FormField label="Tinggi Badan" required hint="Untuk hitung IMT">
+                    <TextInput value={f.heightCm} onChange={set("heightCm")} type="number" placeholder="0" suffix="cm" />
+                  </FormField>
+                  <FormField label="BB Pre-Kehamilan" required>
+                    <TextInput value={f.bbPrepregnancyKg} onChange={set("bbPrepregnancyKg")} type="number" placeholder="0" suffix="kg" />
+                  </FormField>
+                  <FormField label="BB Saat Ini">
+                    <TextInput value={f.currentWeightKg} onChange={set("currentWeightKg")} type="number" placeholder="0" suffix="kg" />
+                  </FormField>
+                </div>
+              )}
+            </SectionCard>
           </div>
 
           {/* Right */}
@@ -221,7 +347,7 @@ export default function TambahPasienPage() {
                 <CardTitle className="text-[16px] font-medium text-[#173753]">Pratinjau</CardTitle>
               </CardHeader>
               <CardContent className="pt-2 px-4">
-                <div className="flex flex-col items-center text-center pb-5 border-b border-gray-100">
+                <div className="flex flex-col items-center text-center pb-5 border-b border-gray-100 relative">
                   <div
                     className="h-18 w-18 rounded-[20px] flex items-center justify-center text-[38px] font-bold text-[#173753] mb-3.5 select-none"
                     style={{ background: "linear-gradient(135deg, #C4D6E8, #52A9E3)" }}
@@ -249,6 +375,39 @@ export default function TambahPasienPage() {
                       </span>
                     </div>
                   ))}
+                  <div className="contents">
+                    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider self-center">Status</span>
+                    <span className={cn(
+                      "inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full w-fit",
+                      f.isHamil ? "bg-[#52A9E3] text-white" : "bg-gray-100 text-gray-500"
+                    )}>
+                      {f.isHamil ? <Baby className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                      {f.isHamil ? "Sedang Hamil" : "Tidak Hamil"}
+                    </span>
+                  </div>
+
+                  {f.isHamil && (
+                    <>
+                      <div className="contents">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider self-center">Hamil</span>
+                        <span className="text-sm font-bold text-[#52A9E3]">
+                          {preg?.weeks ?? "—"} Minggu (T{preg?.trimester ?? "—"})
+                        </span>
+                      </div>
+                      <div className="contents">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider self-center">HPL</span>
+                        <span className="text-sm font-medium text-[#173753]">
+                          {preg ? `${preg.edd.getDate()} ${MONTHS_ID[preg.edd.getMonth()]} ${preg.edd.getFullYear()}` : "—"}
+                        </span>
+                      </div>
+                      <div className="contents">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider self-center">Target</span>
+                        <span className="text-sm font-medium text-[#173753]">
+                          {preg?.targets ? `${preg.targets.totalGainMinKg}-${preg.targets.totalGainMaxKg} kg` : "—"}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -257,27 +416,25 @@ export default function TambahPasienPage() {
             <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl">
               <CardContent className="pt-2 pb-3 px-4">
                 <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Wajib diisi · {filled}/{requiredFields.length}
+                  Wajib diisi · {filled + (f.isHamil ? (pregComplete ? 1 : 0) : 0)}/{requiredFields.length + (f.isHamil ? 1 : 0)}
                 </div>
                 <div className="flex flex-col gap-2.5">
-                  {([
-                    { k: "nama" as const, l: "Nama lengkap" },
-                    { k: "username" as const, l: "Username" },
-                    { k: "password" as const, l: "Password (min. 6 karakter)" },
-                  ] as { k: RequiredKey; l: string }[]).map(({ k, l }) => {
-                    const ok = k === "password" ? f.password.length >= 6 : !!f[k]
-                    return (
-                      <div key={k} className={cn("flex items-center gap-2.5 text-sm transition-colors", ok ? "text-[#173753]" : "text-muted-foreground")}>
-                        <span
-                          className="h-4.5 w-4.5 rounded-full flex items-center justify-center shrink-0"
-                          style={ok ? { background: "#1E8E3E" } : { border: "1.5px solid #D1D5DB" }}
-                        >
-                          {ok && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.8} />}
-                        </span>
-                        {l}
-                      </div>
-                    )
-                  })}
+                  {[
+                    { k: "nama", l: "Nama lengkap", ok: !!f.nama },
+                    { k: "username", l: "Username", ok: !!f.username },
+                    { k: "password", l: "Password (min. 6)", ok: f.password.length >= 6 },
+                    ...(f.isHamil ? [{ k: "preg", l: "Data detail kehamilan", ok: pregComplete }] : []),
+                  ].map(({ k, l, ok }) => (
+                    <div key={k} className={cn("flex items-center gap-2.5 text-sm transition-colors", ok ? "text-[#173753]" : "text-muted-foreground")}>
+                      <span
+                        className="h-4.5 w-4.5 rounded-full flex items-center justify-center shrink-0"
+                        style={ok ? { background: "#1E8E3E" } : { border: "1.5px solid #D1D5DB" }}
+                      >
+                        {ok && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.8} />}
+                      </span>
+                      {l}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

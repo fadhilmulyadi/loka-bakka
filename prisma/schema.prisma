@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model Posyandu {
@@ -112,6 +112,7 @@ model PregnancyProfile {
   id                String   @id @default(cuid())
   ibuId             String   @unique
   ibu               Ibu      @relation(fields: [ibuId], references: [id], onDelete: Cascade)
+  hpht              DateTime
   bbPrepregnancyKg  Float
   heightCm          Float
   imtPrepregnancy   Float

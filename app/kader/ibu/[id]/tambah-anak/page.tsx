@@ -285,9 +285,13 @@ export default function TambahAnakIbuPage() {
       })
       setSaved(true)
       setTimeout(() => router.push(`/kader/ibu/${id}`), 1100)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert("Gagal mendaftarkan anak")
+      if (err.message === "POSYANDU_NOT_FOUND") {
+        alert("Sesi Anda tidak valid (Posyandu tidak ditemukan). Silakan Logout dan Login kembali.")
+      } else {
+        alert("Gagal mendaftarkan anak: " + (err.message || "Terjadi kesalahan"))
+      }
     }
   }
 

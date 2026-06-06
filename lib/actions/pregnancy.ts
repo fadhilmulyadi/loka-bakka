@@ -2,7 +2,13 @@
 
 import { prisma } from "@/lib/db"
 import { auth } from "@/auth"
-import type { PregnancyProfileData, PregnancyVisitData } from "@/lib/growth-standards/imt-calc"
+import { 
+  calculateIMT, 
+  getIMTCategory, 
+  getIOMTargets, 
+  type PregnancyProfileData, 
+  type PregnancyVisitData 
+} from "@/lib/growth-standards/imt-calc"
 
 export async function getPregnancyProfile(): Promise<PregnancyProfileData | null> {
   const session = await auth()
@@ -45,4 +51,83 @@ export async function getPregnancyVisits(): Promise<PregnancyVisitData[]> {
     hbGdl: v.hbGdl,
     isOnTrack: v.isOnTrack,
   }))
+}
+
+export async function savePregnancyVisit(data: {
+  ibuId: string
+  currentWeightKg: number
+  lilaCm: number
+  hbGdl: number
+  // Optional baseline data if profile doesn't exist yet
+  heightCm?: number
+  bbPrepregnancyKg?: number
+}) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  let ibu = await prisma.ibu.findUnique({
+    where: { id: data.ibuId },
+    include: { pregnancyProfile: true }
+  })
+
+  if (!ibu) throw new Error("Ibu not found")
+
+  // If no pregnancy profile, create one first
+  if (!ibu.pregnancyProfile) {
+    if (!data.heightCm || !data.bbPrepregnancyKg) {
+      throw new Error("Baseline data (Height and Pre-pregnancy Weight) is required for first visit")
+    }
+
+    const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
+    const category = getIMTCategory(imt)
+    const targets = getIOMTargets(category)
+
+    const profile = await prisma.pregnancyProfile.create({
+      data: {
+        ibuId: data.ibuId,
+        bbPrepregnancyKg: data.bbPrepregnancyKg,
+        heightCm: data.heightCm,
+        imtPrepregnancy: imt,
+        imtCategory: category,
+        targetGainMinKg: targets.totalGainMinKg,
+        targetGainMaxKg: targets.totalGainMaxKg,
+        weeklyGainMinKg: targets.weeklyGainMinKg,
+        weeklyGainMaxKg: targets.weeklyGainMaxKg,
+      }
+    })
+
+    // Refresh ibu object with the new profile
+    ibu.pregnancyProfile = profile
+  }
+
+  const weightGainKg = data.currentWeightKg - ibu.pregnancyProfile.bbPrepregnancyKg
+  
+  // Basic logic for "on track" (can be refined with gestational age later)
+  const isOnTrack = data.lilaCm >= 23.5 && data.hbGdl >= 11.0
+
+  const result = await prisma.pregnancyVisit.create({
+    data: {
+      ibuId: data.ibuId,
+      visitDate: new Date(),
+      currentWeightKg: data.currentWeightKg,
+      weightGainKg: weightGainKg,
+      lilaCm: data.lilaCm,
+      hbGdl: data.hbGdl,
+      isOnTrack: isOnTrack,
+    }
+  })
+
+  // Update Ibu's hamil status if not already set (just in case)
+  if (!ibu.isHamil) {
+    await prisma.ibu.update({
+      where: { id: data.ibuId },
+      data: { isHamil: true }
+    })
+  }
+
+  const { revalidatePath } = await import("next/cache")
+  revalidatePath(`/kader/ibu/${data.ibuId}`)
+  revalidatePath("/kader/dashboard")
+  
+  return result
 }

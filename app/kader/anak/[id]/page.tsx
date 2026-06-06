@@ -12,6 +12,12 @@ import {
   TriangleAlert,
   Clock,
   ChevronDown,
+  Calendar,
+  User,
+  MapPin,
+  Baby,
+  Users,
+  Hash,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -239,7 +245,7 @@ export default function ChildDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Top Left: Identity */}
-          <Card className="lg:col-span-2 ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none">
+          <Card className="lg:col-span-2 ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden">
             <CardHeader className="pb-1.5 border-b border-gray-100 px-4">
               <div className="flex items-center gap-4">
                 <div className="h-[50px] w-[50px] rounded-[14px] bg-[#DBEAFE] flex items-center justify-center text-[18px] font-bold text-[#1D4ED8] flex-shrink-0">
@@ -258,37 +264,37 @@ export default function ChildDetailPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-2 px-4 pb-5">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-2">
+            <CardContent className="pt-4 px-4 pb-6">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-5">
                 {[
-                  { label: "TANGGAL LAHIR", value: childDataState.birthDate },
-                  { label: "USIA SAAT INI", value: childDataState.age },
-                  { label: "JENIS KELAMIN", value: childDataState.gender },
-                  { label: "ANAK KE-", value: childDataState.childOrder },
-                  { label: "NAMA IBU", value: childDataState.parent.mother },
-                  { label: "NAMA AYAH", value: childDataState.parent.father },
+                  { icon: Calendar, label: "TANGGAL LAHIR", value: childDataState.birthDate },
+                  { icon: Clock, label: "USIA SAAT INI", value: childDataState.age },
+                  { icon: Users, label: "JENIS KELAMIN", value: childDataState.gender },
+                  { icon: Hash, label: "ANAK KE-", value: childDataState.childOrder || "—" },
+                  { icon: User, label: "NAMA IBU", value: childDataState.parent.mother },
+                  { icon: User, label: "NAMA AYAH", value: childDataState.parent.father || "—" },
+                  { icon: MapPin, label: "ALAMAT", value: childDataState.address, full: true },
                 ].map((item) => (
-                  <div key={item.label}>
-                    <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
-                      {item.label}
-                    </label>
-                    <span className="text-[12px] font-medium text-[#173753]">{item.value}</span>
+                  <div key={item.label} className={cn("flex gap-3", item.full && "col-span-2")}>
+                    <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] flex items-center justify-center shrink-0">
+                      <item.icon className="w-4 h-4 text-[#64748B]" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-[#94A3B8] mb-0.5 uppercase tracking-wider">
+                        {item.label}
+                      </label>
+                      <span className="text-[13px] font-semibold text-[#173753]">{item.value}</span>
+                    </div>
                   </div>
                 ))}
-                <div className="col-span-2">
-                  <label className="block text-[10px] font-semibold text-muted-foreground mb-0.5">
-                    ALAMAT
-                  </label>
-                  <span className="text-[12px] font-medium text-[#173753]">{childDataState.address}</span>
-                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Top Right: Nutrition Status */}
-          <Card className="lg:col-span-1 ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none">
+          <Card className="lg:col-span-1 ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden">
             <CardHeader className="pb-1.5 border-b border-[#F0F0F0] px-4">
-              <CardTitle className="text-[14px] font-medium text-[#173753] leading-tight">Status Gizi Terakhir</CardTitle>
+              <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Status Gizi Terakhir</CardTitle>
             </CardHeader>
 
             <CardContent className="pt-2 px-4 pb-4 flex flex-col h-full">
@@ -325,7 +331,7 @@ export default function ChildDetailPage() {
         </div>
 
         {/* Middle: Growth Chart */}
-        <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none">
+        <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden">
           <CardHeader className="pb-1.5 border-b border-[#F0F0F0] px-4">
             <div className="flex items-center justify-between">
               <div>

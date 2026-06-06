@@ -1,16 +1,19 @@
 import { PrismaClient } from "@/prisma/generated/prisma"
-import { PrismaPg } from "@prisma/adapter-pg"
 import { Pool } from "pg"
+import { PrismaPg } from "@prisma/adapter-pg"
 
-function getPrisma(): PrismaClient {
+function getPrisma() {
   const g = global as unknown as { prisma?: PrismaClient }
   if (!g.prisma) {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL! })
+    const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL
+    const pool = new Pool({ 
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    })
     const adapter = new PrismaPg(pool)
     g.prisma = new PrismaClient({ adapter })
-    if (process.env.NODE_ENV === "production") {
-      g.prisma.$connect()
-    }
   }
   return g.prisma
 }

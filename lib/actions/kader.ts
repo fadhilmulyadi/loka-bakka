@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
+import { calculateIMT, getIMTCategory, getIOMTargets } from "@/lib/growth-standards/imt-calc"
 
 export async function getChildren() {
   const session = await auth()
@@ -504,13 +505,18 @@ async function getValidatedPosyanduId() {
   }
 
   // Verify posyandu exists to avoid foreign key violations
-  const posyandu = await prisma.posyandu.findUnique({ where: { id: posyanduId } })
-  if (!posyandu) {
-    console.error(`DEBUG: posyanduId ${posyanduId} from session not found in database. This might happen if the database was reset but the session is stale.`)
-    throw new Error("POSYANDU_NOT_FOUND")
+  try {
+    const posyandu = await prisma.posyandu.findUnique({ where: { id: posyanduId } })
+    if (!posyandu) {
+      console.error(`DEBUG: posyanduId ${posyanduId} from session not found in database. This might happen if the database was reset but the session is stale.`)
+      throw new Error("POSYANDU_NOT_FOUND")
+    }
+    return posyanduId
+  } catch (error) {
+    if (error instanceof Error && error.message === "POSYANDU_NOT_FOUND") throw error
+    console.error("Database error in getValidatedPosyanduId:", error)
+    throw new Error("DATABASE_ERROR")
   }
-
-  return posyanduId
 }
 
 export async function createChild(data: {
@@ -568,6 +574,10 @@ export async function createIbu(data: {
   tanggalLahir?: string
   alamat?: string
   isHamil?: boolean
+  hpht?: string
+  bbPrepregnancyKg?: number
+  heightCm?: number
+  currentWeightKg?: number
 }) {
   const posyanduId = await getValidatedPosyanduId()
 
@@ -576,24 +586,62 @@ export async function createIbu(data: {
 
   const hashed = await bcrypt.hash(data.password, 10)
 
-  const result = await prisma.ibu.create({
-    data: {
-      nama: data.nama,
-      username: data.username,
-      pin: hashed,
-      noHp: data.noHp ?? null,
-      tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
-      alamat: data.alamat ?? null,
-      isHamil: data.isHamil ?? false,
-      posyanduId: posyanduId,
-    },
-    select: { id: true, nama: true, username: true },
+  return await prisma.$transaction(async (tx) => {
+    const ibu = await tx.ibu.create({
+      data: {
+        nama: data.nama,
+        username: data.username,
+        pin: hashed,
+        noHp: data.noHp ?? null,
+        tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
+        alamat: data.alamat ?? null,
+        isHamil: data.isHamil ?? false,
+        posyanduId: posyanduId,
+      },
+      select: { id: true, nama: true, username: true },
+    })
+
+    if (data.isHamil && data.hpht && data.bbPrepregnancyKg && data.heightCm) {
+      const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
+      const category = getIMTCategory(imt)
+      const targets = getIOMTargets(category)
+
+      await tx.pregnancyProfile.create({
+        data: {
+          ibuId: ibu.id,
+          hpht: new Date(data.hpht),
+          bbPrepregnancyKg: data.bbPrepregnancyKg,
+          heightCm: data.heightCm,
+          imtPrepregnancy: imt,
+          imtCategory: category,
+          targetGainMinKg: targets.totalGainMinKg,
+          targetGainMaxKg: targets.totalGainMaxKg,
+          weeklyGainMinKg: targets.weeklyGainMinKg,
+          weeklyGainMaxKg: targets.weeklyGainMaxKg,
+        }
+      })
+
+      if (data.currentWeightKg) {
+        const weightGainKg = data.currentWeightKg - data.bbPrepregnancyKg
+        await tx.pregnancyVisit.create({
+          data: {
+            ibuId: ibu.id,
+            visitDate: new Date(),
+            currentWeightKg: data.currentWeightKg,
+            weightGainKg: weightGainKg,
+            lilaCm: 0, // Placeholder
+            hbGdl: 0,  // Placeholder
+            isOnTrack: true,
+          }
+        })
+      }
+    }
+
+    revalidatePath("/kader/rekap")
+    revalidatePath("/kader/dashboard")
+
+    return ibu
   })
-
-  revalidatePath("/kader/rekap")
-  revalidatePath("/kader/dashboard")
-
-  return result
 }
 
 export async function getIbuById(id: string) {
@@ -603,6 +651,9 @@ export async function getIbuById(id: string) {
   const ibu = await prisma.ibu.findUnique({
     where: { id },
     include: {
+      posyandu: {
+        select: { nama: true }
+      },
       anaks: {
         include: {
           pengukurans: { orderBy: { tanggal: "desc" }, take: 1 },
@@ -610,11 +661,17 @@ export async function getIbuById(id: string) {
         orderBy: { createdAt: "asc" },
       },
       pregnancyProfile: true,
+      pregnancyVisits: {
+        orderBy: { visitDate: "asc" },
+      },
+      skrinings: {
+        orderBy: { tanggal: "desc" },
+      },
     },
   })
 
   if (!ibu || ibu.posyanduId !== session.user.posyanduId) throw new Error("Not found")
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { pin: _pin, ...safeIbu } = ibu
-  return safeIbu
+  const { pin: _pin, ...rest } = ibu
+  return { ...rest, posyandu: ibu.posyandu.nama }
 }

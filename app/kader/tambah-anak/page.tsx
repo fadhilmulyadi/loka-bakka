@@ -308,9 +308,13 @@ export default function TambahAnakPage() {
       })
       setSaved(true)
       setTimeout(() => router.push("/kader/rekap"), 1100)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert("Gagal mendaftarkan anak")
+      if (err.message === "POSYANDU_NOT_FOUND") {
+        alert("Sesi Anda tidak valid (Posyandu tidak ditemukan). Silakan Logout dan Login kembali.")
+      } else {
+        alert("Gagal mendaftarkan anak: " + (err.message || "Terjadi kesalahan"))
+      }
     }
   }
 
