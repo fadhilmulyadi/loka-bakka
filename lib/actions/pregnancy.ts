@@ -58,9 +58,10 @@ export async function savePregnancyVisit(data: {
   currentWeightKg: number
   lilaCm: number
   hbGdl: number
-  // Optional baseline data if profile doesn't exist yet
-  heightCm?: number
-  bbPrepregnancyKg?: number
+  // Baseline data required for first visit profile
+  heightCm: number
+  bbPrepregnancyKg: number
+  hpht: Date
 }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
@@ -74,10 +75,6 @@ export async function savePregnancyVisit(data: {
 
   // If no pregnancy profile, create one first
   if (!ibu.pregnancyProfile) {
-    if (!data.heightCm || !data.bbPrepregnancyKg) {
-      throw new Error("Baseline data (Height and Pre-pregnancy Weight) is required for first visit")
-    }
-
     const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
     const category = getIMTCategory(imt)
     const targets = getIOMTargets(category)
@@ -85,6 +82,7 @@ export async function savePregnancyVisit(data: {
     const profile = await prisma.pregnancyProfile.create({
       data: {
         ibuId: data.ibuId,
+        hpht: data.hpht,
         bbPrepregnancyKg: data.bbPrepregnancyKg,
         heightCm: data.heightCm,
         imtPrepregnancy: imt,

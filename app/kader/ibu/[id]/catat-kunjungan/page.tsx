@@ -194,6 +194,7 @@ export default function CatatKunjunganIbuPage() {
   const [bb, setBb] = useState("")
   const [lila, setLila] = useState("")
   const [hb, setHb] = useState("")
+  const [hpht, setHpht] = useState("")
   
   // Baseline states for first visit
   const [tb, setTb] = useState("")
@@ -243,8 +244,9 @@ export default function CatatKunjunganIbuPage() {
         currentWeightKg: parseFloat(bb),
         lilaCm: parseFloat(lila),
         hbGdl: parseFloat(hb),
-        heightCm: tb !== "" ? parseFloat(tb) : undefined,
-        bbPrepregnancyKg: bbBefore !== "" ? parseFloat(bbBefore) : undefined,
+        heightCm: tb !== "" ? parseFloat(tb) : 0,
+        bbPrepregnancyKg: bbBefore !== "" ? parseFloat(bbBefore) : 0,
+        hpht: hpht !== "" ? new Date(hpht) : new Date(),
       })
       setSaved(true)
       setTimeout(() => router.push(`/kader/ibu/${ibuId}`), 1200)
@@ -371,6 +373,15 @@ export default function CatatKunjunganIbuPage() {
                 </p>
                 <MeasureRow icon={Ruler} label="Tinggi Badan" value={tb} onChange={setTb} unit="CM" />
                 <MeasureRow icon={Scale} label="BB Sebelum Hamil" value={bbBefore} onChange={setBbBefore} unit="KG" />
+                
+                {/* Add HPHT input */}
+                <div className="grid items-center gap-4 py-3 border-b border-gray-100 last:border-0" style={{ gridTemplateColumns: "40px 1fr 160px" }}>
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "#EFF6FF", color: NAVY }}>
+                    <Calendar className="h-[18px] w-[18px]" />
+                  </div>
+                  <div className="text-sm font-semibold text-[#173753]">HPHT</div>
+                  <input type="date" value={hpht} onChange={(e) => setHpht(e.target.value)} className="w-full h-11 pl-3.5 pr-3 rounded-xl border border-gray-200 text-sm" />
+                </div>
               </SectionCard>
             )}
 
