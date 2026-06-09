@@ -7,6 +7,7 @@ import {
   CheckSquare, User, Baby, RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
+import GrowthChart from '@/components/ibu/growth-chart'
 
 interface ChildDashboardViewProps {
   data: {
@@ -269,6 +270,18 @@ export default function ChildDashboardView({ data, score, doneCount }: ChildDash
             </Link>
           </div>
         </section>
+
+        {/* Growth Chart section */}
+        {childData.pengukurans && childData.pengukurans.length > 0 && (
+          <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mt-5">
+            <h3 className="text-[14px] font-bold text-[#1F2937] mb-1">Grafik Pertumbuhan</h3>
+            <p className="text-[11px] text-[#697079] mb-3">Berat dan tinggi badan per kunjungan</p>
+            <GrowthChart
+              pengukurans={childData.pengukurans}
+              jenisKelamin={childData.jenisKelamin}
+            />
+          </section>
+        )}
 
         {/* STATUS NOTIF */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
