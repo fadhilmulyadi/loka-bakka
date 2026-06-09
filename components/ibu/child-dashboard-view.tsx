@@ -283,6 +283,43 @@ export default function ChildDashboardView({ data, score, doneCount }: ChildDash
           </section>
         )}
 
+        {/* VISIT HISTORY */}
+        {childData.pengukurans && childData.pengukurans.length > 0 && (
+          <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mt-5">
+            <h3 className="text-[14px] font-bold text-[#1F2937] mb-3">Riwayat Kunjungan</h3>
+            <div className="flex flex-col gap-2">
+              {[...childData.pengukurans]
+                .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+                .map((p, i) => {
+                  const statusColor =
+                    p.statusTBU === 'Normal'
+                      ? { bg: '#E7F7EF', text: '#1E9E62' }
+                      : p.statusTBU === 'Risiko Stunting'
+                      ? { bg: '#FFF7E6', text: '#8A6100' }
+                      : { bg: '#FEF1F1', text: '#9F1C1C' }
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 bg-[#F8FBFE] border border-[#E4EDE7] rounded-[13px]">
+                      <div>
+                        <div className="text-[12px] font-semibold text-[#1F2937]">
+                          {new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </div>
+                        <div className="text-[11px] text-[#697079] mt-0.5">
+                          {p.beratBadan.toFixed(1)} kg &bull; {p.tinggiBadan.toFixed(1)} cm &bull; Z-Score: {p.zScoreTBU.toFixed(1)}
+                        </div>
+                      </div>
+                      <span
+                        className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold"
+                        style={{ backgroundColor: statusColor.bg, color: statusColor.text }}
+                      >
+                        {p.statusTBU}
+                      </span>
+                    </div>
+                  )
+                })}
+            </div>
+          </section>
+        )}
+
         {/* STATUS NOTIF */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
           <h2 className="text-[15px] font-semibold text-[#1F2937]">Pesan Harian</h2>
