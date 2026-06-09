@@ -285,7 +285,7 @@ export default function RekapPosyanduPage() {
           {activeTab === "anak" && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">Filter</span>
-              <Select value={tempStatus} onValueChange={setTempStatus}>
+              <Select value={tempStatus} onValueChange={(v) => setTempStatus(v as string)}>
                 <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Status Gizi:</span>
@@ -299,7 +299,7 @@ export default function RekapPosyanduPage() {
                   <SelectItem value="Stunting" className="text-xs text-[#173753]">Stunting</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={tempCheck} onValueChange={setTempCheck}>
+              <Select value={tempCheck} onValueChange={(v) => setTempCheck(v as string)}>
                 <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Status Periksa:</span>
@@ -335,7 +335,7 @@ export default function RekapPosyanduPage() {
           {activeTab === "ibu-hamil" && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">Filter</span>
-              <Select value={hamilTrimesterFilter} onValueChange={setHamilTrimesterFilter}>
+              <Select value={hamilTrimesterFilter} onValueChange={(v) => setHamilTrimesterFilter(v as string)}>
                 <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Trimester:</span>
@@ -349,7 +349,7 @@ export default function RekapPosyanduPage() {
                   <SelectItem value="3" className="text-xs text-[#173753]">Trimester 3</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={hamilKunjunganFilter} onValueChange={setHamilKunjunganFilter}>
+              <Select value={hamilKunjunganFilter} onValueChange={(v) => setHamilKunjunganFilter(v as string)}>
                 <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Kunjungan:</span>
@@ -360,6 +360,27 @@ export default function RekapPosyanduPage() {
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="Sudah" className="text-xs text-[#173753]">Sudah Kunjungan</SelectItem>
                   <SelectItem value="Belum" className="text-xs text-[#173753]">Belum Kunjungan</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Filter Ibu */}
+          {activeTab === "ibu" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground">Filter</span>
+              <Select value={ibuRisikoFilter} onValueChange={(v) => setIbuRisikoFilter(v as string)}>
+                <SelectTrigger className="w-fit min-w-[160px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Kategori Risiko:</span>
+                    <SelectValue placeholder="Semua" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                  <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                  <SelectItem value="Aman" className="text-xs text-[#173753]">Aman</SelectItem>
+                  <SelectItem value="Waspada" className="text-xs text-[#173753]">Waspada</SelectItem>
+                  <SelectItem value="Bahaya" className="text-xs text-[#173753]">Bahaya</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -571,6 +592,69 @@ export default function RekapPosyanduPage() {
               </div>
             )}
 
+            {/* Ibu Table */}
+            {activeTab === "ibu" && (
+              <div className="px-4 pb-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-[#E8E8E8]">
+                      <TableHead className="text-[14px] text-[#173753] font-medium pl-2 w-10">No</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Nama</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Usia</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Jml Anak</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Skrining Terakhir</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Kategori Risiko</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBiasa.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-16">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search className="w-8 h-8 text-gray-200" />
+                            <p className="text-sm font-medium text-muted-foreground">Tidak ada data yang cocok</p>
+                            <p className="text-xs text-muted-foreground">Coba ubah filter atau kata kunci pencarian</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredBiasa.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className="border-b border-[#F0F0F0] transition-colors hover:bg-[#F7FBFF]"
+                        >
+                          <TableCell className="text-[14px] pl-2 text-[#173753]">{row.no}</TableCell>
+                          <TableCell className="text-[14px] font-medium text-[#173753]">
+                            <Link href={`/kader/ibu/${row.id}`} className="hover:text-[#52A9E3] transition-colors">
+                              {row.nama}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.usia}</TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.jumlahAnak} anak</TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.skriningTerakhir}</TableCell>
+                          <TableCell>
+                            {row.kategoriRisiko ? (
+                              <StatusBadge status={row.kategoriRisiko} />
+                            ) : (
+                              <span className="text-[12px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                                Belum Skrining
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
             {/* Footer */}
             {activeTab === "anak" && filtered.length > 0 && (
               <div className="px-4 py-2.5 border-t border-[#F0F0F0] flex items-center justify-between">
@@ -612,6 +696,32 @@ export default function RekapPosyanduPage() {
                     <CircleAlert className="w-2.5 h-2.5" />
                     {filteredHamil.filter(r => !r.sudahKunjungan).length} belum kunjungan
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Ibu Footer */}
+            {activeTab === "ibu" && filteredBiasa.length > 0 && (
+              <div className="px-4 py-2.5 border-t border-[#F0F0F0] flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Menampilkan <span className="font-medium text-[#173753]">{filteredBiasa.length}</span> dari{" "}
+                  <span className="font-medium text-[#173753]">{ibuBiasa.length}</span> data
+                </p>
+                <div className="flex items-center gap-1">
+                  {(["Aman", "Waspada", "Bahaya"] as const).map((k) => {
+                    const count = filteredBiasa.filter(r => r.kategoriRisiko === k).length
+                    if (count === 0) return null
+                    const colors: Record<string, string> = {
+                      Aman:    "bg-green-100 text-green-700",
+                      Waspada: "bg-amber-100 text-amber-700",
+                      Bahaya:  "bg-red-100 text-red-700",
+                    }
+                    return (
+                      <span key={k} className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${colors[k]}`}>
+                        {count} {k.toLowerCase()}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
             )}
