@@ -281,60 +281,87 @@ export default function RekapPosyanduPage() {
 
         {/* Filter Bar */}
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-muted-foreground">Filter</span>
-            
-            <Select value={tempStatus} onValueChange={setTempStatus}>
-              <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Status Gizi:</span>
-                  <SelectValue placeholder="Semua" />
+          {/* Filter Anak */}
+          {activeTab === "anak" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground">Filter</span>
+              <Select value={tempStatus} onValueChange={setTempStatus}>
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Status Gizi:</span>
+                    <SelectValue placeholder="Semua" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                  <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                  <SelectItem value="Normal" className="text-xs text-[#173753]">Normal</SelectItem>
+                  <SelectItem value="Berisiko" className="text-xs text-[#173753]">Berisiko</SelectItem>
+                  <SelectItem value="Stunting" className="text-xs text-[#173753]">Stunting</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={tempCheck} onValueChange={setTempCheck}>
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Status Periksa:</span>
+                    <SelectValue placeholder="Semua" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                  <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                  <SelectItem value="Sudah Periksa" className="text-xs text-[#173753]">Sudah Periksa</SelectItem>
+                  <SelectItem value="Belum Periksa" className="text-xs text-[#173753]">Belum Periksa</SelectItem>
+                </SelectContent>
+              </Select>
+              {(isFilterActive || isFilterChanged) && (
+                <div className="flex items-center gap-2">
+                  {isFilterChanged && (
+                    <button onClick={handleApplyFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      Terapkan Filter
+                    </button>
+                  )}
+                  {isFilterActive && (
+                    <button onClick={handleResetFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
+                      <X className="w-3.5 h-3.5" />
+                      Hapus Filter
+                    </button>
+                  )}
                 </div>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-                <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
-                <SelectItem value="Normal" className="text-xs text-[#173753]">Normal</SelectItem>
-                <SelectItem value="Berisiko" className="text-xs text-[#173753]">Berisiko</SelectItem>
-                <SelectItem value="Stunting" className="text-xs text-[#173753]">Stunting</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={tempCheck} onValueChange={setTempCheck}>
-              <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground">Status Periksa:</span>
-                  <SelectValue placeholder="Semua" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-                <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
-                <SelectItem value="Sudah Periksa" className="text-xs text-[#173753]">Sudah Periksa</SelectItem>
-                <SelectItem value="Belum Periksa" className="text-xs text-[#173753]">Belum Periksa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(isFilterActive || isFilterChanged) && (
-            <div className="flex items-center gap-2">
-              {isFilterChanged && (
-                <button
-                  onClick={handleApplyFilters}
-                  className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity"
-                  style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  Terapkan Filter
-                </button>
               )}
-              {isFilterActive && (
-                <button
-                  onClick={handleResetFilters}
-                  className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Hapus Filter
-                </button>
-              )}
+            </div>
+          )}
+
+          {/* Filter Ibu Hamil */}
+          {activeTab === "ibu-hamil" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground">Filter</span>
+              <Select value={hamilTrimesterFilter} onValueChange={setHamilTrimesterFilter}>
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Trimester:</span>
+                    <SelectValue placeholder="Semua" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                  <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                  <SelectItem value="1" className="text-xs text-[#173753]">Trimester 1</SelectItem>
+                  <SelectItem value="2" className="text-xs text-[#173753]">Trimester 2</SelectItem>
+                  <SelectItem value="3" className="text-xs text-[#173753]">Trimester 3</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={hamilKunjunganFilter} onValueChange={setHamilKunjunganFilter}>
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground">Kunjungan:</span>
+                    <SelectValue placeholder="Semua" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                  <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                  <SelectItem value="Sudah" className="text-xs text-[#173753]">Sudah Kunjungan</SelectItem>
+                  <SelectItem value="Belum" className="text-xs text-[#173753]">Belum Kunjungan</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>
@@ -459,6 +486,91 @@ export default function RekapPosyanduPage() {
               </div>
             )}
 
+            {/* Ibu Hamil Table */}
+            {activeTab === "ibu-hamil" && (
+              <div className="px-4 pb-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-[#E8E8E8]">
+                      <TableHead className="text-[14px] text-[#173753] font-medium pl-2 w-10">No</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Nama</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Usia</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Trimester</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">BB Saat Ini</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">HPL</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Kunjungan Bulan Ini</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Terakhir Kunjungan</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredHamil.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-16">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search className="w-8 h-8 text-gray-200" />
+                            <p className="text-sm font-medium text-muted-foreground">Tidak ada data yang cocok</p>
+                            <p className="text-xs text-muted-foreground">Coba ubah filter atau kata kunci pencarian</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredHamil.map((row) => (
+                        <TableRow
+                          key={row.id}
+                          className={cn(
+                            "border-b border-[#F0F0F0] transition-colors hover:bg-[#F7FBFF]",
+                            !row.sudahKunjungan && "bg-amber-50/40"
+                          )}
+                        >
+                          <TableCell className="text-[14px] pl-2 text-[#173753]">{row.no}</TableCell>
+                          <TableCell className="text-[14px] font-medium text-[#173753]">
+                            <Link href={`/kader/ibu/${row.id}`} className="hover:text-[#52A9E3] transition-colors">
+                              {row.nama}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.usia}</TableCell>
+                          <TableCell>
+                            {row.trimester !== null ? (
+                              <span className={cn(
+                                "text-[13px] font-semibold px-2 py-0.5 rounded-full",
+                                row.trimester === 1 ? "bg-blue-50 text-blue-600" :
+                                row.trimester === 2 ? "bg-purple-50 text-purple-600" :
+                                                      "bg-pink-50 text-pink-600"
+                              )}>
+                                T{row.trimester}
+                              </span>
+                            ) : "-"}
+                          </TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.bbSaatIni}</TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.hpl}</TableCell>
+                          <TableCell>
+                            {row.sudahKunjungan ? (
+                              <span className="text-[14px] font-medium text-green-700 flex items-center gap-1">
+                                <CircleCheck className="w-3.5 h-3.5 flex-none" />
+                                Sudah
+                              </span>
+                            ) : (
+                              <span className="text-[14px] font-medium text-amber-700 flex items-center gap-1">
+                                <CircleAlert className="w-3.5 h-3.5 flex-none" />
+                                Belum
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.lastVisit}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
             {/* Footer */}
             {activeTab === "anak" && filtered.length > 0 && (
               <div className="px-4 py-2.5 border-t border-[#F0F0F0] flex items-center justify-between">
@@ -480,6 +592,26 @@ export default function RekapPosyanduPage() {
                       {filtered.filter(c => c.status === "Stunting").length} stunting
                     </span>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* Ibu Hamil Footer */}
+            {activeTab === "ibu-hamil" && filteredHamil.length > 0 && (
+              <div className="px-4 py-2.5 border-t border-[#F0F0F0] flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Menampilkan <span className="font-medium text-[#173753]">{filteredHamil.length}</span> dari{" "}
+                  <span className="font-medium text-[#173753]">{ibuHamil.length}</span> data
+                </p>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                    <CircleCheck className="w-2.5 h-2.5" />
+                    {filteredHamil.filter(r => r.sudahKunjungan).length} sudah kunjungan
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                    <CircleAlert className="w-2.5 h-2.5" />
+                    {filteredHamil.filter(r => !r.sudahKunjungan).length} belum kunjungan
+                  </span>
                 </div>
               </div>
             )}
