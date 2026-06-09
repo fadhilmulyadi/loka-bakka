@@ -110,9 +110,12 @@ export default function RekapPosyanduPage() {
   // Ibu Hamil filters
   const [hamilTrimesterFilter, setHamilTrimesterFilter] = useState("")
   const [hamilKunjunganFilter, setHamilKunjunganFilter] = useState("")
+  const [tempHamilTrimester, setTempHamilTrimester] = useState("")
+  const [tempHamilKunjungan, setTempHamilKunjungan] = useState("")
 
   // Ibu filters
   const [ibuRisikoFilter, setIbuRisikoFilter] = useState("")
+  const [tempIbuRisiko, setTempIbuRisiko] = useState("")
 
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
@@ -172,23 +175,47 @@ export default function RekapPosyanduPage() {
     setTempCheck("")
     setHamilTrimesterFilter("")
     setHamilKunjunganFilter("")
+    setTempHamilTrimester("")
+    setTempHamilKunjungan("")
     setIbuRisikoFilter("")
+    setTempIbuRisiko("")
   }, [activeTab])
 
   const handleApplyFilters = () => {
     setStatusFilter(tempStatus)
     setCheckFilter(tempCheck)
   }
-
   const handleResetFilters = () => {
     setTempStatus("")
     setTempCheck("")
     setStatusFilter("")
     setCheckFilter("")
   }
-
   const isFilterActive = !!statusFilter || !!checkFilter
   const isFilterChanged = tempStatus !== statusFilter || tempCheck !== checkFilter
+
+  const handleApplyHamilFilters = () => {
+    setHamilTrimesterFilter(tempHamilTrimester)
+    setHamilKunjunganFilter(tempHamilKunjungan)
+  }
+  const handleResetHamilFilters = () => {
+    setTempHamilTrimester("")
+    setTempHamilKunjungan("")
+    setHamilTrimesterFilter("")
+    setHamilKunjunganFilter("")
+  }
+  const isHamilFilterActive = !!hamilTrimesterFilter || !!hamilKunjunganFilter
+  const isHamilFilterChanged = tempHamilTrimester !== hamilTrimesterFilter || tempHamilKunjungan !== hamilKunjunganFilter
+
+  const handleApplyIbuFilters = () => {
+    setIbuRisikoFilter(tempIbuRisiko)
+  }
+  const handleResetIbuFilters = () => {
+    setTempIbuRisiko("")
+    setIbuRisikoFilter("")
+  }
+  const isIbuFilterActive = !!ibuRisikoFilter
+  const isIbuFilterChanged = tempIbuRisiko !== ibuRisikoFilter
 
   const total = children.length
 
@@ -279,6 +306,27 @@ export default function RekapPosyanduPage() {
           </div>
         </div>
 
+        {/* Tab Selector */}
+        <div className="flex p-1 rounded-xl bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] gap-1 w-fit">
+          {(["anak", "ibu-hamil", "ibu"] as const).map((tab) => {
+            const labels: Record<string, string> = { anak: "Anak", "ibu-hamil": "Ibu Hamil", ibu: "Ibu" }
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-5 py-1.5 text-[10px] font-medium uppercase tracking-widest rounded-lg transition-all",
+                  activeTab === tab
+                    ? "bg-[#52A9E3] text-white shadow-sm"
+                    : "text-[#173753] hover:bg-[#52A9E3]/10"
+                )}
+              >
+                {labels[tab]}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Filter Bar */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           {/* Filter Anak */}
@@ -312,21 +360,21 @@ export default function RekapPosyanduPage() {
                   <SelectItem value="Belum Periksa" className="text-xs text-[#173753]">Belum Periksa</SelectItem>
                 </SelectContent>
               </Select>
-              {(isFilterActive || isFilterChanged) && (
-                <div className="flex items-center gap-2">
-                  {isFilterChanged && (
-                    <button onClick={handleApplyFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                      Terapkan Filter
-                    </button>
-                  )}
-                  {isFilterActive && (
-                    <button onClick={handleResetFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
-                      <X className="w-3.5 h-3.5" />
-                      Hapus Filter
-                    </button>
-                  )}
-                </div>
+            </div>
+          )}
+          {activeTab === "anak" && (isFilterActive || isFilterChanged) && (
+            <div className="flex items-center gap-2">
+              {isFilterChanged && (
+                <button onClick={handleApplyFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Terapkan Filter
+                </button>
+              )}
+              {isFilterActive && (
+                <button onClick={handleResetFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
+                  <X className="w-3.5 h-3.5" />
+                  Hapus Filter
+                </button>
               )}
             </div>
           )}
@@ -335,7 +383,7 @@ export default function RekapPosyanduPage() {
           {activeTab === "ibu-hamil" && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">Filter</span>
-              <Select value={hamilTrimesterFilter} onValueChange={(v) => setHamilTrimesterFilter(v as string)}>
+              <Select value={tempHamilTrimester} onValueChange={(v) => setTempHamilTrimester(v as string)}>
                 <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Trimester:</span>
@@ -349,7 +397,7 @@ export default function RekapPosyanduPage() {
                   <SelectItem value="3" className="text-xs text-[#173753]">Trimester 3</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={hamilKunjunganFilter} onValueChange={(v) => setHamilKunjunganFilter(v as string)}>
+              <Select value={tempHamilKunjungan} onValueChange={(v) => setTempHamilKunjungan(v as string)}>
                 <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Kunjungan:</span>
@@ -364,12 +412,28 @@ export default function RekapPosyanduPage() {
               </Select>
             </div>
           )}
+          {activeTab === "ibu-hamil" && (isHamilFilterActive || isHamilFilterChanged) && (
+            <div className="flex items-center gap-2">
+              {isHamilFilterChanged && (
+                <button onClick={handleApplyHamilFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Terapkan Filter
+                </button>
+              )}
+              {isHamilFilterActive && (
+                <button onClick={handleResetHamilFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
+                  <X className="w-3.5 h-3.5" />
+                  Hapus Filter
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Filter Ibu */}
           {activeTab === "ibu" && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">Filter</span>
-              <Select value={ibuRisikoFilter} onValueChange={(v) => setIbuRisikoFilter(v as string)}>
+              <Select value={tempIbuRisiko} onValueChange={(v) => setTempIbuRisiko(v as string)}>
                 <SelectTrigger className="w-fit min-w-[160px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Kategori Risiko:</span>
@@ -385,41 +449,27 @@ export default function RekapPosyanduPage() {
               </Select>
             </div>
           )}
+          {activeTab === "ibu" && (isIbuFilterActive || isIbuFilterChanged) && (
+            <div className="flex items-center gap-2">
+              {isIbuFilterChanged && (
+                <button onClick={handleApplyIbuFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Terapkan Filter
+                </button>
+              )}
+              {isIbuFilterActive && (
+                <button onClick={handleResetIbuFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
+                  <X className="w-3.5 h-3.5" />
+                  Hapus Filter
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Table Card */}
         <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
           <CardContent className="p-0">
-            {/* Tab Bar */}
-            <div className="flex items-center gap-0 px-4 border-b border-[#F0F0F0]">
-              {([
-                { key: "anak"      as Tab, label: "Anak",      count: children.length },
-                { key: "ibu-hamil" as Tab, label: "Ibu Hamil", count: ibuHamil.length },
-                { key: "ibu"       as Tab, label: "Ibu",        count: ibuBiasa.length },
-              ]).map(({ key, label, count }) => (
-                <button
-                  key={key}
-                  onClick={() => setActiveTab(key)}
-                  className={cn(
-                    "px-5 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5",
-                    activeTab === key
-                      ? "border-[#52A9E3] text-[#173753]"
-                      : "border-transparent text-muted-foreground hover:text-[#173753]"
-                  )}
-                >
-                  {label}
-                  <span className={cn(
-                    "text-[11px] px-1.5 py-0.5 rounded-full font-semibold",
-                    activeTab === key
-                      ? "bg-[#52A9E3]/10 text-[#52A9E3]"
-                      : "bg-gray-100 text-gray-500"
-                  )}>
-                    {count}
-                  </span>
-                </button>
-              ))}
-            </div>
-
             {/* Anak Table */}
             {activeTab === "anak" && (
               <div className="px-4 pb-1">
