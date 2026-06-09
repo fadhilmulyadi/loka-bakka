@@ -738,3 +738,43 @@ export async function getIbuHamil() {
     }
   })
 }
+
+export async function getIbuBiasa() {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const list = await prisma.ibu.findMany({
+    where: { posyanduId: session.user.posyanduId, isHamil: false },
+    include: {
+      skrinings: {
+        orderBy: { tanggal: "desc" },
+        take: 1,
+        select: { tanggal: true, kategori: true, skorRisiko: true },
+      },
+      _count: { select: { anaks: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+
+  const now = new Date()
+
+  return list.map((ibu, i) => {
+    const skrining = ibu.skrinings[0] ?? null
+    const birth = ibu.tanggalLahir ? new Date(ibu.tanggalLahir) : null
+    const usiaYears = birth
+      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
+      : null
+
+    return {
+      no: i + 1,
+      id: ibu.id,
+      nama: ibu.nama,
+      usia: usiaYears !== null ? `${usiaYears} th` : "-",
+      jumlahAnak: ibu._count.anaks,
+      skriningTerakhir: skrining
+        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(skrining.tanggal))
+        : "Belum",
+      kategoriRisiko: skrining?.kategori ?? null,
+    }
+  })
+}
