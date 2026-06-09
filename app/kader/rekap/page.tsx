@@ -342,100 +342,125 @@ export default function RekapPosyanduPage() {
         {/* Table Card */}
         <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
           <CardContent className="p-0">
-            {/* Header + Filter Bar */}
-            <div className="flex items-center gap-3 px-4 pb-3 flex-wrap border-b border-[#F0F0F0]">
-              <div className="flex-none">
-                <p className="text-[16px] font-semibold text-[#173753] leading-tight">Daftar Pasien</p>
-              </div>
+            {/* Tab Bar */}
+            <div className="flex items-center gap-0 px-4 border-b border-[#F0F0F0]">
+              {([
+                { key: "anak"      as Tab, label: "Anak",      count: children.length },
+                { key: "ibu-hamil" as Tab, label: "Ibu Hamil", count: ibuHamil.length },
+                { key: "ibu"       as Tab, label: "Ibu",        count: ibuBiasa.length },
+              ]).map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className={cn(
+                    "px-5 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5",
+                    activeTab === key
+                      ? "border-[#52A9E3] text-[#173753]"
+                      : "border-transparent text-muted-foreground hover:text-[#173753]"
+                  )}
+                >
+                  {label}
+                  <span className={cn(
+                    "text-[11px] px-1.5 py-0.5 rounded-full font-semibold",
+                    activeTab === key
+                      ? "bg-[#52A9E3]/10 text-[#52A9E3]"
+                      : "bg-gray-100 text-gray-500"
+                  )}>
+                    {count}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {/* Table */}
-            <div className="px-4 pb-1">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-[#E8E8E8]">
-                    <TableHead className="text-[14px] text-[#173753] font-medium pl-2 w-10">No</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">Nama Pasien</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium w-10">L/P</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">Usia</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">BB</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">TB</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">Status Gizi</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">Periksa Bulan Ini</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">Terakhir Periksa</TableHead>
-                    <TableHead className="text-[14px] text-[#173753] font-medium">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-16">
-                        <div className="flex flex-col items-center gap-2">
-                          <Search className="w-8 h-8 text-gray-200" />
-                          <p className="text-sm font-medium text-muted-foreground">Tidak ada data yang cocok</p>
-                          <p className="text-xs text-muted-foreground">Coba ubah filter atau kata kunci pencarian</p>
-                        </div>
-                      </TableCell>
+            {/* Anak Table */}
+            {activeTab === "anak" && (
+              <div className="px-4 pb-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-[#E8E8E8]">
+                      <TableHead className="text-[14px] text-[#173753] font-medium pl-2 w-10">No</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Nama Pasien</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium w-10">L/P</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Usia</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">BB</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">TB</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Status Gizi</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Periksa Bulan Ini</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Terakhir Periksa</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Aksi</TableHead>
                     </TableRow>
-                  ) : (
-                    filtered.map((row) => (
-                      <TableRow
-                        key={row.no}
-                        className={cn(
-                          "border-b border-[#F0F0F0] transition-colors hover:bg-[#F7FBFF]",
-                          !row.sudah && "bg-amber-50/40"
-                        )}
-                      >
-                        <TableCell className="text-[14px] pl-2 text-[#173753]">{row.no}</TableCell>
-                        <TableCell className="text-[14px] font-medium text-[#173753]">
-                          <Link href={`/kader/anak/${row.id}`} className="hover:text-[#52A9E3] transition-colors">
-                            {row.nama}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <span className={cn(
-                            "text-[14px] font-semibold px-1.5 py-0.5 rounded-[4px]",
-                            row.sex === "L"
-                              ? "bg-[#378ADD]/10 text-[#378ADD]"
-                              : "bg-pink-100 text-pink-600"
-                          )}>
-                            {row.sex}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-[14px] text-[#173753]">{row.usia}</TableCell>
-                        <TableCell className="text-[14px] text-[#173753]">{row.bb} kg</TableCell>
-                        <TableCell className="text-[14px] text-[#173753]">{row.tb} cm</TableCell>
-                        <TableCell>
-                          <StatusBadge status={row.status} />
-                        </TableCell>
-                        <TableCell>
-                          {row.sudah ? (
-                            <span className="text-[14px] font-medium text-green-700 flex items-center gap-1">
-                              <CircleCheck className="w-3.5 h-3.5 flex-none" />
-                              Sudah Periksa
-                            </span>
-                          ) : (
-                            <span className="text-[14px] font-medium text-amber-700 flex items-center gap-1">
-                              <CircleAlert className="w-3.5 h-3.5 flex-none" />
-                              Belum Periksa
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-[14px] text-[#173753]">{row.tgl}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-16">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search className="w-8 h-8 text-gray-200" />
+                            <p className="text-sm font-medium text-muted-foreground">Tidak ada data yang cocok</p>
+                            <p className="text-xs text-muted-foreground">Coba ubah filter atau kata kunci pencarian</p>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ) : (
+                      filtered.map((row) => (
+                        <TableRow
+                          key={row.no}
+                          className={cn(
+                            "border-b border-[#F0F0F0] transition-colors hover:bg-[#F7FBFF]",
+                            !row.sudah && "bg-amber-50/40"
+                          )}
+                        >
+                          <TableCell className="text-[14px] pl-2 text-[#173753]">{row.no}</TableCell>
+                          <TableCell className="text-[14px] font-medium text-[#173753]">
+                            <Link href={`/kader/anak/${row.id}`} className="hover:text-[#52A9E3] transition-colors">
+                              {row.nama}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <span className={cn(
+                              "text-[14px] font-semibold px-1.5 py-0.5 rounded-[4px]",
+                              row.sex === "L"
+                                ? "bg-[#378ADD]/10 text-[#378ADD]"
+                                : "bg-pink-100 text-pink-600"
+                            )}>
+                              {row.sex}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.usia}</TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.bb} kg</TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.tb} cm</TableCell>
+                          <TableCell>
+                            <StatusBadge status={row.status} />
+                          </TableCell>
+                          <TableCell>
+                            {row.sudah ? (
+                              <span className="text-[14px] font-medium text-green-700 flex items-center gap-1">
+                                <CircleCheck className="w-3.5 h-3.5 flex-none" />
+                                Sudah Periksa
+                              </span>
+                            ) : (
+                              <span className="text-[14px] font-medium text-amber-700 flex items-center gap-1">
+                                <CircleAlert className="w-3.5 h-3.5 flex-none" />
+                                Belum Periksa
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-[14px] text-[#173753]">{row.tgl}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
             {/* Footer */}
-            {filtered.length > 0 && (
+            {activeTab === "anak" && filtered.length > 0 && (
               <div className="px-4 py-2.5 border-t border-[#F0F0F0] flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   Menampilkan <span className="font-medium text-[#173753]">{filtered.length}</span> dari <span className="font-medium text-[#173753]">{total}</span> data
