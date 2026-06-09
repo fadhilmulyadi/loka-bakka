@@ -24,7 +24,7 @@ import {
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
-import { getChildren, getDashboardStats } from "@/lib/actions/kader"
+import { getChildren, getDashboardStats, getIbuHamil, getIbuBiasa } from "@/lib/actions/kader"
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
 
@@ -59,6 +59,30 @@ type Child = {
   tgl: string
 }
 
+type Tab = "anak" | "ibu-hamil" | "ibu"
+
+type IbuHamilRow = {
+  no: number
+  id: string
+  nama: string
+  usia: string
+  trimester: 1 | 2 | 3 | null
+  bbSaatIni: string
+  hpl: string
+  sudahKunjungan: boolean
+  lastVisit: string
+}
+
+type IbuBiasaRow = {
+  no: number
+  id: string
+  nama: string
+  usia: string
+  jumlahAnak: number
+  skriningTerakhir: string
+  kategoriRisiko: string | null
+}
+
 import { StatusBadge } from "@/components/status-badge"
 
 // ... (existing imports)
@@ -79,29 +103,92 @@ export default function RekapPosyanduPage() {
   const [children, setChildren] = useState<Child[]>([])
   const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, posyanduName: string } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [query, setQuery]             = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [checkFilter, setCheckFilter]   = useState("all")
+  const [activeTab, setActiveTab] = useState<Tab>("anak")
+  const [ibuHamil, setIbuHamil] = useState<IbuHamilRow[]>([])
+  const [ibuBiasa, setIbuBiasa] = useState<IbuBiasaRow[]>([])
+
+  // Ibu Hamil filters
+  const [hamilTrimesterFilter, setHamilTrimesterFilter] = useState("")
+  const [hamilKunjunganFilter, setHamilKunjunganFilter] = useState("")
+
+  // Ibu filters
+  const [ibuRisikoFilter, setIbuRisikoFilter] = useState("")
+
+  const [query, setQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
+  const [checkFilter, setCheckFilter] = useState("")
+  const [tempStatus, setTempStatus] = useState("")
+  const [tempCheck, setTempCheck] = useState("")
 
   useEffect(() => {
-    Promise.all([getChildren(), getDashboardStats()]).then(([childData, statData]) => {
-      setChildren(childData as Child[])
-      setStats(statData)
-      setLoading(false)
-    })
+    Promise.all([getChildren(), getDashboardStats(), getIbuHamil(), getIbuBiasa()])
+      .then(([childData, statData, hamilData, biasaData]) => {
+        setChildren(childData as Child[])
+        setStats(statData)
+        setIbuHamil(hamilData as IbuHamilRow[])
+        setIbuBiasa(biasaData as IbuBiasaRow[])
+        setLoading(false)
+      })
   }, [])
 
   const filtered = useMemo(() => {
     return children.filter((c) => {
-      const matchName   = c.nama.toLowerCase().includes(query.toLowerCase())
-      const matchStatus = statusFilter === "all" || c.status === statusFilter
-      const matchCheck  =
-        checkFilter === "all" ||
-        (checkFilter === "sudah" && c.sudah) ||
-        (checkFilter === "belum" && !c.sudah)
+      const matchName = c.nama.toLowerCase().includes(query.toLowerCase())
+      const matchStatus = !statusFilter || c.status === statusFilter
+      const matchCheck =
+        !checkFilter ||
+        (checkFilter === "Sudah Periksa" && c.sudah) ||
+        (checkFilter === "Belum Periksa" && !c.sudah)
       return matchName && matchStatus && matchCheck
     })
   }, [children, query, statusFilter, checkFilter])
+
+  const filteredHamil = useMemo(() => {
+    return ibuHamil.filter((r) => {
+      const matchName = r.nama.toLowerCase().includes(query.toLowerCase())
+      const matchTrimester =
+        !hamilTrimesterFilter || r.trimester === Number(hamilTrimesterFilter)
+      const matchKunjungan =
+        !hamilKunjunganFilter ||
+        (hamilKunjunganFilter === "Sudah" && r.sudahKunjungan) ||
+        (hamilKunjunganFilter === "Belum" && !r.sudahKunjungan)
+      return matchName && matchTrimester && matchKunjungan
+    })
+  }, [ibuHamil, query, hamilTrimesterFilter, hamilKunjunganFilter])
+
+  const filteredBiasa = useMemo(() => {
+    return ibuBiasa.filter((r) => {
+      const matchName = r.nama.toLowerCase().includes(query.toLowerCase())
+      const matchRisiko = !ibuRisikoFilter || r.kategoriRisiko === ibuRisikoFilter
+      return matchName && matchRisiko
+    })
+  }, [ibuBiasa, query, ibuRisikoFilter])
+
+  useEffect(() => {
+    setQuery("")
+    setStatusFilter("")
+    setCheckFilter("")
+    setTempStatus("")
+    setTempCheck("")
+    setHamilTrimesterFilter("")
+    setHamilKunjunganFilter("")
+    setIbuRisikoFilter("")
+  }, [activeTab])
+
+  const handleApplyFilters = () => {
+    setStatusFilter(tempStatus)
+    setCheckFilter(tempCheck)
+  }
+
+  const handleResetFilters = () => {
+    setTempStatus("")
+    setTempCheck("")
+    setStatusFilter("")
+    setCheckFilter("")
+  }
+
+  const isFilterActive = !!statusFilter || !!checkFilter
+  const isFilterChanged = tempStatus !== statusFilter || tempCheck !== checkFilter
 
   const total = children.length
 
@@ -197,44 +284,59 @@ export default function RekapPosyanduPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground">Filter</span>
             
-            <button className="flex items-center gap-1 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors">
-              <span className="text-muted-foreground">Kategori:</span>
-              <span className="font-medium ml-0.5">Semua</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
-            </button>
+            <Select value={tempStatus} onValueChange={setTempStatus}>
+              <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Status Gizi:</span>
+                  <SelectValue placeholder="Semua" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                <SelectItem value="Normal" className="text-xs text-[#173753]">Normal</SelectItem>
+                <SelectItem value="Berisiko" className="text-xs text-[#173753]">Berisiko</SelectItem>
+                <SelectItem value="Stunting" className="text-xs text-[#173753]">Stunting</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <button className="flex items-center gap-1 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors">
-              <span className="text-muted-foreground">Posyandu:</span>
-              <span className="font-medium ml-0.5">Semua</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
-            </button>
-
-            <button className="flex items-center gap-1 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors">
-              <span className="text-muted-foreground">Status:</span>
-              <span className="font-medium ml-0.5">Semua</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
-            </button>
-
-            <button className="flex items-center gap-1 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors">
-              <span className="text-muted-foreground">Status Periksa:</span>
-              <span className="font-medium ml-0.5">Semua</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
-            </button>
+            <Select value={tempCheck} onValueChange={setTempCheck}>
+              <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">Status Periksa:</span>
+                  <SelectValue placeholder="Semua" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
+                <SelectItem value="Sudah Periksa" className="text-xs text-[#173753]">Sudah Periksa</SelectItem>
+                <SelectItem value="Belum Periksa" className="text-xs text-[#173753]">Belum Periksa</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity"
-              style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Terapkan Filter
-            </button>
-            <button className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors">
-              <X className="w-3.5 h-3.5" />
-              Hapus Filter
-            </button>
-          </div>
+          {(isFilterActive || isFilterChanged) && (
+            <div className="flex items-center gap-2">
+              {isFilterChanged && (
+                <button
+                  onClick={handleApplyFilters}
+                  className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity"
+                  style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Terapkan Filter
+                </button>
+              )}
+              {isFilterActive && (
+                <button
+                  onClick={handleResetFilters}
+                  className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Hapus Filter
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Table Card */}
@@ -310,12 +412,12 @@ export default function RekapPosyanduPage() {
                           {row.sudah ? (
                             <span className="text-[14px] font-medium text-green-700 flex items-center gap-1">
                               <CircleCheck className="w-3.5 h-3.5 flex-none" />
-                              Sudah
+                              Sudah Periksa
                             </span>
                           ) : (
                             <span className="text-[14px] font-medium text-amber-700 flex items-center gap-1">
                               <CircleAlert className="w-3.5 h-3.5 flex-none" />
-                              Belum
+                              Belum Periksa
                             </span>
                           )}
                         </TableCell>
