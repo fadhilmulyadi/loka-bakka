@@ -197,7 +197,7 @@ export async function getRecentMeasurements() {
   return measurements.map((m) => ({
     id: m.anakId,
     waktu: new Date(m.tanggal).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-    posyandu: "Posyandu " + (session.user.posyanduId ? "Melati" : ""), // session.user doesn't have posyanduName in DefaultSession
+    posyandu: session.user.posyanduId ? "Melati" : "Posyandu", // Simplified fallback
     nama: m.anak.nama,
     status: m.statusTBU,
     tindak: m.statusTBU === "Normal" ? "Selesai" : "Dipantau",
@@ -335,9 +335,10 @@ export async function getChildDetail(id: string) {
     posyanduId: anak.ibu.posyandu.id,
     desa: anak.ibu.posyandu.kelurahan,
     address: anak.ibu.alamat || "-",
-    childOrder: "-", // Not in schema, keeping as placeholder
+    childOrder: anak.anakKe?.toString() || "—",
     parent: {
       mother: anak.ibu.nama,
+      father: anak.namaAyah || "—",
       phone: anak.ibu.noHp || "-",
     },
     status: lastPengukuran?.statusTBU || "Normal",
@@ -527,6 +528,8 @@ export async function createChild(data: {
   ibuUsername: string
   telp?: string
   alamat?: string
+  namaAyah?: string
+  anakKe?: number
 }) {
   const posyanduId = await getValidatedPosyanduId()
 
@@ -555,6 +558,8 @@ export async function createChild(data: {
       nama: data.nama,
       tanggalLahir: new Date(data.birth),
       jenisKelamin: data.sex,
+      namaAyah: data.namaAyah,
+      anakKe: data.anakKe,
       ibuId: ibu.id,
     },
   })
@@ -674,4 +679,62 @@ export async function getIbuById(id: string) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _password, ...rest } = ibu
   return { ...rest, posyandu: ibu.posyandu.nama }
+}
+
+export async function getIbuHamil() {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const list = await prisma.ibu.findMany({
+    where: { posyanduId: session.user.posyanduId, isHamil: true },
+    include: {
+      pregnancyProfile: { select: { hpht: true } },
+      pregnancyVisits: {
+        orderBy: { visitDate: "desc" },
+        take: 1,
+        select: { visitDate: true, currentWeightKg: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+
+  const now = new Date()
+
+  return list.map((ibu, i) => {
+    const hpht = ibu.pregnancyProfile?.hpht ? new Date(ibu.pregnancyProfile.hpht) : null
+    const diffDays = hpht ? Math.floor((now.getTime() - hpht.getTime()) / 86_400_000) : null
+    const weeks = diffDays !== null ? Math.floor(diffDays / 7) : null
+    const trimester: 1 | 2 | 3 | null =
+      weeks === null ? null : weeks < 14 ? 1 : weeks < 28 ? 2 : 3
+
+    const hpl = hpht ? new Date(hpht.getTime() + 280 * 86_400_000) : null
+    const hplStr = hpl
+      ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(hpl)
+      : "—"
+
+    const visit = ibu.pregnancyVisits[0] ?? null
+    const sudahKunjungan = visit
+      ? new Date(visit.visitDate).getMonth() === now.getMonth() &&
+        new Date(visit.visitDate).getFullYear() === now.getFullYear()
+      : false
+
+    const birth = ibu.tanggalLahir ? new Date(ibu.tanggalLahir) : null
+    const usiaYears = birth
+      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
+      : null
+
+    return {
+      no: i + 1,
+      id: ibu.id,
+      nama: ibu.nama,
+      usia: usiaYears !== null ? `${usiaYears} th` : "—",
+      trimester,
+      bbSaatIni: visit ? `${visit.currentWeightKg} kg` : "—",
+      hpl: hplStr,
+      sudahKunjungan,
+      lastVisit: visit
+        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(visit.visitDate))
+        : "-",
+    }
+  })
 }
