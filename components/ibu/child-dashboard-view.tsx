@@ -24,6 +24,13 @@ interface ChildDashboardViewProps {
         zScoreTBU: number
         tanggal: Date
       } | null
+      pengukurans?: Array<{
+        tanggal: string | Date
+        beratBadan: number
+        tinggiBadan: number
+        statusTBU: string
+        zScoreTBU: number
+      }>
     } | null
   }
   score: number

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db"
 import { auth } from "@/auth"
+import { calculateGestationalAge, calculateHPL, MONTHS_ID } from "@/lib/pregnancy-utils"
 
 export async function getIbuData() {
   const session = await auth()
@@ -16,7 +17,7 @@ export async function getIbuData() {
         include: {
           pengukurans: {
             orderBy: { tanggal: "desc" },
-            take: 1,
+            take: 10,
           },
         },
         orderBy: { createdAt: "asc" },
@@ -40,10 +41,31 @@ export async function getIbuData() {
   const pregnancyProfile = ibu.pregnancyProfile
   const lastVisit = ibu.pregnancyVisits[0] ?? null
 
+  let weeksPregnant = 0
+  let dueDateStr = "—"
+  let trimester = 0
+  let daysRemaining = 0
+  
+  if (pregnancyProfile?.hpht) {
+    weeksPregnant = calculateGestationalAge(new Date(pregnancyProfile.hpht))
+    const dueDate = calculateHPL(new Date(pregnancyProfile.hpht))
+    dueDateStr = `${dueDate.getDate()} ${MONTHS_ID[dueDate.getMonth()]} ${dueDate.getFullYear()}`
+    
+    if (weeksPregnant <= 13) trimester = 1
+    else if (weeksPregnant <= 27) trimester = 2
+    else trimester = 3
+
+    const now = new Date()
+    const diffTime = dueDate.getTime() - now.getTime()
+    daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
+  }
+
   // Data Kehamilan
   const pregnancyData = isPregnant ? {
-    weeksPregnant: 0, // TODO: Hitung dari HPHT jika ada
-    dueDate: "—",
+    weeksPregnant: weeksPregnant,
+    dueDate: dueDateStr,
+    trimester: trimester,
+    daysRemaining: daysRemaining,
     riskStatus: lastSkrining?.kategori || "Aman",
     riskScore: lastSkrining?.skorRisiko || 0,
     lila: lastVisit?.lilaCm ?? 0,
@@ -72,7 +94,14 @@ export async function getIbuData() {
       statusTBU: firstAnak.pengukurans[0].statusTBU,
       zScoreTBU: firstAnak.pengukurans[0].zScoreTBU,
       tanggal: firstAnak.pengukurans[0].tanggal,
-    } : null
+    } : null,
+    pengukurans: firstAnak.pengukurans.map((p) => ({
+      tanggal: p.tanggal,
+      beratBadan: p.beratBadan,
+      tinggiBadan: p.tinggiBadan,
+      statusTBU: p.statusTBU,
+      zScoreTBU: p.zScoreTBU,
+    })),
   } : null
 
   return {
@@ -113,6 +142,7 @@ export async function getIbuProfile() {
     kecamatan: ibu.posyandu.kecamatan,
     isPregnant: ibu.isHamil,
     lastSkrining: ibu.skrinings[0] ?? null,
+    pregnancyProfile: ibu.pregnancyProfile,
   }
 }
 
