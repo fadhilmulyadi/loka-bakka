@@ -26,32 +26,13 @@ interface ChildDashboardViewProps {
       } | null
     } | null
   }
+  score: number
+  doneCount: number
 }
 
-export default function ChildDashboardView({ data }: ChildDashboardViewProps) {
+export default function ChildDashboardView({ data, score, doneCount }: ChildDashboardViewProps) {
   if (!data) return null
   const { childData } = data
-  const [doneCount, setDoneCount] = useState(3)
-  const [score, setScore] = useState(60)
-
-  useEffect(() => {
-    try {
-      const st = JSON.parse(localStorage.getItem('tugas_anak_state') || 'null')
-      if (st) {
-        let newScore = 0
-        let newDone = 0
-        const TASK_PTS = [20, 20, 20, 20, 20]
-        for (let i = 0; i < 5; i++) {
-          if (st[i]) {
-            newScore += TASK_PTS[i]
-            newDone++
-          }
-        }
-        setScore(newScore)
-        setDoneCount(newDone)
-      }
-    } catch (e) {}
-  }, [])
 
   if (!childData) {
     return (
@@ -69,6 +50,7 @@ export default function ChildDashboardView({ data }: ChildDashboardViewProps) {
 
   const months = childData.usiaBulan
   const ageDisplay = months < 12 ? `${months} Bulan` : `${Math.floor(months / 12)} Tahun ${months % 12} Bulan`
+  const hpkProgress = Math.min(100, Math.round((months / 24) * 100))
 
   // Status mapping
   const getStatusLevel = (status: string) => {
@@ -169,10 +151,10 @@ export default function ChildDashboardView({ data }: ChildDashboardViewProps) {
           <div className="mt-3.5">
             <div className="flex justify-between text-[11px] font-medium opacity-80 mb-1.5">
               <span>Periode Emas 1000 HPK</span>
-              <span>54%</span>
+              <span>{`${hpkProgress}%`}</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full bg-white transition-all duration-500" style={{ width: '54%' }} />
+              <div className="h-full bg-white transition-all duration-500" style={{ width: `${hpkProgress}%` }} />
             </div>
           </div>
         </section>
