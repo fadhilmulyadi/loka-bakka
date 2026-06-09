@@ -710,7 +710,7 @@ export async function getIbuHamil() {
     const hpl = hpht ? new Date(hpht.getTime() + 280 * 86_400_000) : null
     const hplStr = hpl
       ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(hpl)
-      : "—"
+      : "-"
 
     const visit = ibu.pregnancyVisits[0] ?? null
     const sudahKunjungan = visit
@@ -727,9 +727,9 @@ export async function getIbuHamil() {
       no: i + 1,
       id: ibu.id,
       nama: ibu.nama,
-      usia: usiaYears !== null ? `${usiaYears} th` : "—",
+      usia: usiaYears !== null ? `${usiaYears} th` : "-",
       trimester,
-      bbSaatIni: visit ? `${visit.currentWeightKg} kg` : "—",
+      bbSaatIni: visit ? `${visit.currentWeightKg} kg` : "-",
       hpl: hplStr,
       sudahKunjungan,
       lastVisit: visit
