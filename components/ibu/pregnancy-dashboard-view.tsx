@@ -68,7 +68,7 @@ interface PregnancyDashboardViewProps {
       isOnTrack: boolean | null
       targetGainMin: number | null
       targetGainMax: number | null
-    }
+    } | null
   }
   score: number
   doneCount: number
@@ -81,6 +81,8 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
   const radius = 36
   const circumference = 2 * Math.PI * radius
   const offset = circumference * (1 - score / 100)
+
+  if (!pregnancyData) return null
 
   return (
     <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar scroll-smooth">
