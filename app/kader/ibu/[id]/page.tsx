@@ -39,7 +39,7 @@ import { getIbuById } from "@/lib/actions/kader"
 import { calculateGestationalAge, calculateHPL, MONTHS_ID as UTILS_MONTHS } from "@/lib/pregnancy-utils"
 
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer, LineChart, Line
+  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer,
 } from "recharts"
 
 import {
@@ -132,13 +132,24 @@ export default function IbuProfilePage() {
   const birthDate = ibu.tanggalLahir ? new Date(ibu.tanggalLahir) : null
   const age = birthDate ? Math.floor((new Date().getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null
 
-  // Chart Data for Pregnancy Weight Gain (Mock/Refined from visits)
-  const chartData = ibu.pregnancyVisits?.map((v, i) => ({
-    week: i * 4 + 4, // Simplification for demo
-    actual: v.currentWeightKg,
-    targetMin: 50 + (i * 0.4), // Mock target
-    targetMax: 50 + (i * 0.5), // Mock target
-  })) || []
+  const hphtDate = ibu.pregnancyProfile?.hpht ? new Date(ibu.pregnancyProfile.hpht) : null
+  const bbPre = ibu.pregnancyProfile?.bbPrepregnancyKg ?? 0
+  const gainMin = ibu.pregnancyProfile?.targetGainMinKg ?? 0
+  const gainMax = ibu.pregnancyProfile?.targetGainMaxKg ?? 0
+  const chartData = (hphtDate && (ibu.pregnancyVisits?.length ?? 0) > 0)
+    ? ibu.pregnancyVisits.map((v) => {
+        const week = Math.max(0, Math.floor(
+          (new Date(v.visitDate).getTime() - hphtDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+        ))
+        return {
+          week,
+          actual: v.currentWeightKg,
+          isOnTrack: v.isOnTrack,
+          targetMin: +(bbPre + (week / 40) * gainMin).toFixed(1),
+          targetMax: +(bbPre + (week / 40) * gainMax).toFixed(1),
+        }
+      })
+    : []
 
   return (
     <div className="flex-1 bg-[#EBF2F8] flex flex-col min-h-screen">
@@ -362,14 +373,22 @@ export default function IbuProfilePage() {
                   <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Kurva Kenaikan Berat Badan</CardTitle>
                   <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">Target vs Aktual Berdasarkan IOM Guidelines</p>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-4 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <div className="w-3 h-0.5 bg-pink-500" />
                     <span className="text-[10px] font-bold text-pink-600 uppercase tracking-tighter">Berat Aktual</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 bg-[#FDF2F8]" />
-                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-tighter">Target Range</span>
+                    <div className="w-3 h-3 bg-[#FDF2F8] border border-pink-200 rounded-sm" />
+                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-tighter">Target IOM</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#1E8E3E]" />
+                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-tighter">Sesuai</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#B06000]" />
+                    <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-tighter">Perlu Perhatian</span>
                   </div>
                 </div>
               </div>
@@ -378,13 +397,7 @@ export default function IbuProfilePage() {
             <CardContent className="pt-2 px-4 pb-4">
               <div className="h-[300px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                    <defs>
-                      <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={PINK} stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor={PINK} stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
+                  <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
                       dataKey="week"
@@ -403,43 +416,50 @@ export default function IbuProfilePage() {
                     <ReTooltip
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
+                          const entry = payload.find(p => p.dataKey === 'actual')
+                          if (!entry) return null
+                          const d = entry.payload as { week: number; isOnTrack: boolean; targetMin: number; targetMax: number }
                           return (
                             <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100">
-                              <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Minggu Ke-{payload[0].payload.week}</p>
-                              <p className="text-[14px] font-black text-[#173753]">{payload[0].value} kg</p>
+                              <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Minggu Ke-{d.week}</p>
+                              <p className="text-[14px] font-black text-[#173753]">{entry.value} kg</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5">Target IOM: {d.targetMin}–{d.targetMax} kg</p>
+                              <p className={`text-[10px] font-bold mt-0.5 ${d.isOnTrack ? 'text-[#1E8E3E]' : 'text-[#B06000]'}`}>
+                                {d.isOnTrack ? '✓ Sesuai Target' : '⚠ Perlu Perhatian'}
+                              </p>
                             </div>
                           )
                         }
                         return null
                       }}
                     />
-                    <Area
-                      type="monotone"
-                      dataKey="targetMax"
-                      stroke="none"
-                      fill="#FDF2F8"
-                      fillOpacity={1}
-                      name="Range Max"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="targetMin"
-                      stroke="none"
-                      fill="#EBF2F8"
-                      fillOpacity={1}
-                      name="Range Min"
-                    />
-                    <Area
+                    <Area type="monotone" dataKey="targetMax" stroke="none" fill="#FDF2F8" fillOpacity={1} legendType="none" />
+                    <Area type="monotone" dataKey="targetMin" stroke="none" fill="white" fillOpacity={1} legendType="none" />
+                    <Line
                       type="monotone"
                       dataKey="actual"
                       stroke={PINK}
                       strokeWidth={3}
-                      fill="url(#colorActual)"
-                      dot={{ r: 4, fill: PINK, strokeWidth: 2, stroke: "#fff" }}
-                      activeDot={{ r: 6, fill: PINK, strokeWidth: 2, stroke: "#fff" }}
                       name="Berat Aktual"
+                      dot={(props) => {
+                        const { cx, cy } = props as { cx: number; cy: number; index: number }
+                        const index = (props as { cx: number; cy: number; index: number }).index
+                        const isOnTrack = chartData[index]?.isOnTrack ?? true
+                        return (
+                          <circle
+                            key={`dot-${index}`}
+                            cx={cx}
+                            cy={cy}
+                            r={4}
+                            fill={isOnTrack ? '#1E8E3E' : '#B06000'}
+                            stroke="white"
+                            strokeWidth={2}
+                          />
+                        )
+                      }}
+                      activeDot={{ r: 6, fill: PINK, strokeWidth: 2, stroke: '#fff' }}
                     />
-                  </AreaChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
