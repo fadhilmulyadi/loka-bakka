@@ -27,7 +27,7 @@ export default function IbuEdukasiPage() {
     </div>
   )
 
-  if (ibuData?.isPregnant) {
+  if (ibuData?.isPregnant && ibuData.pregnancyData) {
     return <PregnancyEducationView trimester={ibuData.pregnancyData.trimester} />
   }
 
