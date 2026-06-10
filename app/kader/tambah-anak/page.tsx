@@ -256,7 +256,6 @@ export default function TambahAnakPage() {
     birth: "",
     birthPlace: "",
     anakKe: "",
-    jumlahSaudara: "",
     ibu: "",
     ayah: "",
     telp: "",
