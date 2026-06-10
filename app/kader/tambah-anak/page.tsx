@@ -57,7 +57,6 @@ interface FormState {
   birth: string
   birthPlace: string
   anakKe: string
-  jumlahSaudara: string
   ibu: string
   ayah: string
   telp: string
@@ -305,6 +304,8 @@ export default function TambahAnakPage() {
         ibuUsername: f.ibuUsername,
         telp: f.telp,
         alamat: f.alamat,
+        namaAyah: f.ayah,
+        anakKe: f.anakKe ? parseInt(f.anakKe) : undefined,
       })
       setSaved(true)
       setTimeout(() => router.push("/kader/rekap"), 1100)
@@ -463,15 +464,6 @@ export default function TambahAnakPage() {
                     value={f.anakKe}
                     onChange={set("anakKe")}
                     placeholder="mis. 2"
-                    type="number"
-                  />
-                </FormField>
-
-                <FormField label="Jumlah saudara">
-                  <TextInput
-                    value={f.jumlahSaudara}
-                    onChange={set("jumlahSaudara")}
-                    placeholder="mis. 3"
                     type="number"
                   />
                 </FormField>

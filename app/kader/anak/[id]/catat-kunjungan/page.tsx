@@ -312,8 +312,8 @@ export default function CatatKunjunganPage() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-xs text-[#173753] font-medium leading-none">{session?.user?.name ?? "Zee Asadel"}</p>
-              <p className="text-xs font-medium text-muted-foreground mt-0.5">Kader Posyandu {childData.posyandu?.split(" · ")[0]}</p>
+              <p className="text-xs text-[#173753] font-medium leading-none">{session?.user?.name ?? "Kader"}</p>
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">Kader {childData.posyandu}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </div>

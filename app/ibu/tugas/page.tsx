@@ -6,7 +6,7 @@ import PregnancyTasksView from '@/components/ibu/pregnancy-tasks-view'
 import ChildTasksView from '@/components/ibu/child-tasks-view'
 
 export default function IbuTugasPage() {
-  const [ibuData, setIbuData] = useState<any>(null)
+  const [ibuData, setIbuData] = useState<Awaited<ReturnType<typeof getIbuData>>>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

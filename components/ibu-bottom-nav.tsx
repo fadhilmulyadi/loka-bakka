@@ -17,7 +17,7 @@ const NAV_ITEMS = [
     icon: <BookOpen size={21} strokeWidth={1.9} />,
   },
   {
-    label: 'Progres',
+    label: 'Status',
     href: '/ibu/status',
     icon: <TrendingUp size={21} strokeWidth={1.9} />,
   },

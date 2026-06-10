@@ -6,7 +6,7 @@ import PregnancyEducationView from '@/components/ibu/pregnancy-education-view'
 import ChildEducationView from '@/components/ibu/child-education-view'
 
 export default function IbuEdukasiPage() {
-  const [ibuData, setIbuData] = useState<any>(null)
+  const [ibuData, setIbuData] = useState<Awaited<ReturnType<typeof getIbuData>>>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function IbuEdukasiPage() {
   )
 
   if (ibuData?.isPregnant) {
-    return <PregnancyEducationView />
+    return <PregnancyEducationView trimester={ibuData.pregnancyData.trimester} />
   }
 
   return <ChildEducationView />

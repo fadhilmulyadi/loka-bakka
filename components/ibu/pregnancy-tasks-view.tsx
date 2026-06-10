@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useTransition } from 'react'
+import { getDailyTasks, toggleDailyTask } from '@/lib/actions/tasks'
 
 const R = 48
 const C = 2 * Math.PI * R
@@ -102,20 +103,33 @@ function TaskIcon({ icon }: { icon: string }) {
 export default function PregnancyTasksView() {
   const [checked, setChecked] = useState<Record<number, boolean>>({})
   const [mounted, setMounted] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     setMounted(true)
-    try {
-      const saved = JSON.parse(localStorage.getItem('tugas_state') || '{}')
-      setChecked(saved)
-    } catch {}
+    getDailyTasks().then(tasks => {
+      const state: Record<number, boolean> = {}
+      tasks.forEach(t => {
+        state[t.taskId] = t.completed
+      })
+      setChecked(state)
+    })
   }, [])
 
   function toggle(id: number) {
-    setChecked(prev => {
-      const next = { ...prev, [id]: !prev[id] }
-      try { localStorage.setItem('tugas_state', JSON.stringify(next)) } catch {}
-      return next
+    if (isPending) return
+
+    // Optimistic update
+    const nextValue = !checked[id]
+    setChecked(prev => ({ ...prev, [id]: nextValue }))
+    
+    startTransition(async () => {
+      try {
+        await toggleDailyTask(id)
+      } catch (error) {
+        // Rollback on error
+        setChecked(prev => ({ ...prev, [id]: !nextValue }))
+      }
     })
   }
 
@@ -273,73 +287,6 @@ export default function PregnancyTasksView() {
               </button>
             )
           })}
-        </div>
-
-        {/* Notification */}
-        <div className="flex items-center justify-between mt-[22px] mb-3 px-0.5">
-          <h2 className="text-[15px] font-semibold text-[#1F2937]">Pesan untuk Bunda</h2>
-        </div>
-        <div className="flex gap-[11px] items-start bg-gradient-to-b from-white to-[#F1F7FE] border border-[#E4EDE7] rounded-[16px] p-[13px_14px]">
-          <div className="shrink-0 w-[34px] h-[34px] rounded-[10px] bg-[#1178D4] text-white flex items-center justify-center">
-            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12.5px] font-semibold text-[#0A487F] leading-[1.3]">Selamat pagi, Bunda!</div>
-            <div className="text-[11.5px] font-normal text-[#4C545F] leading-[1.5] mt-[3px]">
-              Jangan lupa lengkapi tugas harian ya, agar si kecil tumbuh sehat!
-            </div>
-          </div>
-        </div>
-
-        {/* Status Risiko */}
-        <div className="flex items-center justify-between mt-[22px] mb-3 px-0.5">
-          <h2 className="text-[15px] font-semibold text-[#1F2937]">Status Risiko Janin</h2>
-        </div>
-        <div className="flex flex-col gap-[10px]">
-          <div className="flex gap-[11px] items-start bg-[#F1F7FE] border border-[#C4DDF5] rounded-[14px] p-[12px_13px]">
-            <div className="shrink-0 w-[30px] h-[30px] rounded-[9px] bg-[#1178D4] flex items-center justify-center">
-              <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-[12.5px] font-semibold text-[#0A487F] leading-[1.3]">Status Aman</div>
-              <div className="text-[11.5px] font-normal text-[#4C545F] leading-[1.5] mt-[3px]">
-                Saat ini, Bunda berada di Status Aman! Kondisi yang sangat ideal untuk tumbuh kembang janin. Pertahankan, ya!
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-[11px] items-start bg-[#FFF7E6] border border-[#F4E2BC] rounded-[14px] p-[12px_13px]">
-            <div className="shrink-0 w-[30px] h-[30px] rounded-[9px] bg-[#D99100] flex items-center justify-center">
-              <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 9v4" /><path d="M12 17h.01" />
-                <path d="m10.3 3.9-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.1l-8-14a2 2 0 0 0-3.4 0Z" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-[12.5px] font-semibold text-[#8A6100] leading-[1.3]">Status Perlu Perhatian</div>
-              <div className="text-[11.5px] font-normal text-[#4C545F] leading-[1.5] mt-[3px]">
-                Saat ini, Bunda berada di Status Perlu Perhatian. Waktunya fokus pada asupan nutrisi harian, jangan lupa makan ekstra protein hewani, ya Bunda.
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-[11px] items-start bg-[#FEF1F1] border border-[#F6D2D2] rounded-[14px] p-[12px_13px]">
-            <div className="shrink-0 w-[30px] h-[30px] rounded-[9px] bg-[#DC2626] flex items-center justify-center">
-              <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5Z" />
-              </svg>
-            </div>
-            <div>
-              <div className="text-[12.5px] font-semibold text-[#9F1C1C] leading-[1.3]">Status Risiko Tinggi</div>
-              <div className="text-[11.5px] font-normal text-[#4C545F] leading-[1.5] mt-[3px]">
-                Saat ini, Bunda berada di Status Risiko Tinggi pada Janin. Jangan ditunda, mari jadwalkan periksa ke fasilitas kesehatan terdekat untuk penanganan yang tepat!
-              </div>
-            </div>
-          </div>
         </div>
 
       </main>

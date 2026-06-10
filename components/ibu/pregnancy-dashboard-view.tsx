@@ -4,9 +4,11 @@ import React from 'react'
 import {
   Bell, Calendar, Clock, ChevronRight,
   Check, AlertTriangle, Flame, BookOpen,
-  CheckSquare, User, RefreshCw
+  CheckSquare, User, RefreshCw, TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
+import { BBChart } from '@/components/ibu/bb-chart'
+import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 
 type RiskLevel = 'rendah' | 'sedang' | 'tinggi'
 
@@ -43,6 +45,12 @@ const STATUS_MESSAGES: Record<RiskLevel, {
   },
 }
 
+function formatDateShort(date: Date | string): string {
+  return new Date(date).toLocaleDateString('id-ID', {
+    day: '2-digit', month: 'short',
+  })
+}
+
 interface PregnancyDashboardViewProps {
   data: {
     nama: string
@@ -50,6 +58,8 @@ interface PregnancyDashboardViewProps {
     pregnancyData: {
       weeksPregnant: number
       dueDate: string
+      trimester: number
+      daysRemaining: number
       riskStatus: string
       riskScore: number
       lila: number
@@ -62,9 +72,11 @@ interface PregnancyDashboardViewProps {
   }
   score: number
   doneCount: number
+  profile: PregnancyProfileData | null
+  visits: PregnancyVisitData[]
 }
 
-export default function PregnancyDashboardView({ data, score, doneCount }: PregnancyDashboardViewProps) {
+export default function PregnancyDashboardView({ data, score, doneCount, profile, visits }: PregnancyDashboardViewProps) {
   const { pregnancyData } = data
   const radius = 36
   const circumference = 2 * Math.PI * radius
@@ -103,7 +115,7 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
           
           <span className="relative inline-flex items-center gap-1.5 bg-white/20 border border-white/30 px-3 py-1 rounded-full text-[12px] font-semibold">
             <Flame className="w-[13px] h-[13px]" />
-            {pregnancyData.weeksPregnant > 0 ? 'Trimester 2 · Sedang Berjalan' : 'Trimester — · Belum Ada Data'}
+            {pregnancyData.trimester > 0 ? `Trimester ${pregnancyData.trimester} · Sedang Berjalan` : 'Trimester — · Belum Ada Data'}
           </span>
           <div className="flex items-end gap-2 mt-3">
             <span className="text-[52px] font-bold leading-[0.9] tracking-tighter">{pregnancyData.weeksPregnant > 0 ? pregnancyData.weeksPregnant : '—'}</span>
@@ -133,7 +145,7 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
                 Hitung Mundur
               </div>
               <div className="text-[18px] font-bold mt-1 tracking-tight">
-                {pregnancyData.dueDate === "—" ? "—" : "112"}<small className="text-[12px] font-medium opacity-85 ml-1">{pregnancyData.dueDate === "—" ? "" : " hari lagi"}</small>
+                {pregnancyData.dueDate === "—" ? "—" : pregnancyData.daysRemaining}<small className="text-[12px] font-medium opacity-85 ml-1">{pregnancyData.dueDate === "—" ? "" : " hari lagi"}</small>
               </div>
             </div>
           </div>
@@ -141,10 +153,10 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
           <div className="mt-3.5">
             <div className="flex justify-between text-[11px] font-medium opacity-80 mb-1.5">
               <span>Perjalanan kehamilan</span>
-              <span>{pregnancyData.weeksPregnant > 0 ? '60%' : '—'}</span>
+              <span>{pregnancyData.weeksPregnant > 0 ? `${Math.min(100, Math.round((pregnancyData.weeksPregnant / 40) * 100))}%` : '—'}</span>
             </div>
             <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
-              <div className="h-full bg-white transition-all duration-500" style={{ width: pregnancyData.weeksPregnant > 0 ? '60%' : '0%' }} />
+              <div className="h-full bg-white transition-all duration-500" style={{ width: pregnancyData.weeksPregnant > 0 ? `${Math.min(100, Math.round((pregnancyData.weeksPregnant / 40) * 100))}%` : '0%' }} />
             </div>
           </div>
         </section>
@@ -252,28 +264,101 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
           </div>
         </section>
 
-        {/* STATUS NOTIF */}
-        <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
-          <h2 className="text-[15px] font-semibold text-[#1F2937]">Pesan Harian</h2>
-        </div>
-        {(() => {
-          const level = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
-          const s = STATUS_MESSAGES[level]
-          return (
-            <div className={`flex gap-3 items-start p-3 rounded-[14px] border ${s.border} ${s.bg}`}>
-              <div className={`shrink-0 w-[30px] h-[30px] rounded-[9px] ${s.iconBg} flex items-center justify-center`}>
-                <s.Icon className="w-[17px] h-[17px] text-white" strokeWidth={2.3} />
-              </div>
-              <div className="min-w-0">
-                <div className={`text-[13px] font-semibold ${s.textColor} leading-tight flex items-center gap-2`}>
-                  {s.label}
-                  <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white opacity-80">SAAT INI</span>
-                </div>
-                <div className="text-[13px] font-normal text-[#4C545F] mt-1 leading-relaxed">
-                  {s.message}
-                </div>
-              </div>
+        {/* BB CHART */}
+        {profile && visits.length > 0 && (
+          <>
+            <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
+              <h2 className="text-[15px] font-semibold text-[#1F2937]">Grafik Berat Badan</h2>
+              <Link href="/ibu/status" className="text-[12px] font-semibold text-[#1178D4] flex items-center gap-0.5">
+                Lihat Status <ChevronRight className="w-[13px] h-[13px]" strokeWidth={2.4} />
+              </Link>
             </div>
+            <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
+              <div className="flex items-end justify-between gap-2.5 mb-2.5">
+                <div className="text-[22px] font-bold text-[#1F2937] tracking-tight leading-none">
+                  <span className="block text-[10px] font-medium text-[#697079] mb-1">Berat badan sekarang</span>
+                  {visits[0].currentWeightKg}<small className="text-[11px] font-medium text-[#697079]"> kg</small>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1E9E62] bg-[#E7F7EF] border border-[#C3E9D4] px-2.5 py-1 rounded-full">
+                  <TrendingUp className="w-3 h-3" />
+                  +{visits[0].weightGainKg} kg dari awal
+                </span>
+              </div>
+              <div className="w-full">
+                <BBChart profile={profile} visits={visits} />
+              </div>
+              <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#E4EDE7] text-[10.5px] text-[#697079] font-medium leading-[1.4] text-pretty">
+                <Check className="w-[14px] h-[14px] shrink-0 text-[#1E9E62]" />
+                Pantau terus kenaikan BB Anda setiap kunjungan ke Posyandu.
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* VISIT HISTORY */}
+        {visits.length > 0 && (
+          <>
+            <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
+              <h2 className="text-[15px] font-semibold text-[#1F2937]">Riwayat Kunjungan</h2>
+            </div>
+            <section className="bg-white border border-[#E4EDE7] rounded-[18px] px-4 py-1 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
+              {visits.map((v, i) => {
+                const isBad = v.lilaCm < 23.5 || v.hbGdl < 11;
+                const badgeLabel = isBad ? 'Risiko Tinggi' : (v.isOnTrack ? 'Sesuai Target' : 'Perlu Perhatian');
+                const badgeClass = isBad 
+                  ? 'bg-[#FEF1F1] text-[#9F1C1C]' 
+                  : (v.isOnTrack ? 'bg-[#E7F7EF] text-[#1E9E62]' : 'bg-[#FFF7E6] text-[#A77400]');
+
+                const vDate = new Date(v.visitDate);
+                const day = vDate.getDate().toString().padStart(2, '0');
+                const month = vDate.toLocaleDateString('id-ID', { month: 'short' });
+
+                return (
+                  <div key={v.id} className="flex items-center gap-3 py-3 border-b border-[#E4EDE7] last:border-b-0">
+                    <div className="shrink-0 w-10 text-center">
+                      <div className="text-[16px] font-bold text-[#1F2937] leading-none">{day}</div>
+                      <div className="text-[9px] font-semibold text-[#697079] uppercase mt-0.5">{month}</div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-semibold text-[#1F2937]">{v.currentWeightKg} kg</div>
+                      <div className="text-[10.5px] font-medium text-[#697079] mt-0.5">
+                        +{v.weightGainKg} kg dari awal
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${badgeClass}`}>
+                      {badgeLabel}
+                    </span>
+                  </div>
+                )
+              })}
+            </section>
+          </>
+        )}
+
+        {/* STATUS NOTIF */}
+        {(() => {
+          const currentLevel = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
+          const s = STATUS_MESSAGES[currentLevel]
+          return (
+            <>
+              <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
+                <h2 className="text-[15px] font-semibold text-[#1F2937]">Status Kesehatanmu</h2>
+              </div>
+              <div className={`flex gap-3 items-start p-4 rounded-[18px] border ${s.border} ${s.bg} shadow-[0_4px_14px_-8px_rgba(9,30,66,0.10)]`}>
+                <div className={`shrink-0 w-[38px] h-[38px] rounded-[12px] ${s.iconBg} flex items-center justify-center shadow-[0_4px_10px_-4px_rgba(9,30,66,0.25)]`}>
+                  <s.Icon className="w-[20px] h-[20px] text-white" strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[13px] font-bold ${s.textColor} leading-tight flex items-center gap-2`}>
+                    {s.label}
+                    <span className={`text-[8px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white/70 ${s.textColor}`}>SAAT INI</span>
+                  </div>
+                  <div className="text-[12px] font-normal text-[#4C545F] mt-1.5 leading-[1.55] text-pretty">
+                    {s.message}
+                  </div>
+                </div>
+              </div>
+            </>
           )
         })()}
 
@@ -287,7 +372,9 @@ export default function PregnancyDashboardView({ data, score, doneCount }: Pregn
               <BookOpen className="w-[21px] h-[21px]" strokeWidth={1.8} />
             </div>
             <div className="text-[14px] font-semibold text-[#1F2937] leading-tight">Edukasi</div>
-            <div className="text-[12px] font-normal text-[#697079] mt-1 leading-snug">Materi Trimester 2 untukmu</div>
+            <div className="text-[12px] font-normal text-[#697079] mt-1 leading-snug">
+              {pregnancyData.trimester > 0 ? `Materi Trimester ${pregnancyData.trimester} untukmu` : 'Materi edukasi kehamilan'}
+            </div>
             <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-semibold text-[#1178D4]">
               Buka <ChevronRight className="w-3 h-3" strokeWidth={2.4} />
             </span>

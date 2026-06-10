@@ -40,12 +40,12 @@ interface FormState {
   birth: string
   birthPlace: string
   anakKe: string
-  jumlahSaudara: string
   photo: string | null
   bbLahir: string
   tbLahir: string
   asi: string
   imunisasi: string
+  ayah: string
 }
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
@@ -237,12 +237,12 @@ export default function TambahAnakIbuPage() {
     birth: "",
     birthPlace: "",
     anakKe: "",
-    jumlahSaudara: "",
     photo: null,
     bbLahir: "",
     tbLahir: "",
     asi: "",
     imunisasi: "",
+    ayah: "",
   })
 
   useEffect(() => {
@@ -282,6 +282,8 @@ export default function TambahAnakIbuPage() {
         ibuUsername: ibu.username,
         telp: ibu.noHp || undefined,
         alamat: ibu.alamat || undefined,
+        anakKe: f.anakKe ? parseInt(f.anakKe) : undefined,
+        namaAyah: f.ayah,
       })
       setSaved(true)
       setTimeout(() => router.push(`/kader/ibu/${id}`), 1100)
@@ -446,19 +448,10 @@ export default function TambahAnakIbuPage() {
                     type="number"
                   />
                 </FormField>
-
-                <FormField label="Jumlah saudara">
-                  <TextInput
-                    value={f.jumlahSaudara}
-                    onChange={set("jumlahSaudara")}
-                    placeholder="mis. 3"
-                    type="number"
-                  />
-                </FormField>
               </div>
             </SectionCard>
 
-            {/* 2. Data orang tua (Read-only) */}
+            {/* 2. Data orang tua */}
             <SectionCard title="Data orang tua">
               <div className="grid grid-cols-2 gap-4">
                 <FormField label="Nama ibu">
@@ -474,6 +467,14 @@ export default function TambahAnakIbuPage() {
                     value={ibu.username}
                     onChange={() => {}}
                     disabled
+                  />
+                </FormField>
+
+                <FormField label="Nama ayah">
+                  <TextInput
+                    value={f.ayah}
+                    onChange={set("ayah")}
+                    placeholder="Nama lengkap ayah"
                   />
                 </FormField>
 

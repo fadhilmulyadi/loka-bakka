@@ -125,15 +125,17 @@ const EDU_DATA = [
   }
 ]
 
-export default function PregnancyEducationView() {
-  const [activeTri, setActiveTri] = useState(0)
+export default function PregnancyEducationView({ trimester }: { trimester?: number }) {
+  const [activeTri, setActiveTri] = useState((trimester && trimester > 0) ? trimester - 1 : 0)
 
   useEffect(() => {
     const saved = localStorage.getItem('edukasi_tri')
     if (saved !== null) {
       setActiveTri(parseInt(saved, 10))
+    } else if (trimester && trimester > 0) {
+      setActiveTri(trimester - 1)
     }
-  }, [])
+  }, [trimester])
 
   const handleTriChange = (idx: number) => {
     setActiveTri(idx)

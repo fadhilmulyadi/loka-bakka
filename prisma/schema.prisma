@@ -59,6 +59,18 @@ model Ibu {
   skrinings         SkriningShamil[]
   pregnancyProfile  PregnancyProfile?
   pregnancyVisits   PregnancyVisit[]
+  dailyTasks        DailyTask[]
+}
+
+model DailyTask {
+  id        String   @id @default(cuid())
+  ibuId     String
+  ibu       Ibu      @relation(fields: [ibuId], references: [id], onDelete: Cascade)
+  taskId    Int
+  completed Boolean  @default(false)
+  date      DateTime @default(now())
+
+  @@unique([ibuId, taskId, date])
 }
 
 model Anak {
@@ -66,6 +78,8 @@ model Anak {
   nama         String
   tanggalLahir DateTime
   jenisKelamin String
+  namaAyah     String?
+  anakKe       Int?
   ibuId        String
   createdAt    DateTime @default(now())
 

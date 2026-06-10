@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 
 import { getIbuById } from "@/lib/actions/kader"
 import { savePregnancyVisit } from "@/lib/actions/pregnancy"
+import { calculateGestationalAge, calculateHPL } from "@/lib/pregnancy-utils"
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
 
@@ -340,11 +341,15 @@ export default function CatatKunjunganIbuPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg">
                     <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                    24 Minggu
+                    {ibu.pregnancyProfile?.hpht ? `${calculateGestationalAge(new Date(ibu.pregnancyProfile.hpht))} Minggu` : "— Minggu"}
                   </div>
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-50 px-2.5 py-1 rounded-lg">
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Trimester 2
+                    {ibu.pregnancyProfile?.hpht ? (() => {
+                      const age = calculateGestationalAge(new Date(ibu.pregnancyProfile.hpht))
+                      const tri = age <= 13 ? 1 : age <= 27 ? 2 : 3
+                      return `Trimester ${tri}`
+                    })() : "Trimester —"}
                   </div>
                 </div>
               </div>

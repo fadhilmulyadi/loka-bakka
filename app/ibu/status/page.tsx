@@ -7,7 +7,7 @@ import PregnancyStatusView from '@/components/ibu/pregnancy-status-view'
 import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 
 export default function IbuStatusPage() {
-  const [ibuData, setIbuData] = useState<any>(null)
+  const [ibuData, setIbuData] = useState<Awaited<ReturnType<typeof getIbuData>>>(null)
   const [profile, setProfile] = useState<PregnancyProfileData | null>(null)
   const [latestVisit, setLatestVisit] = useState<PregnancyVisitData | null>(null)
   const [loading, setLoading] = useState(true)

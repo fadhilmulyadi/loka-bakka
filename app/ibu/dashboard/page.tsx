@@ -2,22 +2,36 @@
 
 import React, { useEffect, useState } from 'react'
 import { getIbuData } from '@/lib/actions/ibu'
+import { getPregnancyProfile, getPregnancyVisits } from '@/lib/actions/pregnancy'
+import { getDailyTaskStats } from '@/lib/actions/tasks'
+import { type PregnancyProfileData, type PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 import PregnancyDashboardView from '@/components/ibu/pregnancy-dashboard-view'
 import ChildDashboardView from '@/components/ibu/child-dashboard-view'
 
 export default function IbuDashboardPage() {
-  const [ibuData, setIbuData] = useState<any>(null)
+  const [ibuData, setIbuData] = useState<Awaited<ReturnType<typeof getIbuData>>>(null)
+  const [profile, setProfile] = useState<PregnancyProfileData | null>(null)
+  const [visits, setVisits] = useState<PregnancyVisitData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [score, setScore] = useState(60)
-  const [doneCount, setDoneCount] = useState(4)
+  const [score, setScore] = useState(0)
+  const [doneCount, setDoneCount] = useState(0)
 
   useEffect(() => {
     let mounted = true
-    getIbuData()
-      .then(data => {
+    Promise.all([
+      getIbuData(),
+      getPregnancyProfile(),
+      getPregnancyVisits(),
+      getDailyTaskStats()
+    ])
+      .then(([data, p, v, stats]) => {
         if (mounted) {
           setIbuData(data)
+          setProfile(p)
+          setVisits(v)
+          setScore(stats.score)
+          setDoneCount(stats.doneCount)
           setLoading(false)
         }
       })
@@ -29,26 +43,6 @@ export default function IbuDashboardPage() {
       })
 
     return () => { mounted = false }
-  }, [])
-
-  useEffect(() => {
-    // Shared state logic for pregnancy tasks
-    const TASK_PTS = [20, 20, 20, 20, 10, 10]
-    try {
-      const st = JSON.parse(localStorage.getItem('tugas_state') || 'null')
-      if (st) {
-        let newScore = 0
-        let newDone = 0
-        for (let i = 0; i < 6; i++) {
-          if (st[i]) {
-            newScore += TASK_PTS[i]
-            newDone++
-          }
-        }
-        setScore(newScore)
-        setDoneCount(newDone)
-      }
-    } catch (e) {}
   }, [])
 
   if (loading) return (
@@ -74,12 +68,14 @@ export default function IbuDashboardPage() {
       <PregnancyDashboardView 
         data={ibuData} 
         score={score} 
-        doneCount={doneCount} 
+        doneCount={doneCount}
+        profile={profile}
+        visits={visits}
       />
     )
   }
 
   return (
-    <ChildDashboardView data={ibuData} />
+    <ChildDashboardView data={ibuData} score={score} doneCount={doneCount} />
   )
 }

@@ -222,7 +222,7 @@ export default function RekapPosyanduPage() {
   if (loading) return <div className="flex-1 flex items-center justify-center bg-[#EBF2F8]">Loading...</div>
 
   return (
-    <div className="flex-1 bg-[#EBF2F8] flex flex-col">
+    <div className="min-h-full bg-[#EBF2F8] flex flex-col">
       {/* Topbar */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-2 z-10">
         <div className="relative w-[291px] flex-none">

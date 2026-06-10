@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
 import { getIbuProfile } from "@/lib/actions/ibu"
+import { calculateGestationalAge, calculateHPL, MONTHS_ID } from "@/lib/pregnancy-utils"
 import { 
   User, 
   LogOut, 
@@ -8,10 +9,7 @@ import {
   Phone, 
   MapPin, 
   Baby, 
-  Activity, 
-  Star, 
   ChevronRight,
-  BookOpen,
   Bell,
   HelpCircle,
   Pencil,
@@ -43,6 +41,22 @@ export default async function IbuAkunPage() {
     return age
   }
 
+  // Calculate pregnancy info
+  let weeksPregnant = 0
+  let trimester = 0
+  let hplStr = "—"
+  
+  if (profile.pregnancyProfile?.hpht) {
+    const hpht = new Date(profile.pregnancyProfile.hpht)
+    weeksPregnant = calculateGestationalAge(hpht)
+    const hpl = calculateHPL(hpht)
+    hplStr = `${hpl.getDate()} ${MONTHS_ID[hpl.getMonth()]} ${hpl.getFullYear()}`
+    
+    if (weeksPregnant <= 13) trimester = 1
+    else if (weeksPregnant <= 27) trimester = 2
+    else trimester = 3
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#E7ECF1]">
       {/* Header */}
@@ -66,7 +80,7 @@ export default async function IbuAkunPage() {
               {profile.isPregnant ? (
                 <>
                   <Droplet size={13} fill="white" />
-                  <span>Ibu Hamil · 24 Minggu</span>
+                  <span>Ibu Hamil {weeksPregnant > 0 ? `· ${weeksPregnant} Minggu` : ""}</span>
                 </>
               ) : (
                 <>
@@ -76,7 +90,7 @@ export default async function IbuAkunPage() {
               )}
             </div>
             <p className="text-[11.5px] mt-2 text-white/80 font-medium">
-              Posyandu {profile.posyandu} · {profile.kelurahan}
+              {profile.posyandu.toLowerCase().includes("posyandu") ? profile.posyandu : `Posyandu ${profile.posyandu}`} · {profile.kelurahan}
             </p>
           </div>
         </div>
@@ -84,39 +98,6 @@ export default async function IbuAkunPage() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-5 pt-4 pb-32 space-y-6 scrollbar-hide">
-        {/* Quick Stats */}
-        <div className="flex gap-2.5">
-          <div className="flex-1 bg-white border border-[#E4EDE7] rounded-[15px] p-3 text-center shadow-sm">
-            <div className="w-[30px] h-[30px] mx-auto mb-2 bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-lg">
-              <Activity size={16} />
-            </div>
-            <div className="text-[18px] font-bold text-[#1F2937] leading-none">
-              {profile.lastSkrining?.kategori || "Aman"}
-            </div>
-            <div className="text-[10px] font-medium text-[#697079] mt-1">Status Risiko</div>
-          </div>
-
-          <div className="flex-1 bg-white border border-[#E4EDE7] rounded-[15px] p-3 text-center shadow-sm">
-            <div className="w-[30px] h-[30px] mx-auto mb-2 bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-lg">
-              <Star size={16} />
-            </div>
-            <div className="text-[18px] font-bold text-[#1F2937] leading-none">
-              60<span className="text-[10px] font-medium text-[#697079]">/100</span>
-            </div>
-            <div className="text-[10px] font-medium text-[#697079] mt-1">Skor Harian</div>
-          </div>
-
-          <div className="flex-1 bg-white border border-[#E4EDE7] rounded-[15px] p-3 text-center shadow-sm">
-            <div className="w-[30px] h-[30px] mx-auto mb-2 bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-lg">
-              <Clock size={16} />
-            </div>
-            <div className="text-[18px] font-bold text-[#1F2937] leading-none">
-              8<span className="text-[10px] font-medium text-[#697079]">×</span>
-            </div>
-            <div className="text-[10px] font-medium text-[#697079] mt-1">Kunjungan</div>
-          </div>
-        </div>
-
         {/* Data Diri */}
         <section>
           <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Data Diri</h2>
@@ -180,7 +161,9 @@ export default async function IbuAkunPage() {
                 </div>
                 <div>
                   <div className="text-[10px] font-medium text-[#697079]">Usia Kehamilan</div>
-                  <div className="text-[13.5px] font-bold text-[#1F2937]">24 Minggu (Trimester 2)</div>
+                  <div className="text-[13.5px] font-bold text-[#1F2937]">
+                    {weeksPregnant > 0 ? `${weeksPregnant} Minggu (Trimester ${trimester})` : "—"}
+                  </div>
                 </div>
               </div>
 
@@ -190,30 +173,9 @@ export default async function IbuAkunPage() {
                 </div>
                 <div>
                   <div className="text-[10px] font-medium text-[#697079]">Perkiraan Lahir (HPL)</div>
-                  <div className="text-[13.5px] font-bold text-[#1F2937]">12 September 2026</div>
+                  <div className="text-[13.5px] font-bold text-[#1F2937]">{hplStr}</div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7]">
-                <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
-                  <BookOpen size={19} />
-                </div>
-                <div>
-                  <div className="text-[10px] font-medium text-[#697079]">Nomor Buku KIA</div>
-                  <div className="text-[13.5px] font-bold text-[#1F2937]">KIA-2026-001284</div>
-                </div>
-              </div>
-
-              <Link href="/ibu/status" className="flex items-center gap-3.5 px-4 py-3.5 active:bg-[#F1F7FE] transition-colors">
-                <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
-                  <Activity size={19} />
-                </div>
-                <div className="flex-1 font-bold text-[13.5px] text-[#1F2937]">Riwayat Cek Risiko</div>
-                <div className="px-2.5 py-1 bg-[#E7F7EF] text-[#1E9E62] text-[10px] font-bold rounded-full">
-                  {profile.lastSkrining?.kategori || "Aman"}
-                </div>
-                <ChevronRight size={17} className="text-[#989DA3]" />
-              </Link>
             </div>
           </section>
         )}

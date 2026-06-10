@@ -252,7 +252,7 @@ export default function ChildDetailPage() {
                   { icon: Calendar, label: "TANGGAL LAHIR", value: childDataState.birthDate },
                   { icon: Clock, label: "USIA SAAT INI", value: childDataState.age },
                   { icon: Users, label: "JENIS KELAMIN", value: childDataState.gender },
-                  { icon: Hash, label: "ANAK KE-", value: childDataState.childOrder || "—" },
+                  { icon: Hash, label: "ANAK KE-", value: childDataState.childOrder },
                   { icon: User, label: "NAMA IBU", value: childDataState.parent.mother },
                   { icon: User, label: "NAMA AYAH", value: childDataState.parent.father || "—" },
                   { icon: MapPin, label: "ALAMAT", value: childDataState.address, full: true },
