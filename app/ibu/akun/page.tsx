@@ -20,12 +20,13 @@ import { format } from "date-fns"
 import { id } from "date-fns/locale"
 import Link from "next/link"
 
-export default async function IbuAkunPage() {
+export default async function IbuAkunPage({ searchParams }: { searchParams: Promise<{ child?: string }> }) {
   const session = await auth()
   if (!session || session.user.role !== "ibu") {
     redirect("/login")
   }
 
+  const { child: childId } = await searchParams
   const profile = await getIbuProfile()
   if (!profile) return null
 
@@ -192,13 +193,23 @@ export default async function IbuAkunPage() {
               <ChevronRight size={17} className="text-[#989DA3]" />
             </button>
 
-            <Link href="/ibu/anak" className="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7] active:bg-[#F1F7FE] transition-colors text-decoration-none">
-              <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
-                <Baby size={19} />
-              </div>
-              <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Lihat Data Anak</div>
-              <ChevronRight size={17} className="text-[#989DA3]" />
-            </Link>
+            {childId && profile.isPregnant ? (
+              <Link href="/ibu/dashboard" className="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7] active:bg-[#F1F7FE] transition-colors text-decoration-none">
+                <div className="w-[38px] h-[38px] bg-[#EAF6EF] text-[#1E9E62] flex items-center justify-center rounded-xl">
+                  <Droplet size={19} />
+                </div>
+                <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Kembali ke Mode Kehamilan</div>
+                <ChevronRight size={17} className="text-[#989DA3]" />
+              </Link>
+            ) : (
+              <Link href="/ibu/anak" className="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7] active:bg-[#F1F7FE] transition-colors text-decoration-none">
+                <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                  <Baby size={19} />
+                </div>
+                <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Lihat Data Anak</div>
+                <ChevronRight size={17} className="text-[#989DA3]" />
+              </Link>
+            )}
 
             <button className="w-full flex items-center gap-3.5 px-4 py-3.5 active:bg-[#F1F7FE] transition-colors">
               <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
