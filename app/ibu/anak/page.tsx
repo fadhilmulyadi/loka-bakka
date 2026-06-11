@@ -72,7 +72,7 @@ export default function IbuAnakPage() {
             {anaks.map((anak) => (
               <Link
                 key={anak.id}
-                href={`/ibu/anak/${anak.id}`}
+                href={`/ibu/child/${anak.id}/dashboard`}
                 className="bg-white rounded-2xl p-4 shadow-[2px_2px_8px_rgba(0,0,0,0.06)] flex items-center gap-3 active:bg-gray-50 transition-colors"
               >
                 <div
