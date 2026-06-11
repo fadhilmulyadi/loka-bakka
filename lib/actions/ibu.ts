@@ -182,3 +182,66 @@ export async function getIbuAnaks() {
     }
   })
 }
+
+export async function getIbuAnakDetail(id: string) {
+  const session = await auth()
+  if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
+
+  const anak = await prisma.anak.findFirst({
+    where: { id, ibuId: session.user.id },
+    include: {
+      pengukurans: { orderBy: { tanggal: "desc" } },
+    },
+  })
+
+  if (!anak) return null
+
+  const birth = new Date(anak.tanggalLahir)
+  const now = new Date()
+  const ageMonths =
+    (now.getFullYear() - birth.getFullYear()) * 12 +
+    (now.getMonth() - birth.getMonth())
+
+  const last = anak.pengukurans[0] ?? null
+
+  const fmt = (d: Date) =>
+    new Intl.DateTimeFormat("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(d)
+
+  return {
+    id: anak.id,
+    nama: anak.nama,
+    jenisKelamin: anak.jenisKelamin as "L" | "P",
+    tanggalLahir: fmt(birth),
+    usia:
+      ageMonths < 12
+        ? `${ageMonths} bln`
+        : `${Math.floor(ageMonths / 12)} thn ${ageMonths % 12} bln`,
+    anakKe: anak.anakKe?.toString() ?? "—",
+    latest: last
+      ? {
+          bb: last.beratBadan,
+          tb: last.tinggiBadan,
+          status: last.statusTBU,
+          zScore: last.zScoreTBU.toFixed(1),
+          tanggal: fmt(new Date(last.tanggal)),
+        }
+      : null,
+    visits: anak.pengukurans.map((p) => {
+      const pDate = new Date(p.tanggal)
+      const visitMonths =
+        (pDate.getFullYear() - birth.getFullYear()) * 12 +
+        (pDate.getMonth() - birth.getMonth())
+      return {
+        tanggal: fmt(pDate),
+        usiaBulan: visitMonths,
+        bb: p.beratBadan,
+        tb: p.tinggiBadan,
+        status: p.statusTBU,
+      }
+    }),
+  }
+}
