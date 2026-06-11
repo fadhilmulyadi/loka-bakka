@@ -1,6 +1,6 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import { IbuBottomNav } from "@/components/ibu-bottom-nav"
+import { IbuNavWrapper } from "@/components/ibu-nav-wrapper"
 
 export default async function IbuLayout({
   children,
@@ -21,7 +21,7 @@ export default async function IbuLayout({
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
           <div className="pointer-events-auto">
-            <IbuBottomNav />
+            <IbuNavWrapper />
           </div>
         </div>
       </div>
