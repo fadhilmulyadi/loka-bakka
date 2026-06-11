@@ -57,6 +57,9 @@ export default function IbuAnakDetailPage() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    setAnak(null)
+    setError(false)
+    setLoading(true)
     getIbuAnakDetail(id)
       .then((data) => {
         if (data) setAnak(data)
