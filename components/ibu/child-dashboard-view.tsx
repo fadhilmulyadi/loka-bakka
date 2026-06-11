@@ -170,7 +170,7 @@ export default function ChildDashboardView({ data, score, doneCount }: ChildDash
         {/* SCORE */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
           <h2 className="text-[15px] font-semibold text-[#1F2937]">Skor Aktif Harian</h2>
-          <Link href="/ibu/tugas" className="text-[12px] font-semibold text-[#1178D4] flex items-center gap-0.5">
+          <Link href={`/ibu/tugas?child=${childData.id}`} className="text-[12px] font-semibold text-[#1178D4] flex items-center gap-0.5">
             Lihat Tugas <ChevronRight className="w-[13px] h-[13px]" strokeWidth={2.4} />
           </Link>
         </div>
@@ -196,7 +196,7 @@ export default function ChildDashboardView({ data, score, doneCount }: ChildDash
               <b className="text-[#1178D4] font-bold">{doneCount}</b> dari 5 tugas selesai
             </div>
             <Link
-              href="/ibu/tugas"
+              href={`/ibu/tugas?child=${childData.id}`}
               className="inline-flex items-center gap-1.5 mt-2.5 px-3 py-2 rounded-[10px] bg-[#1178D4] text-white text-[13px] font-semibold shadow-[0_6px_14px_-7px_rgba(17,120,212,0.7)] active:bg-[#0F6CBF] transition-colors"
             >
               Lihat Tugas Harian <ChevronRight className="w-[13px] h-[13px]" strokeWidth={2.4} />
@@ -346,7 +346,7 @@ export default function ChildDashboardView({ data, score, doneCount }: ChildDash
           <h2 className="text-[15px] font-semibold text-[#1F2937]">Pintasan</h2>
         </div>
         <div className="flex gap-3">
-          <Link href="/ibu/edukasi" className="flex-1 bg-white border border-[#E4EDE7] rounded-[16px] p-3.5 shadow-[0_4px_12px_-8px_rgba(9,30,66,0.14)] active:translate-y-0.5 transition-all">
+          <Link href={`/ibu/edukasi?child=${childData.id}`} className="flex-1 bg-white border border-[#E4EDE7] rounded-[16px] p-3.5 shadow-[0_4px_12px_-8px_rgba(9,30,66,0.14)] active:translate-y-0.5 transition-all">
             <div className="w-[38px] h-[38px] rounded-[12px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center mb-2.5">
               <BookOpen className="w-[21px] h-[21px]" strokeWidth={1.8} />
             </div>
@@ -356,7 +356,7 @@ export default function ChildDashboardView({ data, score, doneCount }: ChildDash
               Buka <ChevronRight className="w-3 h-3" strokeWidth={2.4} />
             </span>
           </Link>
-          <Link href="/ibu/tugas" className="flex-1 bg-white border border-[#E4EDE7] rounded-[16px] p-3.5 shadow-[0_4px_12px_-8px_rgba(9,30,66,0.14)] active:translate-y-0.5 transition-all">
+          <Link href={`/ibu/tugas?child=${childData.id}`} className="flex-1 bg-white border border-[#E4EDE7] rounded-[16px] p-3.5 shadow-[0_4px_12px_-8px_rgba(9,30,66,0.14)] active:translate-y-0.5 transition-all">
             <div className="w-[38px] h-[38px] rounded-[12px] bg-[#EAF6EF] text-[#1E9E62] flex items-center justify-center mb-2.5">
               <CheckSquare className="w-[21px] h-[21px]" strokeWidth={1.8} />
             </div>

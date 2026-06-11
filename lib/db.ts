@@ -5,12 +5,12 @@ import { PrismaPg } from "@prisma/adapter-pg"
 function getPrisma() {
   const g = global as unknown as { prisma?: PrismaClient }
   if (!g.prisma) {
-    const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL
-    const pool = new Pool({ 
+    // Use the pooler URL (DATABASE_URL) — DIRECT_URL is for migrations only
+    const connectionString = process.env.DATABASE_URL!
+    const pool = new Pool({
       connectionString,
-      ssl: {
-        rejectUnauthorized: false
-      }
+      max: 1, // one connection per serverless function instance
+      ssl: { rejectUnauthorized: false },
     })
     const adapter = new PrismaPg(pool)
     g.prisma = new PrismaClient({ adapter })

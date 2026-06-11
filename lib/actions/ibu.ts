@@ -183,6 +183,53 @@ export async function getIbuAnaks() {
   })
 }
 
+export async function getIbuAnakForDashboard(id: string) {
+  const session = await auth()
+  if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
+
+  const [ibu, anak] = await Promise.all([
+    prisma.ibu.findUnique({ where: { id: session.user.id }, select: { nama: true } }),
+    prisma.anak.findFirst({
+      where: { id, ibuId: session.user.id },
+      include: { pengukurans: { orderBy: { tanggal: "desc" }, take: 10 } },
+    }),
+  ])
+
+  if (!ibu || !anak) return null
+
+  const birth = new Date(anak.tanggalLahir)
+  const now = new Date()
+  const usiaBulan =
+    (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
+
+  return {
+    nama: ibu.nama,
+    childData: {
+      id: anak.id,
+      nama: anak.nama,
+      jenisKelamin: anak.jenisKelamin as "L" | "P",
+      tanggalLahir: anak.tanggalLahir,
+      usiaBulan,
+      lastPengukuran: anak.pengukurans[0]
+        ? {
+            beratBadan: anak.pengukurans[0].beratBadan,
+            tinggiBadan: anak.pengukurans[0].tinggiBadan,
+            statusTBU: anak.pengukurans[0].statusTBU,
+            zScoreTBU: anak.pengukurans[0].zScoreTBU,
+            tanggal: anak.pengukurans[0].tanggal,
+          }
+        : null,
+      pengukurans: anak.pengukurans.map((p) => ({
+        tanggal: p.tanggal,
+        beratBadan: p.beratBadan,
+        tinggiBadan: p.tinggiBadan,
+        statusTBU: p.statusTBU,
+        zScoreTBU: p.zScoreTBU,
+      })),
+    },
+  }
+}
+
 export async function getIbuAnakDetail(id: string) {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")

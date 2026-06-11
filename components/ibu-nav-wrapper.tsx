@@ -1,16 +1,25 @@
 "use client"
 
-import { usePathname, useParams } from "next/navigation"
+import { Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { IbuBottomNav } from "@/components/ibu-bottom-nav"
 import { ChildBottomNav } from "@/components/child-bottom-nav"
 
-export function IbuNavWrapper() {
-  const pathname = usePathname()
-  const params = useParams()
+function NavContent() {
+  const searchParams = useSearchParams()
+  const childId = searchParams.get("child")
 
-  if (pathname.includes("/ibu/child/")) {
-    return <ChildBottomNav childId={params.id as string} />
+  if (childId) {
+    return <ChildBottomNav childId={childId} />
   }
 
   return <IbuBottomNav />
+}
+
+export function IbuNavWrapper() {
+  return (
+    <Suspense fallback={<IbuBottomNav />}>
+      <NavContent />
+    </Suspense>
+  )
 }
