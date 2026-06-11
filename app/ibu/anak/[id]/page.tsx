@@ -54,12 +54,14 @@ export default function IbuAnakDetailPage() {
   const id = params?.id as string
   const [anak, setAnak] = useState<AnakDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     getIbuAnakDetail(id)
       .then((data) => {
         if (data) setAnak(data)
       })
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
   }, [id])
 
@@ -67,6 +69,27 @@ export default function IbuAnakDetailPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-[#52A9E3] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="px-5 pt-5 pb-3 flex items-center gap-3">
+          <Link
+            href="/ibu/anak"
+            className="w-8 h-8 rounded-full bg-[#EBF2F8] flex items-center justify-center flex-none"
+          >
+            <ChevronLeft className="w-4 h-4 text-[#173753]" />
+          </Link>
+          <h1 className="text-xl font-semibold text-[#173753]">Profil Anak</h1>
+        </div>
+        <div className="flex-1 flex items-center justify-center px-5">
+          <p className="text-sm text-muted-foreground text-center">
+            Terjadi kesalahan. Silakan coba lagi.
+          </p>
+        </div>
       </div>
     )
   }
@@ -178,7 +201,7 @@ export default function IbuAnakDetailPage() {
             <p className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider mb-3">
               Kurva Berat Badan
             </p>
-            <div className="h-45">
+            <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={chartData}
