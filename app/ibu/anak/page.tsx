@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Baby } from "lucide-react"
+import { Baby, ChevronRight } from "lucide-react"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { getIbuAnaks } from "@/lib/actions/ibu"
 
@@ -69,9 +70,10 @@ export default function IbuAnakPage() {
         ) : (
           <div className="space-y-3">
             {anaks.map((anak) => (
-              <div
+              <Link
                 key={anak.id}
-                className="bg-white rounded-2xl p-4 shadow-[2px_2px_8px_rgba(0,0,0,0.06)] flex items-center gap-3"
+                href={`/ibu/anak/${anak.id}`}
+                className="bg-white rounded-2xl p-4 shadow-[2px_2px_8px_rgba(0,0,0,0.06)] flex items-center gap-3 active:bg-gray-50 transition-colors"
               >
                 <div
                   className="h-12 w-12 rounded-2xl flex items-center justify-center text-base font-bold text-white flex-none"
@@ -101,8 +103,9 @@ export default function IbuAnakPage() {
                   {anak.tanggalPengukuran && (
                     <p className="text-[10px] text-muted-foreground">{formatDate(anak.tanggalPengukuran)}</p>
                   )}
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
