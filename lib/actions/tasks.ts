@@ -1,6 +1,8 @@
 "use server"
 
-import { prisma } from "@/lib/db"
+import { db } from "@/lib/db/client"
+import { dailyTask, ibu } from "@/lib/db/schema"
+import { and, eq, gte, lte } from "drizzle-orm"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
 
@@ -17,14 +19,12 @@ export async function getDailyTasks() {
 
   const { start, end } = getTodayRange()
 
-  const tasks = await prisma.dailyTask.findMany({
-    where: {
-      ibuId: session.user.id,
-      date: {
-        gte: start,
-        lte: end,
-      },
-    },
+  const tasks = await db.query.dailyTask.findMany({
+    where: and(
+      eq(dailyTask.ibuId, session.user.id),
+      gte(dailyTask.date, start),
+      lte(dailyTask.date, end),
+    ),
   })
 
   return tasks
@@ -36,29 +36,22 @@ export async function toggleDailyTask(taskId: number) {
 
   const { start } = getTodayRange()
 
-  const existing = await prisma.dailyTask.findUnique({
-    where: {
-      ibuId_taskId_date: {
-        ibuId: session.user.id,
-        taskId: taskId,
-        date: start,
-      },
-    },
+  const existing = await db.query.dailyTask.findFirst({
+    where: and(
+      eq(dailyTask.ibuId, session.user.id),
+      eq(dailyTask.taskId, taskId),
+      eq(dailyTask.date, start),
+    ),
   })
 
   if (existing) {
-    await prisma.dailyTask.update({
-      where: { id: existing.id },
-      data: { completed: !existing.completed },
-    })
+    await db.update(dailyTask).set({ completed: !existing.completed }).where(eq(dailyTask.id, existing.id))
   } else {
-    await prisma.dailyTask.create({
-      data: {
-        ibuId: session.user.id,
-        taskId: taskId,
-        completed: true,
-        date: start,
-      },
+    await db.insert(dailyTask).values({
+      ibuId: session.user.id,
+      taskId: taskId,
+      completed: true,
+      date: start,
     })
   }
 
@@ -70,28 +63,26 @@ export async function getDailyTaskStats() {
   const session = await auth()
   if (!session || session.user.role !== "ibu") return { score: 0, doneCount: 0 }
 
-  const ibu = await prisma.ibu.findUnique({
-    where: { id: session.user.id },
-    select: { isHamil: true }
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, session.user.id),
+    columns: { isHamil: true },
   })
 
   const { start, end } = getTodayRange()
 
-  const tasks = await prisma.dailyTask.findMany({
-    where: {
-      ibuId: session.user.id,
-      date: {
-        gte: start,
-        lte: end,
-      },
-      completed: true,
-    },
+  const tasks = await db.query.dailyTask.findMany({
+    where: and(
+      eq(dailyTask.ibuId, session.user.id),
+      gte(dailyTask.date, start),
+      lte(dailyTask.date, end),
+      eq(dailyTask.completed, true),
+    ),
   })
 
   let score = 0
   let doneCount = 0
 
-  if (ibu?.isHamil) {
+  if (ibuRow?.isHamil) {
     const PREGNANCY_PTS = [20, 20, 20, 20, 10, 10]
     tasks.forEach(t => {
       if (t.taskId >= 0 && t.taskId < PREGNANCY_PTS.length) {
@@ -100,7 +91,6 @@ export async function getDailyTaskStats() {
       }
     })
   } else {
-    // Child tasks (0-4)
     const CHILD_PTS = [20, 20, 20, 20, 20]
     tasks.forEach(t => {
       if (t.taskId >= 0 && t.taskId < CHILD_PTS.length) {
