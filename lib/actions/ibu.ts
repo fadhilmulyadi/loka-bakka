@@ -1,6 +1,8 @@
 "use server"
 
-import { prisma } from "@/lib/db"
+import { db } from "@/lib/db/client"
+import { ibu, anak, pengukuran, skriningShamil } from "@/lib/db/schema"
+import { eq, and, desc, asc } from "drizzle-orm"
 import { auth } from "@/auth"
 import { calculateGestationalAge, calculateHPL, MONTHS_ID } from "@/lib/pregnancy-utils"
 
@@ -10,36 +12,27 @@ export async function getIbuData() {
     throw new Error("Unauthorized")
   }
 
-  const ibu = await prisma.ibu.findUnique({
-    where: { id: session.user.id },
-    include: {
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, session.user.id),
+    with: {
       anaks: {
-        include: {
-          pengukurans: {
-            orderBy: { tanggal: "desc" },
-            take: 10,
-          },
+        with: {
+          pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 10 },
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: asc(anak.createdAt),
       },
-      skrinings: {
-        orderBy: { tanggal: "desc" },
-        take: 1,
-      },
+      skrinings: { orderBy: desc(skriningShamil.tanggal), limit: 1 },
       pregnancyProfile: true,
-      pregnancyVisits: {
-        orderBy: { visitDate: "desc" },
-        take: 1,
-      },
+      pregnancyVisits: { orderBy: (pv, { desc }) => desc(pv.visitDate), limit: 1 },
     },
   })
 
-  if (!ibu) return null
+  if (!ibuRow) return null
 
-  const isPregnant = ibu.isHamil
-  const lastSkrining = ibu.skrinings[0]
-  const pregnancyProfile = ibu.pregnancyProfile
-  const lastVisit = ibu.pregnancyVisits[0] ?? null
+  const isPregnant = ibuRow.isHamil
+  const lastSkrining = ibuRow.skrinings[0]
+  const pregnancyProfile = ibuRow.pregnancyProfile
+  const lastVisit = ibuRow.pregnancyVisits[0] ?? null
 
   let weeksPregnant = 0
   let dueDateStr = "—"
@@ -77,7 +70,7 @@ export async function getIbuData() {
   } : null
 
   // Data Anak (ambil anak pertama jika tidak hamil)
-  const firstAnak = ibu.anaks[0]
+  const firstAnak = ibuRow.anaks[0]
   const childData = firstAnak ? {
     id: firstAnak.id,
     nama: firstAnak.nama,
@@ -105,7 +98,7 @@ export async function getIbuData() {
   } : null
 
   return {
-    nama: ibu.nama,
+    nama: ibuRow.nama,
     isPregnant,
     pregnancyData,
     childData,
@@ -118,31 +111,28 @@ export async function getIbuProfile() {
     throw new Error("Unauthorized")
   }
 
-  const ibu = await prisma.ibu.findUnique({
-    where: { id: session.user.id },
-    include: {
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, session.user.id),
+    with: {
       posyandu: true,
       pregnancyProfile: true,
-      skrinings: {
-        orderBy: { tanggal: "desc" },
-        take: 1,
-      },
+      skrinings: { orderBy: desc(skriningShamil.tanggal), limit: 1 },
     },
   })
 
-  if (!ibu) return null
+  if (!ibuRow) return null
 
   return {
-    nama: ibu.nama,
-    noHp: ibu.noHp,
-    tanggalLahir: ibu.tanggalLahir,
-    alamat: ibu.alamat,
-    posyandu: ibu.posyandu.nama,
-    kelurahan: ibu.posyandu.kelurahan,
-    kecamatan: ibu.posyandu.kecamatan,
-    isPregnant: ibu.isHamil,
-    lastSkrining: ibu.skrinings[0] ?? null,
-    pregnancyProfile: ibu.pregnancyProfile,
+    nama: ibuRow.nama,
+    noHp: ibuRow.noHp,
+    tanggalLahir: ibuRow.tanggalLahir,
+    alamat: ibuRow.alamat,
+    posyandu: ibuRow.posyandu.nama,
+    kelurahan: ibuRow.posyandu.kelurahan,
+    kecamatan: ibuRow.posyandu.kecamatan,
+    isPregnant: ibuRow.isHamil,
+    lastSkrining: ibuRow.skrinings[0] ?? null,
+    pregnancyProfile: ibuRow.pregnancyProfile,
   }
 }
 
@@ -150,31 +140,31 @@ export async function getIbuAnaks() {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
 
-  const ibu = await prisma.ibu.findUnique({
-    where: { id: session.user.id },
-    include: {
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, session.user.id),
+    with: {
       anaks: {
-        include: {
-          pengukurans: { orderBy: { tanggal: "desc" }, take: 1 },
+        with: {
+          pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 },
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: asc(anak.createdAt),
       },
     },
   })
 
-  if (!ibu) return []
+  if (!ibuRow) return []
 
-  return ibu.anaks.map((anak) => {
-    const last = anak.pengukurans[0] ?? null
-    const birth = new Date(anak.tanggalLahir)
+  return ibuRow.anaks.map((anakRow) => {
+    const last = anakRow.pengukurans[0] ?? null
+    const birth = new Date(anakRow.tanggalLahir)
     const now = new Date()
     const months =
       (now.getFullYear() - birth.getFullYear()) * 12 +
       (now.getMonth() - birth.getMonth())
     return {
-      id: anak.id,
-      nama: anak.nama,
-      jenisKelamin: anak.jenisKelamin as "L" | "P",
+      id: anakRow.id,
+      nama: anakRow.nama,
+      jenisKelamin: anakRow.jenisKelamin as "L" | "P",
       usia: months < 12 ? `${months} bln` : `${Math.floor(months / 12)} thn ${months % 12} bln`,
       status: last?.statusTBU ?? null,
       bb: last?.beratBadan ?? null,
@@ -187,39 +177,39 @@ export async function getIbuAnakForDashboard(id: string) {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
 
-  const [ibu, anak] = await Promise.all([
-    prisma.ibu.findUnique({ where: { id: session.user.id }, select: { nama: true } }),
-    prisma.anak.findFirst({
-      where: { id, ibuId: session.user.id },
-      include: { pengukurans: { orderBy: { tanggal: "desc" }, take: 10 } },
+  const [ibuRow, anakRow] = await Promise.all([
+    db.query.ibu.findFirst({ where: eq(ibu.id, session.user.id), columns: { nama: true } }),
+    db.query.anak.findFirst({
+      where: and(eq(anak.id, id), eq(anak.ibuId, session.user.id)),
+      with: { pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 10 } },
     }),
   ])
 
-  if (!ibu || !anak) return null
+  if (!ibuRow || !anakRow) return null
 
-  const birth = new Date(anak.tanggalLahir)
+  const birth = new Date(anakRow.tanggalLahir)
   const now = new Date()
   const usiaBulan =
     (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
 
   return {
-    nama: ibu.nama,
+    nama: ibuRow.nama,
     childData: {
-      id: anak.id,
-      nama: anak.nama,
-      jenisKelamin: anak.jenisKelamin as "L" | "P",
-      tanggalLahir: anak.tanggalLahir,
+      id: anakRow.id,
+      nama: anakRow.nama,
+      jenisKelamin: anakRow.jenisKelamin as "L" | "P",
+      tanggalLahir: anakRow.tanggalLahir,
       usiaBulan,
-      lastPengukuran: anak.pengukurans[0]
+      lastPengukuran: anakRow.pengukurans[0]
         ? {
-            beratBadan: anak.pengukurans[0].beratBadan,
-            tinggiBadan: anak.pengukurans[0].tinggiBadan,
-            statusTBU: anak.pengukurans[0].statusTBU,
-            zScoreTBU: anak.pengukurans[0].zScoreTBU,
-            tanggal: anak.pengukurans[0].tanggal,
+            beratBadan: anakRow.pengukurans[0].beratBadan,
+            tinggiBadan: anakRow.pengukurans[0].tinggiBadan,
+            statusTBU: anakRow.pengukurans[0].statusTBU,
+            zScoreTBU: anakRow.pengukurans[0].zScoreTBU,
+            tanggal: anakRow.pengukurans[0].tanggal,
           }
         : null,
-      pengukurans: anak.pengukurans.map((p) => ({
+      pengukurans: anakRow.pengukurans.map((p) => ({
         tanggal: p.tanggal,
         beratBadan: p.beratBadan,
         tinggiBadan: p.tinggiBadan,
@@ -234,22 +224,22 @@ export async function getIbuAnakDetail(id: string) {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
 
-  const anak = await prisma.anak.findFirst({
-    where: { id, ibuId: session.user.id },
-    include: {
-      pengukurans: { orderBy: { tanggal: "desc" } },
+  const anakRow = await db.query.anak.findFirst({
+    where: and(eq(anak.id, id), eq(anak.ibuId, session.user.id)),
+    with: {
+      pengukurans: { orderBy: desc(pengukuran.tanggal) },
     },
   })
 
-  if (!anak) return null
+  if (!anakRow) return null
 
-  const birth = new Date(anak.tanggalLahir)
+  const birthDate = new Date(anakRow.tanggalLahir)
   const now = new Date()
   const ageMonths =
-    (now.getFullYear() - birth.getFullYear()) * 12 +
-    (now.getMonth() - birth.getMonth())
+    (now.getFullYear() - birthDate.getFullYear()) * 12 +
+    (now.getMonth() - birthDate.getMonth())
 
-  const last = anak.pengukurans[0] ?? null
+  const last = anakRow.pengukurans[0] ?? null
 
   const fmt = (d: Date) =>
     new Intl.DateTimeFormat("id-ID", {
@@ -259,15 +249,15 @@ export async function getIbuAnakDetail(id: string) {
     }).format(d)
 
   return {
-    id: anak.id,
-    nama: anak.nama,
-    jenisKelamin: anak.jenisKelamin as "L" | "P",
-    tanggalLahir: fmt(birth),
+    id: anakRow.id,
+    nama: anakRow.nama,
+    jenisKelamin: anakRow.jenisKelamin as "L" | "P",
+    tanggalLahir: fmt(birthDate),
     usia:
       ageMonths < 12
         ? `${ageMonths} bln`
         : `${Math.floor(ageMonths / 12)} thn ${ageMonths % 12} bln`,
-    anakKe: anak.anakKe?.toString() ?? "—",
+    anakKe: anakRow.anakKe?.toString() ?? "—",
     latest: last
       ? {
           bb: last.beratBadan,
@@ -277,11 +267,11 @@ export async function getIbuAnakDetail(id: string) {
           tanggal: fmt(new Date(last.tanggal)),
         }
       : null,
-    visits: anak.pengukurans.map((p) => {
+    visits: anakRow.pengukurans.map((p) => {
       const pDate = new Date(p.tanggal)
       const visitMonths =
-        (pDate.getFullYear() - birth.getFullYear()) * 12 +
-        (pDate.getMonth() - birth.getMonth())
+        (pDate.getFullYear() - birthDate.getFullYear()) * 12 +
+        (pDate.getMonth() - birthDate.getMonth())
       return {
         tanggal: fmt(pDate),
         usiaBulan: visitMonths,

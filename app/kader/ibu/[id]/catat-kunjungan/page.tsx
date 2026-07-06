@@ -18,7 +18,6 @@ import {
   Search,
   TriangleAlert,
   Clock,
-  Bell,
   LogOut,
   ChevronDown,
   Droplet,
@@ -29,6 +28,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
+import { NotificationBell } from "@/components/kader/notification-bell"
 
 import { getIbuById } from "@/lib/actions/kader"
 import { savePregnancyVisit } from "@/lib/actions/pregnancy"
@@ -282,9 +282,7 @@ export default function CatatKunjunganIbuPage() {
             <Clock className="w-3.5 h-3.5" />
             <span className="tabular-nums font-medium">{time}</span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 bg-white rounded-full shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753]">
-            <Bell className="w-4 h-4" />
-          </Button>
+          <NotificationBell />
           <Button
             variant="ghost" size="sm"
             className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753]"

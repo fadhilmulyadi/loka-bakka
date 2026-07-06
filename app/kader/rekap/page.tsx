@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import {
   Card, CardContent,
@@ -17,14 +17,18 @@ import {
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  Bell, LogOut, TriangleAlert, Clock, Search,
+  LogOut, TriangleAlert, Clock, Search,
   ChevronDown, ChevronLeft, ChevronRight, ChevronRight as ArrowRight,
-  CircleCheck, CircleAlert, Activity, Download, Upload, Plus, MoreHorizontal,
-  SlidersHorizontal, X,
+  CircleCheck, CircleAlert, Activity, Download, Plus, MoreHorizontal,
+  SlidersHorizontal, X, Stethoscope, User, FileText, Bell, Pencil, PowerOff,
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
-import { getChildren, getDashboardStats, getIbuHamil, getIbuBiasa } from "@/lib/actions/kader"
+import { getChildren, getDashboardStats, getIbuHamil } from "@/lib/actions/kader"
+import { toCSV, downloadCSV } from "@/lib/csv"
+import { ImportPasienDialog } from "@/components/kader/import-pasien-dialog"
+import { NotificationBell } from "@/components/kader/notification-bell"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
 
@@ -59,7 +63,7 @@ type Child = {
   tgl: string
 }
 
-type Tab = "anak" | "ibu-hamil" | "ibu"
+type Tab = "anak" | "ibu-hamil"
 
 type IbuHamilRow = {
   no: number
@@ -73,29 +77,10 @@ type IbuHamilRow = {
   lastVisit: string
 }
 
-type IbuBiasaRow = {
-  no: number
-  id: string
-  nama: string
-  usia: string
-  jumlahAnak: number
-  skriningTerakhir: string
-  kategoriRisiko: string | null
-}
 
 import { StatusBadge } from "@/components/status-badge"
 
-// ... (existing imports)
 
-function statusBadge(status: string) {
-  // Keeping this for compatibility in other places if needed, but not using it here for the table.
-  const map: Record<string, string> = {
-    "Normal":   "bg-green-100 text-green-800",
-    "Stunting": "bg-red-100 text-red-800",
-    "Berisiko": "bg-amber-100 text-amber-800",
-  }
-  return map[status] ?? "bg-gray-100 text-gray-800"
-}
 
 export default function RekapPosyanduPage() {
   const { data: session } = useSession()
@@ -105,17 +90,13 @@ export default function RekapPosyanduPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>("anak")
   const [ibuHamil, setIbuHamil] = useState<IbuHamilRow[]>([])
-  const [ibuBiasa, setIbuBiasa] = useState<IbuBiasaRow[]>([])
 
-  // Ibu Hamil filters
+
   const [hamilTrimesterFilter, setHamilTrimesterFilter] = useState("")
   const [hamilKunjunganFilter, setHamilKunjunganFilter] = useState("")
   const [tempHamilTrimester, setTempHamilTrimester] = useState("")
   const [tempHamilKunjungan, setTempHamilKunjungan] = useState("")
 
-  // Ibu filters
-  const [ibuRisikoFilter, setIbuRisikoFilter] = useState("")
-  const [tempIbuRisiko, setTempIbuRisiko] = useState("")
 
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
@@ -123,16 +104,17 @@ export default function RekapPosyanduPage() {
   const [tempStatus, setTempStatus] = useState("")
   const [tempCheck, setTempCheck] = useState("")
 
-  useEffect(() => {
-    Promise.all([getChildren(), getDashboardStats(), getIbuHamil(), getIbuBiasa()])
-      .then(([childData, statData, hamilData, biasaData]) => {
+  const loadData = () =>
+    Promise.all([getChildren(), getDashboardStats(), getIbuHamil()])
+      .then(([childData, statData, hamilData]) => {
         setChildren(childData as Child[])
         setStats(statData)
         setIbuHamil(hamilData as IbuHamilRow[])
-        setIbuBiasa(biasaData as IbuBiasaRow[])
+
         setLoading(false)
       })
-  }, [])
+
+  useEffect(() => { loadData() }, [])
 
   const filtered = useMemo(() => {
     return children.filter((c) => {
@@ -159,13 +141,7 @@ export default function RekapPosyanduPage() {
     })
   }, [ibuHamil, query, hamilTrimesterFilter, hamilKunjunganFilter])
 
-  const filteredBiasa = useMemo(() => {
-    return ibuBiasa.filter((r) => {
-      const matchName = r.nama.toLowerCase().includes(query.toLowerCase())
-      const matchRisiko = !ibuRisikoFilter || r.kategoriRisiko === ibuRisikoFilter
-      return matchName && matchRisiko
-    })
-  }, [ibuBiasa, query, ibuRisikoFilter])
+
 
   useEffect(() => {
     setQuery("")
@@ -177,8 +153,6 @@ export default function RekapPosyanduPage() {
     setHamilKunjunganFilter("")
     setTempHamilTrimester("")
     setTempHamilKunjungan("")
-    setIbuRisikoFilter("")
-    setTempIbuRisiko("")
   }, [activeTab])
 
   const handleApplyFilters = () => {
@@ -207,19 +181,26 @@ export default function RekapPosyanduPage() {
   const isHamilFilterActive = !!hamilTrimesterFilter || !!hamilKunjunganFilter
   const isHamilFilterChanged = tempHamilTrimester !== hamilTrimesterFilter || tempHamilKunjungan !== hamilKunjunganFilter
 
-  const handleApplyIbuFilters = () => {
-    setIbuRisikoFilter(tempIbuRisiko)
-  }
-  const handleResetIbuFilters = () => {
-    setTempIbuRisiko("")
-    setIbuRisikoFilter("")
-  }
-  const isIbuFilterActive = !!ibuRisikoFilter
-  const isIbuFilterChanged = tempIbuRisiko !== ibuRisikoFilter
 
   const total = children.length
 
-  if (loading) return <div className="flex-1 flex items-center justify-center bg-[#EBF2F8]">Loading...</div>
+  const handleExport = () => {
+    const today = new Date().toISOString().slice(0, 10)
+    if (activeTab === "anak") {
+      downloadCSV(`rekap-anak-${today}.csv`, toCSV(
+        ["No", "Nama", "L/P", "Usia", "BB (kg)", "TB (cm)", "Status Gizi", "Periksa Bulan Ini", "Terakhir Periksa"],
+        filtered.map((r) => [r.no, r.nama, r.sex, r.usia, r.bb, r.tb, r.status, r.sudah ? "Sudah" : "Belum", r.tgl])
+      ))
+    } else if (activeTab === "ibu-hamil") {
+      downloadCSV(`rekap-ibu-hamil-${today}.csv`, toCSV(
+        ["No", "Nama", "Usia", "Trimester", "BB Saat Ini", "HPL", "Kunjungan Bulan Ini", "Terakhir Kunjungan"],
+        filteredHamil.map((r) => [r.no, r.nama, r.usia, r.trimester ?? "-", r.bbSaatIni, r.hpl, r.sudahKunjungan ? "Sudah" : "Belum", r.lastVisit])
+      ))
+    }
+  }
+
+  const activeCount = activeTab === "anak" ? filtered.length : filteredHamil.length
+
 
   return (
     <div className="min-h-full bg-[#EBF2F8] flex flex-col">
@@ -237,18 +218,18 @@ export default function RekapPosyanduPage() {
         <div className="flex-1 flex items-center gap-2 px-4 h-8 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
           <TriangleAlert className="w-3.5 h-3.5 text-[#E53935] flex-none" />
           <span className="text-xs text-[#173753] truncate font-medium">
-            {stats ? `${stats.totalChildren - stats.measuredThisMonth} pasien belum diperiksa bulan ini` : "Loading..."}
+            {loading
+              ? <Skeleton className="h-3.5 w-52 inline-block rounded" />
+              : `${stats!.totalChildren - stats!.measuredThisMonth} pasien belum diperiksa bulan ini`
+            }
           </span>
-          <span className="text-xs text-muted-foreground flex-none font-medium">| {stats?.posyanduName || "Loading..."}</span>
         </div>
         <div className="flex items-center gap-2 flex-none">
           <div className="flex items-center gap-2 px-4 h-8 text-xs text-[#173753] bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
             <Clock className="w-3.5 h-3.5" />
             <span className="tabular-nums">{time || "—"}</span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 bg-white rounded-full shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80">
-            <Bell className="w-4 h-4" />
-          </Button>
+          <NotificationBell />
           <Button
             variant="ghost" size="sm"
             className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
@@ -277,15 +258,11 @@ export default function RekapPosyanduPage() {
                 Tambah Pasien
               </Button>
             </Link>
+            <ImportPasienDialog kind={activeTab === "anak" ? "anak" : "ibu"} onImported={loadData} />
             <Button
               variant="ghost" size="sm"
-              className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Impor
-            </Button>
-            <Button
-              variant="ghost" size="sm"
+              disabled={activeCount === 0}
+              onClick={handleExport}
               className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
             >
               <Download className="w-3.5 h-3.5" />
@@ -293,7 +270,7 @@ export default function RekapPosyanduPage() {
             </Button>
             <div className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
               <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-teal-100 text-teal-700 text-sm font-semibold">
+                <AvatarFallback className="bg-teal-100 text-teal-700 text-xs font-semibold">
                   {session?.user?.name?.slice(0, 2).toUpperCase() ?? "ZA"}
                 </AvatarFallback>
               </Avatar>
@@ -307,21 +284,31 @@ export default function RekapPosyanduPage() {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex p-1 rounded-xl bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] gap-1 w-fit">
-          {(["anak", "ibu-hamil", "ibu"] as const).map((tab) => {
-            const labels: Record<string, string> = { anak: "Anak", "ibu-hamil": "Ibu Hamil", ibu: "Ibu" }
+        <div className="flex p-1 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] gap-1 w-fit">
+          {(["anak", "ibu-hamil"] as const).map((tab) => {
+            const labels: Record<string, string> = { anak: "Anak", "ibu-hamil": "Ibu Hamil" }
+            const counts: Record<string, number> = { anak: children.length, "ibu-hamil": ibuHamil.length }
+            const isActive = activeTab === tab
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "px-5 py-1.5 text-[10px] font-medium uppercase tracking-widest rounded-lg transition-all",
-                  activeTab === tab
+                  "flex items-center gap-2 px-5 py-1.5 text-[12px] font-medium rounded-[50px] transition-all",
+                  isActive
                     ? "bg-[#52A9E3] text-white shadow-sm"
                     : "text-[#173753] hover:bg-[#52A9E3]/10"
                 )}
               >
                 {labels[tab]}
+                <span className={cn(
+                  "text-[10px] font-semibold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none",
+                  isActive
+                    ? "bg-white/25 text-white"
+                    : "bg-[#52A9E3]/10 text-[#52A9E3]"
+                )}>
+                  {loading ? <Skeleton className="h-2.5 w-4 inline-block rounded" /> : counts[tab]}
+                </span>
               </button>
             )
           })}
@@ -429,42 +416,7 @@ export default function RekapPosyanduPage() {
             </div>
           )}
 
-          {/* Filter Ibu */}
-          {activeTab === "ibu" && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium text-muted-foreground">Filter</span>
-              <Select value={tempIbuRisiko} onValueChange={(v) => setTempIbuRisiko(v as string)}>
-                <SelectTrigger className="w-fit min-w-[160px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-muted-foreground">Kategori Risiko:</span>
-                    <SelectValue placeholder="Semua" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-                  <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
-                  <SelectItem value="Aman" className="text-xs text-[#173753]">Aman</SelectItem>
-                  <SelectItem value="Waspada" className="text-xs text-[#173753]">Waspada</SelectItem>
-                  <SelectItem value="Bahaya" className="text-xs text-[#173753]">Bahaya</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {activeTab === "ibu" && (isIbuFilterActive || isIbuFilterChanged) && (
-            <div className="flex items-center gap-2">
-              {isIbuFilterChanged && (
-                <button onClick={handleApplyIbuFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  Terapkan Filter
-                </button>
-              )}
-              {isIbuFilterActive && (
-                <button onClick={handleResetIbuFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
-                  <X className="w-3.5 h-3.5" />
-                  Hapus Filter
-                </button>
-              )}
-            </div>
-          )}
+
         </div>
 
         {/* Table Card */}
@@ -489,7 +441,22 @@ export default function RekapPosyanduPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.length === 0 ? (
+                    {loading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <TableRow key={i} className="border-b border-[#F0F0F0]">
+                          <TableCell className="pl-2"><Skeleton className="h-4 w-6" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-7 rounded" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-14" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-7 w-7 rounded-full" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : filtered.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={10} className="text-center py-16">
                           <div className="flex flex-col items-center gap-2">
@@ -545,9 +512,39 @@ export default function RekapPosyanduPage() {
                           </TableCell>
                           <TableCell className="text-[14px] text-[#173753]">{row.tgl}</TableCell>
                           <TableCell className="text-muted-foreground">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
+                            <Popover>
+                              <PopoverTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-gray-100">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </PopoverTrigger>
+                              <PopoverContent side="left" align="start" className="w-52 p-1.5 rounded-2xl border-none shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+                                {[
+                                  { icon: Stethoscope, label: "Periksa Sekarang",     danger: false },
+                                  { icon: User,        label: "Lihat Profil Anak",    danger: false },
+                                  { icon: FileText,    label: "Riwayat Pemeriksaan",  danger: false },
+                                  { icon: Bell,        label: "Ingatkan Ibu",         danger: false },
+                                  { icon: User,        label: "Lihat Profil Ibu",     danger: false },
+                                  { icon: Pencil,      label: "Edit Data",            danger: false },
+                                  { icon: PowerOff,    label: "Nonaktifkan Pasien",   danger: true  },
+                                ].map((item, i, arr) => (
+                                  <React.Fragment key={item.label}>
+                                    {i === arr.length - 1 && (
+                                      <div className="my-1 border-t border-gray-100" />
+                                    )}
+                                    <button
+                                      className={cn(
+                                        "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[8px] text-[12.5px] font-medium transition",
+                                        item.danger
+                                          ? "text-red-500 hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                                          : "text-[#173753] hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                                      )}
+                                    >
+                                      <item.icon className="w-3.5 h-3.5 flex-none" />
+                                      {item.label}
+                                    </button>
+                                  </React.Fragment>
+                                ))}
+                              </PopoverContent>
+                            </Popover>
                           </TableCell>
                         </TableRow>
                       ))
@@ -575,7 +572,21 @@ export default function RekapPosyanduPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredHamil.length === 0 ? (
+                    {loading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <TableRow key={i} className="border-b border-[#F0F0F0]">
+                          <TableCell className="pl-2"><Skeleton className="h-4 w-6" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-14" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-10 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-14" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-7 w-7 rounded-full" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : filteredHamil.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9} className="text-center py-16">
                           <div className="flex flex-col items-center gap-2">
@@ -642,68 +653,6 @@ export default function RekapPosyanduPage() {
               </div>
             )}
 
-            {/* Ibu Table */}
-            {activeTab === "ibu" && (
-              <div className="px-4 pb-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-b border-[#E8E8E8]">
-                      <TableHead className="text-[14px] text-[#173753] font-medium pl-2 w-10">No</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Nama</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Usia</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Jml Anak</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Skrining Terakhir</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Kategori Risiko</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBiasa.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-16">
-                          <div className="flex flex-col items-center gap-2">
-                            <Search className="w-8 h-8 text-gray-200" />
-                            <p className="text-sm font-medium text-muted-foreground">Tidak ada data yang cocok</p>
-                            <p className="text-xs text-muted-foreground">Coba ubah filter atau kata kunci pencarian</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredBiasa.map((row) => (
-                        <TableRow
-                          key={row.id}
-                          className="border-b border-[#F0F0F0] transition-colors hover:bg-[#F7FBFF]"
-                        >
-                          <TableCell className="text-[14px] pl-2 text-[#173753]">{row.no}</TableCell>
-                          <TableCell className="text-[14px] font-medium text-[#173753]">
-                            <Link href={`/kader/ibu/${row.id}`} className="hover:text-[#52A9E3] transition-colors">
-                              {row.nama}
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-[14px] text-[#173753]">{row.usia}</TableCell>
-                          <TableCell className="text-[14px] text-[#173753]">{row.jumlahAnak} anak</TableCell>
-                          <TableCell className="text-[14px] text-[#173753]">{row.skriningTerakhir}</TableCell>
-                          <TableCell>
-                            {row.kategoriRisiko ? (
-                              <StatusBadge status={row.kategoriRisiko} />
-                            ) : (
-                              <span className="text-[12px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
-                                Belum Skrining
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
 
             {/* Footer */}
             {activeTab === "anak" && filtered.length > 0 && (
@@ -750,31 +699,7 @@ export default function RekapPosyanduPage() {
               </div>
             )}
 
-            {/* Ibu Footer */}
-            {activeTab === "ibu" && filteredBiasa.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-[#F0F0F0] flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Menampilkan <span className="font-medium text-[#173753]">{filteredBiasa.length}</span> dari{" "}
-                  <span className="font-medium text-[#173753]">{ibuBiasa.length}</span> data
-                </p>
-                <div className="flex items-center gap-1">
-                  {(["Aman", "Waspada", "Bahaya"] as const).map((k) => {
-                    const count = filteredBiasa.filter(r => r.kategoriRisiko === k).length
-                    if (count === 0) return null
-                    const colors: Record<string, string> = {
-                      Aman:    "bg-green-100 text-green-700",
-                      Waspada: "bg-amber-100 text-amber-700",
-                      Bahaya:  "bg-red-100 text-red-700",
-                    }
-                    return (
-                      <span key={k} className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${colors[k]}`}>
-                        {count} {k.toLowerCase()}
-                      </span>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+
           </CardContent>
         </Card>
       </div>

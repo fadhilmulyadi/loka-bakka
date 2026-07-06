@@ -20,13 +20,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  Bell, LogOut, TriangleAlert, Phone,
+  LogOut, TriangleAlert, Phone,
   ChevronDown, TrendingUp, Clock, Search,
   ChevronLeft, ChevronRight, CheckCircle,
 } from "lucide-react"
 import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { getDashboardStats, getRecentMeasurements, getWeeklyData, getUncheckedChildren } from "@/lib/actions/kader"
+import { NotificationBell } from "@/components/kader/notification-bell"
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
 
@@ -220,16 +221,14 @@ export default function KaderDashboardPage() {
           <span className="text-xs text-[#173753] truncate font-medium">
             {stats ? `${stats.totalChildren - stats.measuredThisMonth} pasien belum diperiksa bulan ini` : "Loading..."}
           </span>
-          <span className="text-xs text-muted-foreground flex-none font-medium">| {stats?.posyanduName || "Loading..."}</span>
+
         </div>
         <div className="flex items-center gap-2 flex-none">
           <div className="flex items-center gap-2 px-4 h-8 text-xs text-[#173753] bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
             <Clock className="w-3.5 h-3.5" />
             <span className="tabular-nums">{time || "—"}</span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 bg-white rounded-full shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80">
-            <Bell className="w-4 h-4" />
-          </Button>
+          <NotificationBell />
           <Button
             variant="ghost" size="sm"
             className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"

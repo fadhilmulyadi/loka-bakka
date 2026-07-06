@@ -5,11 +5,8 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import {
   Activity,
-  FileText,
   LayoutDashboard,
-  LogOut,
   MapPin,
-  Settings,
 } from "lucide-react"
 import {
   Sidebar,
@@ -29,10 +26,6 @@ const menusTop = [
   { label: "Peta Sebaran", href: "/kader/peta-sebaran", icon: MapPin },
 ]
 
-const menusBottom = [
-  { label: "Laporan", href: "/kader/laporan", icon: FileText },
-  { label: "Pengaturan", href: "/kader/pengaturan", icon: Settings },
-]
 
 export function KaderSidebar() {
   const pathname = usePathname()
@@ -66,24 +59,6 @@ export function KaderSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <div className="mx-4 my-6 h-0.5 bg-[#BBBBBB]" />
-
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menusBottom.map((menu) => (
-                <SidebarMenuItem key={menu.href}>
-                  <SidebarMenuButton asChild isActive={pathname === menu.href}>
-                    <Link href={menu.href}>
-                      <menu.icon className="h-4 w-4" />
-                      <span>{menu.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
     </Sidebar>

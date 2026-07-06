@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Plus,
   Search,
-  Bell,
   LogOut,
   TriangleAlert,
   Clock,
@@ -37,6 +36,7 @@ import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { getIbuById } from "@/lib/actions/kader"
 import { calculateGestationalAge, calculateHPL, MONTHS_ID as UTILS_MONTHS } from "@/lib/pregnancy-utils"
+import { NotificationBell } from "@/components/kader/notification-bell"
 
 import {
   ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer,
@@ -171,9 +171,7 @@ export default function IbuProfilePage() {
             <Clock className="w-3.5 h-3.5" />
             <span className="tabular-nums">{time || "—"}</span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 bg-white rounded-full shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80">
-            <Bell className="w-4 h-4" />
-          </Button>
+          <NotificationBell />
           <Button
             variant="ghost" size="sm"
             className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
