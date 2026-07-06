@@ -1,7 +1,9 @@
 import NextAuth, { type DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/db"
+import { db } from "@/lib/db/client"
+import { kader as kaderTable, ibu as ibuTable } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 
 declare module "next-auth" {
   interface Session {
@@ -37,9 +39,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null
 
-        const kader = await prisma.kader.findUnique({
-          where: { username: credentials.username as string },
-          select: { id: true, nama: true, password: true, posyanduId: true },
+        const kader = await db.query.kader.findFirst({
+          where: eq(kaderTable.username, credentials.username as string),
+          columns: { id: true, nama: true, password: true, posyanduId: true },
         })
 
         if (!kader) return null
@@ -64,9 +66,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null
 
-        const ibu = await prisma.ibu.findUnique({
-          where: { username: credentials.username as string },
-          select: { id: true, nama: true, password: true, posyanduId: true },
+        const ibu = await db.query.ibu.findFirst({
+          where: eq(ibuTable.username, credentials.username as string),
+          columns: { id: true, nama: true, password: true, posyanduId: true },
         })
 
         if (!ibu) return null
