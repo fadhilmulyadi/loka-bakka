@@ -1,21 +1,23 @@
 "use server"
 
-import { prisma } from "@/lib/db"
+import { db } from "@/lib/db/client"
+import { pregnancyProfile, pregnancyVisit, ibu } from "@/lib/db/schema"
+import { eq, desc } from "drizzle-orm"
 import { auth } from "@/auth"
-import { 
-  calculateIMT, 
-  getIMTCategory, 
-  getIOMTargets, 
-  type PregnancyProfileData, 
-  type PregnancyVisitData 
+import {
+  calculateIMT,
+  getIMTCategory,
+  getIOMTargets,
+  type PregnancyProfileData,
+  type PregnancyVisitData
 } from "@/lib/growth-standards/imt-calc"
 
 export async function getPregnancyProfile(): Promise<PregnancyProfileData | null> {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
 
-  const profile = await prisma.pregnancyProfile.findUnique({
-    where: { ibuId: session.user.id },
+  const profile = await db.query.pregnancyProfile.findFirst({
+    where: eq(pregnancyProfile.ibuId, session.user.id),
   })
 
   if (!profile) return null
@@ -37,9 +39,9 @@ export async function getPregnancyVisits(): Promise<PregnancyVisitData[]> {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
 
-  const visits = await prisma.pregnancyVisit.findMany({
-    where: { ibuId: session.user.id },
-    orderBy: { visitDate: "desc" },
+  const visits = await db.query.pregnancyVisit.findMany({
+    where: eq(pregnancyVisit.ibuId, session.user.id),
+    orderBy: desc(pregnancyVisit.visitDate),
   })
 
   return visits.map(v => ({
@@ -58,7 +60,6 @@ export async function savePregnancyVisit(data: {
   currentWeightKg: number
   lilaCm: number
   hbGdl: number
-  // Baseline data required for first visit profile
   heightCm: number
   bbPrepregnancyKg: number
   hpht: Date
@@ -66,66 +67,56 @@ export async function savePregnancyVisit(data: {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
-  let ibu = await prisma.ibu.findUnique({
-    where: { id: data.ibuId },
-    include: { pregnancyProfile: true }
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, data.ibuId),
+    with: { pregnancyProfile: true },
   })
 
-  if (!ibu) throw new Error("Ibu not found")
+  if (!ibuRow) throw new Error("Ibu not found")
 
-  // If no pregnancy profile, create one first
-  if (!ibu.pregnancyProfile) {
+  let profile = ibuRow.pregnancyProfile
+
+  if (!profile) {
     const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
     const category = getIMTCategory(imt)
     const targets = getIOMTargets(category)
 
-    const profile = await prisma.pregnancyProfile.create({
-      data: {
-        ibuId: data.ibuId,
-        hpht: data.hpht,
-        bbPrepregnancyKg: data.bbPrepregnancyKg,
-        heightCm: data.heightCm,
-        imtPrepregnancy: imt,
-        imtCategory: category,
-        targetGainMinKg: targets.totalGainMinKg,
-        targetGainMaxKg: targets.totalGainMaxKg,
-        weeklyGainMinKg: targets.weeklyGainMinKg,
-        weeklyGainMaxKg: targets.weeklyGainMaxKg,
-      }
-    })
+    const [created] = await db.insert(pregnancyProfile).values({
+      ibuId: data.ibuId,
+      hpht: data.hpht,
+      bbPrepregnancyKg: data.bbPrepregnancyKg,
+      heightCm: data.heightCm,
+      imtPrepregnancy: imt,
+      imtCategory: category,
+      targetGainMinKg: targets.totalGainMinKg,
+      targetGainMaxKg: targets.totalGainMaxKg,
+      weeklyGainMinKg: targets.weeklyGainMinKg,
+      weeklyGainMaxKg: targets.weeklyGainMaxKg,
+    }).returning()
 
-    // Refresh ibu object with the new profile
-    ibu.pregnancyProfile = profile
+    profile = created
   }
 
-  const weightGainKg = data.currentWeightKg - ibu.pregnancyProfile.bbPrepregnancyKg
-  
-  // Basic logic for "on track" (can be refined with gestational age later)
+  const weightGainKg = data.currentWeightKg - profile.bbPrepregnancyKg
   const isOnTrack = data.lilaCm >= 23.5 && data.hbGdl >= 11.0
 
-  const result = await prisma.pregnancyVisit.create({
-    data: {
-      ibuId: data.ibuId,
-      visitDate: new Date(),
-      currentWeightKg: data.currentWeightKg,
-      weightGainKg: weightGainKg,
-      lilaCm: data.lilaCm,
-      hbGdl: data.hbGdl,
-      isOnTrack: isOnTrack,
-    }
-  })
+  const [result] = await db.insert(pregnancyVisit).values({
+    ibuId: data.ibuId,
+    visitDate: new Date(),
+    currentWeightKg: data.currentWeightKg,
+    weightGainKg: weightGainKg,
+    lilaCm: data.lilaCm,
+    hbGdl: data.hbGdl,
+    isOnTrack: isOnTrack,
+  }).returning()
 
-  // Update Ibu's hamil status if not already set (just in case)
-  if (!ibu.isHamil) {
-    await prisma.ibu.update({
-      where: { id: data.ibuId },
-      data: { isHamil: true }
-    })
+  if (!ibuRow.isHamil) {
+    await db.update(ibu).set({ isHamil: true }).where(eq(ibu.id, data.ibuId))
   }
 
   const { revalidatePath } = await import("next/cache")
   revalidatePath(`/kader/ibu/${data.ibuId}`)
   revalidatePath("/kader/dashboard")
-  
+
   return result
 }
