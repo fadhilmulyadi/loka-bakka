@@ -1,10 +1,13 @@
 "use server"
 
-import { prisma } from "@/lib/db"
+import { db } from "@/lib/db/client"
+import { posyandu, kader, ibu, anak, pengukuran, pregnancyProfile, pregnancyVisit } from "@/lib/db/schema"
+import { eq, and, desc, asc, inArray, notInArray, gte, count } from "drizzle-orm"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
 import { calculateIMT, getIMTCategory, getIOMTargets } from "@/lib/growth-standards/imt-calc"
+import { calcHeightZScore, stuntingLabel } from "@/lib/growth-standards/stunting-calc"
 
 export async function getChildren() {
   const session = await auth()
@@ -12,35 +15,27 @@ export async function getChildren() {
     throw new Error("Unauthorized")
   }
 
-  const children = await prisma.anak.findMany({
-    where: {
-      ibu: {
-        posyanduId: session.user.posyanduId,
-      },
-    },
-    include: {
-      pengukurans: {
-        orderBy: {
-          tanggal: "desc",
-        },
-        take: 1,
-      },
+  const ibuIds = db.select({ id: ibu.id }).from(ibu).where(eq(ibu.posyanduId, session.user.posyanduId))
+
+  const children = await db.query.anak.findMany({
+    where: inArray(anak.ibuId, ibuIds),
+    with: {
+      pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 },
     },
   })
 
-  return children.map((anak, index) => {
-    const lastPengukuran = anak.pengukurans[0]
-    
-    // Calculate age in months
-    const birthDate = new Date(anak.tanggalLahir)
+  return children.map((anakRow, index) => {
+    const lastPengukuran = anakRow.pengukurans[0]
+
+    const birthDate = new Date(anakRow.tanggalLahir)
     const now = new Date()
     const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
 
     return {
       no: index + 1,
-      id: anak.id,
-      nama: anak.nama,
-      sex: anak.jenisKelamin as "L" | "P",
+      id: anakRow.id,
+      nama: anakRow.nama,
+      sex: anakRow.jenisKelamin as "L" | "P",
       usia: `${ageMonths} bln`,
       bb: lastPengukuran ? lastPengukuran.beratBadan.toFixed(1).replace(".", ",") : "-",
       tb: lastPengukuran ? lastPengukuran.tinggiBadan.toFixed(1).replace(".", ",") : "-",
@@ -62,56 +57,30 @@ export async function getDashboardStats() {
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-  const posyandu = await prisma.posyandu.findUnique({
-    where: { id: posyanduId },
-    select: { nama: true },
+  const posyanduRow = await db.query.posyandu.findFirst({
+    where: eq(posyandu.id, posyanduId),
+    columns: { nama: true },
   })
 
-  // Total children in this posyandu
-  const totalChildren = await prisma.anak.count({
-    where: {
-      ibu: {
-        posyanduId,
-      },
-    },
-  })
+  const ibuIds = db.select({ id: ibu.id }).from(ibu).where(eq(ibu.posyanduId, posyanduId))
 
-  // Children measured this month
-  const measuredThisMonth = await prisma.pengukuran.groupBy({
-    by: ["anakId"],
-    where: {
-      posyanduId,
-      tanggal: {
-        gte: firstDayOfMonth,
-      },
-    },
-  })
+  const [{ value: totalChildren }] = await db
+    .select({ value: count() })
+    .from(anak)
+    .where(inArray(anak.ibuId, ibuIds))
 
-  // Children measured today
-  const measuredToday = await prisma.pengukuran.groupBy({
-    by: ["anakId"],
-    where: {
-      posyanduId,
-      tanggal: {
-        gte: today,
-      },
-    },
-  })
+  const measuredThisMonth = await db.selectDistinct({ anakId: pengukuran.anakId })
+    .from(pengukuran)
+    .where(and(eq(pengukuran.posyanduId, posyanduId), gte(pengukuran.tanggal, firstDayOfMonth)))
 
-  // Children with stunting status in their latest measurement
-  const allChildren = await prisma.anak.findMany({
-    where: {
-      ibu: {
-        posyanduId,
-      },
-    },
-    include: {
-      pengukurans: {
-        orderBy: {
-          tanggal: "desc",
-        },
-        take: 2,
-      },
+  const measuredToday = await db.selectDistinct({ anakId: pengukuran.anakId })
+    .from(pengukuran)
+    .where(and(eq(pengukuran.posyanduId, posyanduId), gte(pengukuran.tanggal, today)))
+
+  const allChildren = await db.query.anak.findMany({
+    where: inArray(anak.ibuId, ibuIds),
+    with: {
+      pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 2 },
     },
   })
 
@@ -158,8 +127,8 @@ export async function getDashboardStats() {
     { name: "Anak Normal", value: totalMeasured ? Math.round((normalCount / totalMeasured) * 100) : 0, fill: "#378ADD" },
   ]
 
-  const stuntingCount = allChildren.filter(c => 
-    c.pengukurans[0]?.statusTBU === "Stunting" || 
+  const stuntingCount = allChildren.filter(c =>
+    c.pengukurans[0]?.statusTBU === "Stunting" ||
     c.pengukurans[0]?.statusTBU === "Stunting Berat"
   ).length
 
@@ -168,7 +137,7 @@ export async function getDashboardStats() {
     measuredThisMonth: measuredThisMonth.length,
     measuredToday: measuredToday.length,
     stuntingCount,
-    posyanduName: posyandu?.nama || "Posyandu",
+    posyanduName: posyanduRow?.nama || "Posyandu",
     statusData,
     improvedCount,
   }
@@ -180,24 +149,17 @@ export async function getRecentMeasurements() {
     throw new Error("Unauthorized")
   }
 
-  const measurements = await prisma.pengukuran.findMany({
-    where: {
-      posyanduId: session.user.posyanduId,
-    },
-    include: {
-      anak: true,
-      kader: true,
-    },
-    orderBy: {
-      tanggal: "desc",
-    },
-    take: 5,
+  const measurements = await db.query.pengukuran.findMany({
+    where: eq(pengukuran.posyanduId, session.user.posyanduId),
+    with: { anak: true, kader: true },
+    orderBy: desc(pengukuran.tanggal),
+    limit: 5,
   })
 
   return measurements.map((m) => ({
     id: m.anakId,
     waktu: new Date(m.tanggal).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-    posyandu: session.user.posyanduId ? "Melati" : "Posyandu", // Simplified fallback
+    posyandu: session.user.posyanduId ? "Melati" : "Posyandu",
     nama: m.anak.nama,
     status: m.statusTBU,
     tindak: m.statusTBU === "Normal" ? "Selesai" : "Dipantau",
@@ -214,18 +176,9 @@ export async function getWeeklyData() {
   const now = new Date()
   const last7Days = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
 
-  const measurements = await prisma.pengukuran.findMany({
-    where: {
-      posyanduId: session.user.posyanduId,
-      tanggal: {
-        gte: last7Days,
-      },
-    },
-    select: {
-      tanggal: true,
-      statusTBU: true,
-    },
-  })
+  const measurements = await db.select({ tanggal: pengukuran.tanggal, statusTBU: pengukuran.statusTBU })
+    .from(pengukuran)
+    .where(and(eq(pengukuran.posyanduId, session.user.posyanduId), gte(pengukuran.tanggal, last7Days)))
 
   const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"]
   const data = []
@@ -233,8 +186,8 @@ export async function getWeeklyData() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(last7Days.getFullYear(), last7Days.getMonth(), last7Days.getDate() + i)
     const dayName = days[d.getDay()]
-    
-    const dayMeasurements = measurements.filter(m => 
+
+    const dayMeasurements = measurements.filter(m =>
       new Date(m.tanggal).toDateString() === d.toDateString()
     )
 
@@ -257,36 +210,29 @@ export async function getUncheckedChildren() {
   const now = new Date()
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const unchecked = await prisma.anak.findMany({
-    where: {
-      ibu: {
-        posyanduId: session.user.posyanduId,
-      },
-      NOT: {
-        pengukurans: {
-          some: {
-            tanggal: {
-              gte: firstDayOfMonth,
-            },
-          },
-        },
-      },
-    },
-    take: 5,
+  const ibuIds = db.select({ id: ibu.id }).from(ibu).where(eq(ibu.posyanduId, session.user.posyanduId))
+  const measuredAnakIds = db.select({ id: pengukuran.anakId }).from(pengukuran).where(gte(pengukuran.tanggal, firstDayOfMonth))
+
+  const unchecked = await db.query.anak.findMany({
+    where: and(
+      inArray(anak.ibuId, ibuIds),
+      notInArray(anak.id, measuredAnakIds),
+    ),
+    limit: 5,
   })
 
-  return unchecked.map((anak) => {
-    const birthDate = new Date(anak.tanggalLahir)
+  return unchecked.map((anakRow) => {
+    const birthDate = new Date(anakRow.tanggalLahir)
     const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
     const years = Math.floor(ageMonths / 12)
     const months = ageMonths % 12
     const ageStr = `${years > 0 ? years + " tahun " : ""}${months} bulan`
 
     return {
-      id: anak.id,
-      nama: anak.nama,
+      id: anakRow.id,
+      nama: anakRow.nama,
       usia: ageStr,
-      posyandu: "Melati", // Should ideally be from DB but keeping simple for now
+      posyandu: "Melati",
       warna: ["#378ADD", "#EF9F27", "#7F77DD", "#E24B4A", "#2DD4BF"][Math.floor(Math.random() * 5)],
     }
   })
@@ -298,119 +244,96 @@ export async function getChildDetail(id: string) {
     throw new Error("Unauthorized")
   }
 
-  const anak = await prisma.anak.findUnique({
-    where: { id },
-    include: {
+  const anakRow = await db.query.anak.findFirst({
+    where: eq(anak.id, id),
+    with: {
       ibu: {
-        include: {
+        with: {
           posyandu: true,
+          pregnancyProfile: true,
+          anaks: {
+            where: (a, { ne }) => ne(a.id, id),
+            with: { pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 } },
+          },
         },
       },
       pengukurans: {
-        orderBy: {
-          tanggal: "desc",
-        },
-        include: {
-          kader: true,
-        },
+        orderBy: desc(pengukuran.tanggal),
+        with: { kader: true },
       },
     },
   })
 
-  if (!anak) return null
+  if (!anakRow) return null
 
-  const lastPengukuran = anak.pengukurans[0]
-  const birthDate = new Date(anak.tanggalLahir)
+  const lastPengukuran = anakRow.pengukurans[0]
+  const prevPengukuran = anakRow.pengukurans[1]
+  const birthDate = new Date(anakRow.tanggalLahir)
   const now = new Date()
   const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
 
+  const gestationalWeek = anakRow.ibu.isHamil && anakRow.ibu.pregnancyProfile
+    ? Math.max(0, Math.floor((now.getTime() - new Date(anakRow.ibu.pregnancyProfile.hpht).getTime()) / (7 * 24 * 60 * 60 * 1000)))
+    : null
+
+  const nextCheckDate = lastPengukuran ? new Date(lastPengukuran.tanggal) : null
+  if (nextCheckDate) nextCheckDate.setMonth(nextCheckDate.getMonth() + 1)
+  const daysUntilNextCheck = nextCheckDate ? Math.ceil((nextCheckDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)) : null
+
   return {
-    id: anak.id,
-    name: anak.nama,
-    gender: anak.jenisKelamin === "L" ? "Laki-laki" : "Perempuan",
+    id: anakRow.id,
+    name: anakRow.nama,
+    gender: anakRow.jenisKelamin === "L" ? "Laki-laki" : "Perempuan",
     birthDate: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(birthDate),
     age: `${ageMonths} bulan`,
     ageMo: ageMonths,
-    posyandu: anak.ibu.posyandu.nama,
-    posyanduId: anak.ibu.posyandu.id,
-    desa: anak.ibu.posyandu.kelurahan,
-    address: anak.ibu.alamat || "-",
-    childOrder: anak.anakKe?.toString() || "—",
+    posyandu: anakRow.ibu.posyandu.nama,
+    posyanduId: anakRow.ibu.posyandu.id,
+    desa: anakRow.ibu.posyandu.kelurahan,
+    address: anakRow.ibu.alamat || "-",
+    childOrder: anakRow.anakKe?.toString() || "—",
     parent: {
-      mother: anak.ibu.nama,
-      father: anak.namaAyah || "—",
-      phone: anak.ibu.noHp || "-",
+      id: anakRow.ibu.id,
+      mother: anakRow.ibu.nama,
+      father: anakRow.namaAyah || "—",
+      phone: anakRow.ibu.noHp || "-",
+      username: anakRow.ibu.username,
+      isHamil: anakRow.ibu.isHamil,
+      gestationalWeek,
     },
     status: lastPengukuran?.statusTBU || "Normal",
     latestCheckDate: lastPengukuran ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(lastPengukuran.tanggal)) : "-",
     latestTB: lastPengukuran?.tinggiBadan || 0,
     latestBB: lastPengukuran?.beratBadan || 0,
+    deltaBB: lastPengukuran && prevPengukuran ? +(lastPengukuran.beratBadan - prevPengukuran.beratBadan).toFixed(1) : null,
+    deltaTB: lastPengukuran && prevPengukuran ? +(lastPengukuran.tinggiBadan - prevPengukuran.tinggiBadan).toFixed(1) : null,
     zScoreTBU: lastPengukuran ? `${lastPengukuran.zScoreTBU.toFixed(1)} SD` : "-",
+    zScoreTBURaw: lastPengukuran?.zScoreTBU ?? null,
     bbTB: lastPengukuran?.statusBBTB || "-",
     examiner: lastPengukuran?.kader.nama || "-",
-    visits: anak.pengukurans.map((p) => ({
+    nextCheckDate: nextCheckDate ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(nextCheckDate) : null,
+    daysUntilNextCheck,
+    siblings: anakRow.ibu.anaks.map((s) => {
+      const sBirth = new Date(s.tanggalLahir)
+      const sAgeMonths = (now.getFullYear() - sBirth.getFullYear()) * 12 + (now.getMonth() - sBirth.getMonth())
+      return {
+        id: s.id,
+        name: s.nama,
+        age: `${sAgeMonths} bulan`,
+        status: s.pengukurans[0]?.statusTBU || "Normal",
+      }
+    }),
+    visits: anakRow.pengukurans.map((p) => ({
       tgl: new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(p.tanggal)),
       usia: `${(new Date(p.tanggal).getFullYear() - birthDate.getFullYear()) * 12 + (new Date(p.tanggal).getMonth() - birthDate.getMonth())} bln`,
       bb: p.beratBadan,
       tb: p.tinggiBadan,
       zTb: p.zScoreTBU.toFixed(1),
       status: p.statusTBU,
+      examiner: p.kader.nama,
       latest: p.id === lastPengukuran?.id,
     })),
   }
-}
-
-import { calcHeightZScore, stuntingLabel } from "@/lib/growth-standards/stunting-calc"
-
-export async function savePengukuran(data: {
-  anakId: string
-  beratBadan: number
-  tinggiBadan: number
-}) {
-  const session = await auth()
-  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
-
-  const anak = await prisma.anak.findUnique({
-    where: { id: data.anakId },
-    include: { ibu: true }
-  })
-
-  if (!anak) throw new Error("Anak not found")
-
-  const birthDate = new Date(anak.tanggalLahir)
-  const now = new Date()
-  const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
-
-  // Calculate Z-Score TBU (Stunting)
-  const sex = anak.jenisKelamin as "L" | "P"
-  const zTBU = calcHeightZScore(data.tinggiBadan, ageMonths, sex)
-
-  // Placeholders for other Z-scores for now
-  const zBBU = 0.0
-  const zBBTB = 0.0
-
-  const result = await prisma.pengukuran.create({
-    data: {
-      anakId: data.anakId,
-      posyanduId: session.user.posyanduId!,
-      kaderId: session.user.id!,
-      beratBadan: data.beratBadan,
-      tinggiBadan: data.tinggiBadan,
-      zScoreTBU: zTBU.zScore,
-      zScoreBBU: zBBU,
-      zScoreBBTB: zBBTB,
-      statusTBU: stuntingLabel[zTBU.status],
-      statusBBU: "Normal",
-      statusBBTB: "Normal",
-      tanggal: now,
-    }
-  })
-
-  revalidatePath(`/kader/anak/${data.anakId}`)
-  revalidatePath("/kader/dashboard")
-  revalidatePath("/kader/rekap")
-
-  return result
 }
 
 export async function getKelurahanStats() {
@@ -419,29 +342,19 @@ export async function getKelurahanStats() {
     throw new Error("Unauthorized")
   }
 
-  const posyandus = await prisma.posyandu.findMany({
-    include: {
+  const posyandus = await db.query.posyandu.findMany({
+    with: {
       ibus: {
-        include: {
+        with: {
           anaks: {
-            include: {
-              pengukurans: {
-                orderBy: {
-                  tanggal: "desc",
-                },
-                take: 1,
-              },
-            },
+            with: { pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 } },
           },
         },
       },
-      kaders: {
-        take: 1,
-      },
+      kaders: { limit: 1 },
     },
   })
 
-  // Group by kelurahan
   const kelurahanMap = new Map<string, {
     id: number
     nama: string
@@ -474,11 +387,11 @@ export async function getKelurahanStats() {
 
     const data = kelurahanMap.get(kel)!
     data.posyandu.push(p.nama)
-    
-    p.ibus.forEach((ibu) => {
-      ibu.anaks.forEach((anak) => {
+
+    p.ibus.forEach((ibuRow) => {
+      ibuRow.anaks.forEach((anakRow) => {
         data.total++
-        const lastP = anak.pengukurans[0]
+        const lastP = anakRow.pengukurans[0]
         if (!lastP || lastP.statusTBU === "Normal") {
           data.normal++
         } else if (lastP.statusTBU === "Berisiko") {
@@ -493,6 +406,128 @@ export async function getKelurahanStats() {
   return Array.from(kelurahanMap.values())
 }
 
+export async function getIbuById(id: string) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, id),
+    with: {
+      posyandu: { columns: { nama: true } },
+      anaks: {
+        with: { pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 } },
+        orderBy: asc(anak.createdAt),
+      },
+      pregnancyProfile: true,
+      pregnancyVisits: { orderBy: (pv, { asc }) => asc(pv.visitDate) },
+      skrinings: { orderBy: (s, { desc }) => desc(s.tanggal) },
+    },
+  })
+
+  if (!ibuRow || ibuRow.posyanduId !== session.user.posyanduId) throw new Error("Not found")
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password: _password, ...rest } = ibuRow
+  return { ...rest, posyandu: ibuRow.posyandu.nama }
+}
+
+export async function getIbuHamil() {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const list = await db.query.ibu.findMany({
+    where: and(eq(ibu.posyanduId, session.user.posyanduId), eq(ibu.isHamil, true)),
+    with: {
+      pregnancyProfile: { columns: { hpht: true } },
+      pregnancyVisits: {
+        orderBy: (pv, { desc }) => desc(pv.visitDate),
+        limit: 1,
+        columns: { visitDate: true, currentWeightKg: true },
+      },
+    },
+    orderBy: asc(ibu.createdAt),
+  })
+
+  const now = new Date()
+
+  return list.map((ibuRow, i) => {
+    const hpht = ibuRow.pregnancyProfile?.hpht ? new Date(ibuRow.pregnancyProfile.hpht) : null
+    const diffDays = hpht ? Math.floor((now.getTime() - hpht.getTime()) / 86_400_000) : null
+    const weeks = diffDays !== null ? Math.floor(diffDays / 7) : null
+    const trimester: 1 | 2 | 3 | null =
+      weeks === null ? null : weeks < 14 ? 1 : weeks < 28 ? 2 : 3
+
+    const hpl = hpht ? new Date(hpht.getTime() + 280 * 86_400_000) : null
+    const hplStr = hpl
+      ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(hpl)
+      : "-"
+
+    const visit = ibuRow.pregnancyVisits[0] ?? null
+    const sudahKunjungan = visit
+      ? new Date(visit.visitDate).getMonth() === now.getMonth() &&
+        new Date(visit.visitDate).getFullYear() === now.getFullYear()
+      : false
+
+    const birth = ibuRow.tanggalLahir ? new Date(ibuRow.tanggalLahir) : null
+    const usiaYears = birth
+      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
+      : null
+
+    return {
+      no: i + 1,
+      id: ibuRow.id,
+      nama: ibuRow.nama,
+      usia: usiaYears !== null ? `${usiaYears} th` : "-",
+      trimester,
+      bbSaatIni: visit ? `${visit.currentWeightKg} kg` : "-",
+      hpl: hplStr,
+      sudahKunjungan,
+      lastVisit: visit
+        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(visit.visitDate))
+        : "-",
+    }
+  })
+}
+
+export async function getIbuBiasa() {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const list = await db.query.ibu.findMany({
+    where: and(eq(ibu.posyanduId, session.user.posyanduId), eq(ibu.isHamil, false)),
+    with: {
+      skrinings: {
+        orderBy: (s, { desc }) => desc(s.tanggal),
+        limit: 1,
+        columns: { tanggal: true, kategori: true, skorRisiko: true },
+      },
+      anaks: { columns: { id: true } },
+    },
+    orderBy: asc(ibu.createdAt),
+  })
+
+  const now = new Date()
+
+  return list.map((ibuRow, i) => {
+    const skrining = ibuRow.skrinings[0] ?? null
+    const birth = ibuRow.tanggalLahir ? new Date(ibuRow.tanggalLahir) : null
+    const usiaYears = birth
+      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
+      : null
+
+    return {
+      no: i + 1,
+      id: ibuRow.id,
+      nama: ibuRow.nama,
+      usia: usiaYears !== null ? `${usiaYears} th` : "-",
+      jumlahAnak: ibuRow.anaks.length,
+      skriningTerakhir: skrining
+        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(skrining.tanggal))
+        : "Belum",
+      kategoriRisiko: skrining?.kategori ?? null,
+    }
+  })
+}
+
 async function getValidatedPosyanduId() {
   const session = await auth()
   if (!session || session.user.role !== "kader") {
@@ -505,10 +540,9 @@ async function getValidatedPosyanduId() {
     throw new Error("POSYANDU_ID_MISSING")
   }
 
-  // Verify posyandu exists to avoid foreign key violations
   try {
-    const posyandu = await prisma.posyandu.findUnique({ where: { id: posyanduId } })
-    if (!posyandu) {
+    const posyanduRow = await db.query.posyandu.findFirst({ where: eq(posyandu.id, posyanduId) })
+    if (!posyanduRow) {
       console.error(`DEBUG: posyanduId ${posyanduId} from session not found in database. This might happen if the database was reset but the session is stale.`)
       throw new Error("POSYANDU_NOT_FOUND")
     }
@@ -518,6 +552,53 @@ async function getValidatedPosyanduId() {
     console.error("Database error in getValidatedPosyanduId:", error)
     throw new Error("DATABASE_ERROR")
   }
+}
+
+export async function savePengukuran(data: {
+  anakId: string
+  beratBadan: number
+  tinggiBadan: number
+}) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const anakRow = await db.query.anak.findFirst({
+    where: eq(anak.id, data.anakId),
+    with: { ibu: true },
+  })
+
+  if (!anakRow) throw new Error("Anak not found")
+
+  const birthDate = new Date(anakRow.tanggalLahir)
+  const now = new Date()
+  const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
+
+  const sex = anakRow.jenisKelamin as "L" | "P"
+  const zTBU = calcHeightZScore(data.tinggiBadan, ageMonths, sex)
+
+  const zBBU = 0.0
+  const zBBTB = 0.0
+
+  const [result] = await db.insert(pengukuran).values({
+    anakId: data.anakId,
+    posyanduId: session.user.posyanduId!,
+    kaderId: session.user.id!,
+    beratBadan: data.beratBadan,
+    tinggiBadan: data.tinggiBadan,
+    zScoreTBU: zTBU.zScore,
+    zScoreBBU: zBBU,
+    zScoreBBTB: zBBTB,
+    statusTBU: stuntingLabel[zTBU.status],
+    statusBBU: "Normal",
+    statusBBTB: "Normal",
+    tanggal: now,
+  }).returning()
+
+  revalidatePath(`/kader/anak/${data.anakId}`)
+  revalidatePath("/kader/dashboard")
+  revalidatePath("/kader/rekap")
+
+  return result
 }
 
 export async function createChild(data: {
@@ -533,42 +614,37 @@ export async function createChild(data: {
 }) {
   const posyanduId = await getValidatedPosyanduId()
 
-  // 1. Upsert Ibu
-  const ibu = await prisma.ibu.upsert({
-    where: { username: data.ibuUsername },
-    update: {
+  const [ibuRow] = await db.insert(ibu).values({
+    nama: data.ibu,
+    username: data.ibuUsername,
+    password: "$2a$10$7zV.k6uG9fH9xV5fB.Z3u.oYv9z5Y.yYv.Z3u.oYv9z5Y.yYv.y",
+    noHp: data.telp,
+    alamat: data.alamat,
+    posyanduId,
+  }).onConflictDoUpdate({
+    target: ibu.username,
+    set: {
       nama: data.ibu,
       noHp: data.telp,
       alamat: data.alamat,
       posyanduId,
     },
-    create: {
-      nama: data.ibu,
-      username: data.ibuUsername,
-      password: "$2a$10$7zV.k6uG9fH9xV5fB.Z3u.oYv9z5Y.yYv.Z3u.oYv9z5Y.yYv.y", // Default hashed password '1234'
-      noHp: data.telp,
-      alamat: data.alamat,
-      posyanduId,
-    },
-  })
+  }).returning()
 
-  // 2. Create Anak
-  const anak = await prisma.anak.create({
-    data: {
-      nama: data.nama,
-      tanggalLahir: new Date(data.birth),
-      jenisKelamin: data.sex,
-      namaAyah: data.namaAyah,
-      anakKe: data.anakKe,
-      ibuId: ibu.id,
-    },
-  })
+  const [anakRow] = await db.insert(anak).values({
+    nama: data.nama,
+    tanggalLahir: new Date(data.birth),
+    jenisKelamin: data.sex,
+    namaAyah: data.namaAyah,
+    anakKe: data.anakKe,
+    ibuId: ibuRow.id,
+  }).returning()
 
   revalidatePath("/kader/dashboard")
   revalidatePath("/kader/rekap")
-  revalidatePath(`/kader/ibu/${ibu.id}`)
+  revalidatePath(`/kader/ibu/${ibuRow.id}`)
 
-  return anak
+  return anakRow
 }
 
 export async function createIbu(data: {
@@ -586,58 +662,51 @@ export async function createIbu(data: {
 }) {
   const posyanduId = await getValidatedPosyanduId()
 
-  const existing = await prisma.ibu.findUnique({ where: { username: data.username } })
+  const existing = await db.query.ibu.findFirst({ where: eq(ibu.username, data.username) })
   if (existing) throw new Error("USERNAME_TAKEN")
 
   const hashed = await bcrypt.hash(data.password, 10)
 
-  return await prisma.$transaction(async (tx) => {
-    const ibu = await tx.ibu.create({
-      data: {
-        nama: data.nama,
-        username: data.username,
-        password: hashed,
-        noHp: data.noHp ?? null,
-        tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
-        alamat: data.alamat ?? null,
-        isHamil: data.isHamil ?? false,
-        posyanduId: posyanduId,
-      },
-      select: { id: true, nama: true, username: true },
-    })
+  return await db.transaction(async (tx) => {
+    const [ibuRow] = await tx.insert(ibu).values({
+      nama: data.nama,
+      username: data.username,
+      password: hashed,
+      noHp: data.noHp ?? null,
+      tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
+      alamat: data.alamat ?? null,
+      isHamil: data.isHamil ?? false,
+      posyanduId: posyanduId,
+    }).returning({ id: ibu.id, nama: ibu.nama, username: ibu.username })
 
     if (data.isHamil && data.hpht && data.bbPrepregnancyKg && data.heightCm) {
       const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
       const category = getIMTCategory(imt)
       const targets = getIOMTargets(category)
 
-      await tx.pregnancyProfile.create({
-        data: {
-          ibuId: ibu.id,
-          hpht: new Date(data.hpht),
-          bbPrepregnancyKg: data.bbPrepregnancyKg,
-          heightCm: data.heightCm,
-          imtPrepregnancy: imt,
-          imtCategory: category,
-          targetGainMinKg: targets.totalGainMinKg,
-          targetGainMaxKg: targets.totalGainMaxKg,
-          weeklyGainMinKg: targets.weeklyGainMinKg,
-          weeklyGainMaxKg: targets.weeklyGainMaxKg,
-        }
+      await tx.insert(pregnancyProfile).values({
+        ibuId: ibuRow.id,
+        hpht: new Date(data.hpht),
+        bbPrepregnancyKg: data.bbPrepregnancyKg,
+        heightCm: data.heightCm,
+        imtPrepregnancy: imt,
+        imtCategory: category,
+        targetGainMinKg: targets.totalGainMinKg,
+        targetGainMaxKg: targets.totalGainMaxKg,
+        weeklyGainMinKg: targets.weeklyGainMinKg,
+        weeklyGainMaxKg: targets.weeklyGainMaxKg,
       })
 
       if (data.currentWeightKg) {
         const weightGainKg = data.currentWeightKg - data.bbPrepregnancyKg
-        await tx.pregnancyVisit.create({
-          data: {
-            ibuId: ibu.id,
-            visitDate: new Date(),
-            currentWeightKg: data.currentWeightKg,
-            weightGainKg: weightGainKg,
-            lilaCm: 0, // Placeholder
-            hbGdl: 0,  // Placeholder
-            isOnTrack: true,
-          }
+        await tx.insert(pregnancyVisit).values({
+          ibuId: ibuRow.id,
+          visitDate: new Date(),
+          currentWeightKg: data.currentWeightKg,
+          weightGainKg: weightGainKg,
+          lilaCm: 0,
+          hbGdl: 0,
+          isOnTrack: true,
         })
       }
     }
@@ -645,136 +714,7 @@ export async function createIbu(data: {
     revalidatePath("/kader/rekap")
     revalidatePath("/kader/dashboard")
 
-    return ibu
+    return ibuRow
   })
 }
 
-export async function getIbuById(id: string) {
-  const session = await auth()
-  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
-
-  const ibu = await prisma.ibu.findUnique({
-    where: { id },
-    include: {
-      posyandu: {
-        select: { nama: true }
-      },
-      anaks: {
-        include: {
-          pengukurans: { orderBy: { tanggal: "desc" }, take: 1 },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-      pregnancyProfile: true,
-      pregnancyVisits: {
-        orderBy: { visitDate: "asc" },
-      },
-      skrinings: {
-        orderBy: { tanggal: "desc" },
-      },
-    },
-  })
-
-  if (!ibu || ibu.posyanduId !== session.user.posyanduId) throw new Error("Not found")
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password: _password, ...rest } = ibu
-  return { ...rest, posyandu: ibu.posyandu.nama }
-}
-
-export async function getIbuHamil() {
-  const session = await auth()
-  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
-
-  const list = await prisma.ibu.findMany({
-    where: { posyanduId: session.user.posyanduId, isHamil: true },
-    include: {
-      pregnancyProfile: { select: { hpht: true } },
-      pregnancyVisits: {
-        orderBy: { visitDate: "desc" },
-        take: 1,
-        select: { visitDate: true, currentWeightKg: true },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-  })
-
-  const now = new Date()
-
-  return list.map((ibu, i) => {
-    const hpht = ibu.pregnancyProfile?.hpht ? new Date(ibu.pregnancyProfile.hpht) : null
-    const diffDays = hpht ? Math.floor((now.getTime() - hpht.getTime()) / 86_400_000) : null
-    const weeks = diffDays !== null ? Math.floor(diffDays / 7) : null
-    const trimester: 1 | 2 | 3 | null =
-      weeks === null ? null : weeks < 14 ? 1 : weeks < 28 ? 2 : 3
-
-    const hpl = hpht ? new Date(hpht.getTime() + 280 * 86_400_000) : null
-    const hplStr = hpl
-      ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(hpl)
-      : "-"
-
-    const visit = ibu.pregnancyVisits[0] ?? null
-    const sudahKunjungan = visit
-      ? new Date(visit.visitDate).getMonth() === now.getMonth() &&
-        new Date(visit.visitDate).getFullYear() === now.getFullYear()
-      : false
-
-    const birth = ibu.tanggalLahir ? new Date(ibu.tanggalLahir) : null
-    const usiaYears = birth
-      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
-      : null
-
-    return {
-      no: i + 1,
-      id: ibu.id,
-      nama: ibu.nama,
-      usia: usiaYears !== null ? `${usiaYears} th` : "-",
-      trimester,
-      bbSaatIni: visit ? `${visit.currentWeightKg} kg` : "-",
-      hpl: hplStr,
-      sudahKunjungan,
-      lastVisit: visit
-        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(visit.visitDate))
-        : "-",
-    }
-  })
-}
-
-export async function getIbuBiasa() {
-  const session = await auth()
-  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
-
-  const list = await prisma.ibu.findMany({
-    where: { posyanduId: session.user.posyanduId, isHamil: false },
-    include: {
-      skrinings: {
-        orderBy: { tanggal: "desc" },
-        take: 1,
-        select: { tanggal: true, kategori: true, skorRisiko: true },
-      },
-      _count: { select: { anaks: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  })
-
-  const now = new Date()
-
-  return list.map((ibu, i) => {
-    const skrining = ibu.skrinings[0] ?? null
-    const birth = ibu.tanggalLahir ? new Date(ibu.tanggalLahir) : null
-    const usiaYears = birth
-      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
-      : null
-
-    return {
-      no: i + 1,
-      id: ibu.id,
-      nama: ibu.nama,
-      usia: usiaYears !== null ? `${usiaYears} th` : "-",
-      jumlahAnak: ibu._count.anaks,
-      skriningTerakhir: skrining
-        ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(skrining.tanggal))
-        : "Belum",
-      kategoriRisiko: skrining?.kategori ?? null,
-    }
-  })
-}
