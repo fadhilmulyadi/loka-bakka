@@ -18,40 +18,22 @@ import { StatusBadge } from "@/components/status-badge"
 
 const ACCENT = "#52A9E3"
 
-type ReadState = "measuring" | "stable"
-
 function MetricCard({
   label,
   value,
   unit,
   editable,
   onChange,
-  stateLabel,
-  stable,
 }: {
   label: string
   value: string
   unit: string
   editable: boolean
   onChange: (v: string) => void
-  stateLabel?: string
-  stable?: boolean
 }) {
   return (
     <div className="rounded-[14px] border border-gray-200 py-4 px-[18px]">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
-        {stateLabel && (
-          <span
-            className={cn(
-              "text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap",
-              stable ? "bg-[#E6F4EA] text-[#1E8E3E]" : "bg-[#FFF4E5] text-[#B06000]"
-            )}
-          >
-            {stateLabel}
-          </span>
-        )}
-      </div>
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
       {editable ? (
         <div className="flex items-baseline gap-1 mt-1.5">
           <input
@@ -90,25 +72,27 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
   const [tab, setTab] = useState<"alat" | "manual">("alat")
   const [bb, setBb] = useState("")
   const [tb, setTb] = useState("")
-  const [bbState, setBbState] = useState<ReadState>("measuring")
-  const [tbState, setTbState] = useState<ReadState>("measuring")
   const [saving, setSaving] = useState(false)
 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [deviceStatus, setDeviceStatus] = useState<"terhubung" | "terputus">("terputus")
+  const [hasilSelesai, setHasilSelesai] = useState(false)
+  const [kategoriHasil, setKategoriHasil] = useState("")
+  const [teksEdukasi, setTeksEdukasi] = useState("")
 
   const startSession = async () => {
     setBb("")
     setTb("")
-    setBbState("measuring")
-    setTbState("measuring")
+    setHasilSelesai(false)
+    setKategoriHasil("")
+    setTeksEdukasi("")
     setSessionId(null)
 
     try {
       const res = await fetch("/api/pengukuran/mulai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId: "esp32-01" })
+        body: JSON.stringify({ deviceId: "esp32-01", kategori: "anak", anakId: child.id })
       })
       const data = await res.json()
       if (data.success) {
@@ -139,20 +123,19 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
   // Poll session data
   useEffect(() => {
     if (!open || tab !== "alat" || !sessionId) return
-    
+
     const pollSession = async () => {
       try {
         const res = await fetch(`/api/pengukuran/${sessionId}/status`)
         const data = await res.json()
         if (data.success && data.data) {
           const s = data.data
-          if (s.statusBerat === "selesai") {
+          if (s.statusHasil === "selesai") {
             setBb(s.nilaiBerat?.toString() || "")
-            setBbState("stable")
-          }
-          if (s.statusTinggi === "selesai") {
             setTb(s.nilaiTinggi?.toString() || "")
-            setTbState("stable")
+            setKategoriHasil(s.kategoriHasil || "")
+            setTeksEdukasi(s.teksEdukasi || "")
+            setHasilSelesai(true)
           }
         }
       } catch (err) {}
@@ -163,16 +146,14 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
   }, [open, tab, sessionId])
 
   useEffect(() => {
-    if (open && tab === "alat") {
-      startSession()
-    }
-  }, [open, tab])
-
-  useEffect(() => {
     if (!open) {
       setTab("alat")
       setBb("")
       setTb("")
+      setSessionId(null)
+      setHasilSelesai(false)
+      setKategoriHasil("")
+      setTeksEdukasi("")
     }
   }, [open])
 
@@ -182,9 +163,9 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
 
   const ready = tab === "manual"
     ? bbNum != null && tbNum != null
-    : bbState === "stable" && tbState === "stable"
+    : hasilSelesai
 
-  const zTBU = ready && tbNum != null ? calcHeightZScore(tbNum, child.ageMo, sex) : null
+  const zTBU = tab === "manual" && ready && tbNum != null ? calcHeightZScore(tbNum, child.ageMo, sex) : null
 
   const handleSubmit = async () => {
     if (!ready || bbNum == null || tbNum == null) return
@@ -206,7 +187,6 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
       <DialogPortal>
         <DialogOverlay className="bg-[rgba(20,48,74,0.45)]" />
         <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[600px] max-w-[calc(100vw-80px)] max-h-[calc(100vh-80px)] overflow-y-auto rounded-[18px] bg-white shadow-[0_20px_60px_rgba(20,48,74,0.3)] outline-none">
-          {/* Header */}
           <div className="pt-5 px-[26px] pb-0 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <DialogTitle className="text-[17px] font-semibold text-[#173753] leading-tight">
@@ -221,7 +201,6 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
             </DialogClose>
           </div>
 
-          {/* Tab switcher */}
           <div className="mx-[26px] my-4 flex p-1 gap-1 rounded-xl bg-[#F1F5F9]">
             {(["alat", "manual"] as const).map((t) => (
               <button
@@ -238,7 +217,6 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
             ))}
           </div>
 
-          {/* Body */}
           <div className="px-[26px] pb-[22px] flex flex-col gap-[14px]">
             {tab === "alat" && (
               <div className={cn("flex items-center justify-between rounded-xl px-4 py-[11px]", deviceStatus === "terhubung" ? "bg-[#E6F4EA]" : "bg-gray-100")}>
@@ -251,28 +229,31 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-[14px]">
-              <MetricCard
-                label="BERAT BADAN"
-                value={bb}
-                unit="kg"
-                editable={tab === "manual"}
-                onChange={setBb}
-                stateLabel={tab === "alat" ? (bbState === "stable" ? "Selesai" : "Mengukur") : undefined}
-                stable={bbState === "stable"}
-              />
-              <MetricCard
-                label="TINGGI BADAN"
-                value={tb}
-                unit="cm"
-                editable={tab === "manual"}
-                onChange={setTb}
-                stateLabel={tab === "alat" ? (tbState === "stable" ? "Selesai" : "Mengukur") : undefined}
-                stable={tbState === "stable"}
-              />
-            </div>
+            {tab === "alat" && !sessionId && (
+              <button
+                type="button"
+                onClick={startSession}
+                className="h-11 rounded-xl text-[14px] font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: `linear-gradient(to right, ${ACCENT}, #93D1F7)` }}
+              >
+                Mulai Pengukuran dengan Alat
+              </button>
+            )}
 
-            {ready && zTBU && (
+            {tab === "alat" && sessionId && !hasilSelesai && (
+              <div className="rounded-xl bg-[#F7FBFF] px-4 py-3 text-[13px] text-muted-foreground text-center">
+                Menunggu alat menyelesaikan pengukuran…
+              </div>
+            )}
+
+            {(tab === "manual" || hasilSelesai) && (
+              <div className="grid grid-cols-2 gap-[14px]">
+                <MetricCard label="BERAT BADAN" value={bb} unit="kg" editable={tab === "manual"} onChange={setBb} />
+                <MetricCard label="TINGGI BADAN" value={tb} unit="cm" editable={tab === "manual"} onChange={setTb} />
+              </div>
+            )}
+
+            {tab === "manual" && ready && zTBU && (
               <div className="rounded-xl bg-[#F7FBFF] px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[12px] font-medium text-muted-foreground">Hasil skrining otomatis</p>
@@ -286,17 +267,29 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
                 </div>
               </div>
             )}
+
+            {tab === "alat" && hasilSelesai && (
+              <div className="rounded-xl bg-[#F7FBFF] px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-medium text-muted-foreground">Hasil dari alat</p>
+                  <span className="text-[11px] font-semibold text-[#173753] bg-white px-2 py-0.5 rounded-full flex-shrink-0">TB/U</span>
+                </div>
+                <div className="mt-2">
+                  <StatusBadge status={kategoriHasil} />
+                </div>
+                <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">{teksEdukasi}</p>
+              </div>
+            )}
           </div>
 
-          {/* Footer */}
           <div className="flex items-center gap-[10px] px-[26px] py-[15px] border-t border-gray-100">
-            {tab === "alat" && (
+            {tab === "alat" && sessionId && (
               <button
                 type="button"
                 onClick={startSession}
                 className="text-[13px] font-medium text-[#173753] hover:text-[#52A9E3] transition-colors"
               >
-                Ambil ulang
+                Ulangi
               </button>
             )}
             <div className="flex-1" />
