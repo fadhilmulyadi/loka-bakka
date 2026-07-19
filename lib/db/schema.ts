@@ -5,7 +5,6 @@ export const posyandu = pgTable("Posyandu", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   nama: text("nama").notNull(),
   alamat: text("alamat").notNull(),
-  kelurahan: text("kelurahan").notNull(),
   kecamatan: text("kecamatan").notNull(),
   kota: text("kota").notNull(),
   latitude: doublePrecision("latitude"),
@@ -30,6 +29,8 @@ export const ibu = pgTable("Ibu", {
   noHp: text("noHp"),
   tanggalLahir: timestamp("tanggalLahir", { mode: "date" }),
   alamat: text("alamat"),
+  kelurahan: text("kelurahan"),
+  terakhirDiingatkanKehamilan: timestamp("terakhirDiingatkanKehamilan", { mode: "date" }),
   isHamil: boolean("isHamil").notNull().default(false),
   isActive: boolean("isActive").notNull().default(true),
   posyanduId: text("posyanduId").notNull().references(() => posyandu.id),
@@ -53,7 +54,10 @@ export const anak = pgTable("Anak", {
   jenisKelamin: text("jenisKelamin").notNull(),
   namaAyah: text("namaAyah"),
   anakKe: integer("anakKe"),
+  beratLahir: doublePrecision("beratLahir"),
+  panjangLahir: doublePrecision("panjangLahir"),
   ibuId: text("ibuId").notNull().references(() => ibu.id),
+  terakhirDiingatkan: timestamp("terakhirDiingatkan", { mode: "date" }),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 })
 
@@ -109,6 +113,56 @@ export const pregnancyVisit = pgTable("PregnancyVisit", {
   lilaCm: doublePrecision("lilaCm").notNull(),
   hbGdl: doublePrecision("hbGdl").notNull(),
   isOnTrack: boolean("isOnTrack").notNull(),
+  catatanKader: text("catatanKader"),
+  kirimKeIbu: boolean("kirimKeIbu").notNull().default(false),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+export const notifikasi = pgTable("Notifikasi", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  posyanduId: text("posyanduId").notNull().references(() => posyandu.id),
+  ibuId: text("ibuId").references(() => ibu.id, { onDelete: "cascade" }), // set = targeted at one ibu (e.g. a kader reminder), null = posyandu-wide (kader dashboard)
+  templateCode: text("templateCode").notNull(), // "T1" | "T2" | "T3" | "T5" | "R1" | "R2"
+  level: text("level").notNull(), // "merah" | "kuning"
+  judul: text("judul").notNull(),
+  pesan: text("pesan").notNull(),
+  actionLabel: text("actionLabel").notNull(),
+  actionUrl: text("actionUrl").notNull(),
+  groupKey: text("groupKey").notNull().unique(), // dedupe/merge key, e.g. "T1-{posyanduId}-{yyyy-mm-dd}"
+  mergeCount: integer("mergeCount").notNull().default(1),
+  isRead: boolean("isRead").notNull().default(false),
+  createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+})
+
+export const device = pgTable("Device", {
+  id: text("id").primaryKey(), // e.g. "esp32-01"
+  nama: text("nama").notNull(),
+  lastSeen: timestamp("lastSeen", { mode: "date" }).defaultNow(),
+})
+
+export const sesiPengukuran = pgTable("SesiPengukuran", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  deviceId: text("deviceId").references(() => device.id),
+  kategori: text("kategori").notNull().default("anak"), // 'anak' | 'ibu'
+  anakId: text("anakId").references(() => anak.id),
+  ibuId: text("ibuId").references(() => ibu.id),
+  lilaCm: doublePrecision("lilaCm"),
+  hbGdl: doublePrecision("hbGdl"),
+  jawaban: jsonb("jawaban").$type<{
+    protein: boolean
+    fe: boolean
+    pengetahuan: boolean
+    sanitasi: boolean
+    rokok: boolean
+  }>(),
+  nilaiTinggi: doublePrecision("nilaiTinggi"),
+  nilaiBerat: doublePrecision("nilaiBerat"),
+  statusHasil: text("statusHasil").notNull().default("menunggu"), // 'menunggu' | 'selesai'
+  kategoriHasil: text("kategoriHasil"),
+  skorAkhir: integer("skorAkhir"),
+  skorKuesioner: doublePrecision("skorKuesioner"),
+  teksEdukasi: text("teksEdukasi"),
+  namaPasien: text("namaPasien"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 })
 
@@ -117,6 +171,11 @@ export const posyanduRelations = relations(posyandu, ({ many }) => ({
   ibus: many(ibu),
   pengukurans: many(pengukuran),
   skrinings: many(skriningShamil),
+  notifikasis: many(notifikasi),
+}))
+
+export const notifikasiRelations = relations(notifikasi, ({ one }) => ({
+  posyandu: one(posyandu, { fields: [notifikasi.posyanduId], references: [posyandu.id] }),
 }))
 
 export const kaderRelations = relations(kader, ({ one, many }) => ({
@@ -163,4 +222,12 @@ export const pregnancyProfileRelations = relations(pregnancyProfile, ({ one }) =
 export const pregnancyVisitRelations = relations(pregnancyVisit, ({ one }) => ({
   ibu: one(ibu, { fields: [pregnancyVisit.ibuId], references: [ibu.id] }),
   kader: one(kader, { fields: [pregnancyVisit.kaderId], references: [kader.id] }),
+}))
+
+export const deviceRelations = relations(device, ({ many }) => ({
+  sesiPengukuran: many(sesiPengukuran),
+}))
+
+export const sesiPengukuranRelations = relations(sesiPengukuran, ({ one }) => ({
+  device: one(device, { fields: [sesiPengukuran.deviceId], references: [device.id] }),
 }))
