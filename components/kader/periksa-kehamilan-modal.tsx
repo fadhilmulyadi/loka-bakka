@@ -12,14 +12,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { savePregnancyVisit } from "@/lib/actions/pregnancy"
+import { savePregnancyVisit, saveSkriningDariSesi } from "@/lib/actions/pregnancy"
 import { getWeightGainStatus, weightGainLabel } from "@/lib/growth-standards/imt-calc"
 import { StatusBadge } from "@/components/status-badge"
 import { FieldLabel, StyledTextarea } from "@/components/kader/tambah-pasien-modal"
 
 const ACCENT = "#52A9E3"
-
-type ReadState = "measuring" | "stable"
 
 function MetricCard({
   label,
@@ -95,7 +93,6 @@ interface PeriksaKehamilanModalProps {
 export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: PeriksaKehamilanModalProps) {
   const [tab, setTab] = useState<"alat" | "manual">("alat")
   const [bb, setBb] = useState("")
-  const [bbState, setBbState] = useState<ReadState>("measuring")
   const [lila, setLila] = useState("")
   const [hb, setHb] = useState("")
   const [catatan, setCatatan] = useState("")
@@ -103,17 +100,33 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
 
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [deviceStatus, setDeviceStatus] = useState<"terhubung" | "terputus">("terputus")
+  const [hasilSelesai, setHasilSelesai] = useState(false)
+  const [kategoriHasil, setKategoriHasil] = useState("")
+  const [teksEdukasi, setTeksEdukasi] = useState("")
+
+  const lilaNum = lila ? parseFloat(lila.replace(",", ".")) : null
+  const hbNum = hb ? parseFloat(hb.replace(",", ".")) : null
+  const lilaHbSiap = lilaNum != null && hbNum != null
 
   const startSession = async () => {
+    if (!lilaHbSiap) return
     setBb("")
-    setBbState("measuring")
+    setHasilSelesai(false)
+    setKategoriHasil("")
+    setTeksEdukasi("")
     setSessionId(null)
 
     try {
       const res = await fetch("/api/pengukuran/mulai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId: "esp32-01" })
+        body: JSON.stringify({
+          deviceId: "esp32-01",
+          kategori: "ibu",
+          ibuId: ibu.id,
+          lilaCm: lilaNum,
+          hbGdl: hbNum,
+        })
       })
       const data = await res.json()
       if (data.success) {
@@ -151,9 +164,11 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
         const data = await res.json()
         if (data.success && data.data) {
           const s = data.data
-          if (s.statusBerat === "selesai") {
+          if (s.statusHasil === "selesai") {
             setBb(s.nilaiBerat?.toString() || "")
-            setBbState("stable")
+            setKategoriHasil(s.kategoriHasil || "")
+            setTeksEdukasi(s.teksEdukasi || "")
+            setHasilSelesai(true)
           }
         }
       } catch (err) {}
@@ -164,26 +179,22 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
   }, [open, tab, sessionId])
 
   useEffect(() => {
-    if (open && tab === "alat") {
-      startSession()
-    }
-  }, [open, tab])
-
-  useEffect(() => {
     if (!open) {
       setTab("alat")
       setBb("")
       setLila("")
       setHb("")
       setCatatan("")
+      setSessionId(null)
+      setHasilSelesai(false)
+      setKategoriHasil("")
+      setTeksEdukasi("")
     }
   }, [open])
 
   const bbNum = bb ? parseFloat(bb) : null
-  const lilaNum = lila ? parseFloat(lila.replace(",", ".")) : null
-  const hbNum = hb ? parseFloat(hb.replace(",", ".")) : null
 
-  const bbReady = tab === "manual" ? bbNum != null : bbState === "stable"
+  const bbReady = tab === "manual" ? bbNum != null : hasilSelesai
   const ready = bbReady && lilaNum != null && hbNum != null
 
   const weightGainKg = bbNum != null ? bbNum - ibu.bbPrepregnancyKg : null
@@ -199,13 +210,20 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
     if (!ready || bbNum == null || lilaNum == null || hbNum == null) return
     setSaving(true)
     try {
-      await savePregnancyVisit({
-        ibuId: ibu.id,
-        currentWeightKg: bbNum,
-        lilaCm: lilaNum,
-        hbGdl: hbNum,
-        catatanKader: catatan.trim() || undefined,
-      })
+      if (tab === "alat" && sessionId && hasilSelesai) {
+        await saveSkriningDariSesi({
+          sessionId,
+          catatanKader: catatan.trim() || undefined,
+        })
+      } else {
+        await savePregnancyVisit({
+          ibuId: ibu.id,
+          currentWeightKg: bbNum,
+          lilaCm: lilaNum,
+          hbGdl: hbNum,
+          catatanKader: catatan.trim() || undefined,
+        })
+      }
       onSaved()
       onOpenChange(false)
     } catch (err) {
@@ -266,16 +284,8 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
               </div>
             )}
 
-            <div className="grid grid-cols-3 gap-[14px]">
-              <MetricCard
-                label="BERAT BADAN"
-                value={bb}
-                unit="kg"
-                editable={tab === "manual"}
-                onChange={setBb}
-                stateLabel={tab === "alat" ? (bbState === "stable" ? "Selesai" : "Mengukur") : undefined}
-                stable={bbState === "stable"}
-              />
+            {/* LILA + Hb always editable (needed before starting alat session) */}
+            <div className="grid grid-cols-2 gap-[14px]">
               <MetricCard
                 label="LILA"
                 value={lila}
@@ -294,6 +304,40 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
               />
             </div>
 
+            {/* Alat flow: start button or waiting or result */}
+            {tab === "alat" && !sessionId && (
+              <button
+                type="button"
+                onClick={startSession}
+                disabled={!lilaHbSiap}
+                className={cn(
+                  "h-11 rounded-xl text-[14px] font-semibold text-white transition-opacity",
+                  !lilaHbSiap ? "opacity-40 cursor-not-allowed" : "hover:opacity-90"
+                )}
+                style={{ background: `linear-gradient(to right, ${ACCENT}, #93D1F7)` }}
+              >
+                {lilaHbSiap ? "Mulai Pengukuran BB dengan Alat" : "Isi LILA & Hb terlebih dahulu"}
+              </button>
+            )}
+
+            {tab === "alat" && sessionId && !hasilSelesai && (
+              <div className="rounded-xl bg-[#F7FBFF] px-4 py-3 text-[13px] text-muted-foreground text-center">
+                Menunggu alat menyelesaikan pengukuran…
+              </div>
+            )}
+
+            {/* BB card: manual input or device result */}
+            {(tab === "manual" || hasilSelesai) && (
+              <MetricCard
+                label="BERAT BADAN"
+                value={bb}
+                unit="kg"
+                editable={tab === "manual"}
+                onChange={setBb}
+              />
+            )}
+
+            {/* Weight gain screening */}
             {weightGainKg != null && gainStatus && (
               <div className="rounded-xl bg-[#F7FBFF] px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
@@ -306,6 +350,19 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
                   </span>
                   <StatusBadge status={weightGainLabel[gainStatus]} />
                 </div>
+              </div>
+            )}
+
+            {/* Alat risk result */}
+            {tab === "alat" && hasilSelesai && kategoriHasil && (
+              <div className="rounded-xl bg-[#F7FBFF] px-4 py-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-medium text-muted-foreground">Hasil risiko dari alat</p>
+                </div>
+                <div className="mt-2">
+                  <StatusBadge status={kategoriHasil} />
+                </div>
+                <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">{teksEdukasi}</p>
               </div>
             )}
 
@@ -328,13 +385,13 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
 
           {/* Footer */}
           <div className="flex items-center gap-[10px] px-[26px] py-[15px] border-t border-gray-100">
-            {tab === "alat" && (
+            {tab === "alat" && sessionId && (
               <button
                 type="button"
                 onClick={startSession}
                 className="text-[13px] font-medium text-[#173753] hover:text-[#52A9E3] transition-colors"
               >
-                Ambil ulang
+                Ulangi
               </button>
             )}
             <div className="flex-1" />
