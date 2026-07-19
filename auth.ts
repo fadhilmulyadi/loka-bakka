@@ -11,12 +11,14 @@ declare module "next-auth" {
       id: string
       role: "kader" | "ibu"
       posyanduId: string
+      posyanduName: string
     } & DefaultSession["user"]
   }
 
   interface User {
     role: "kader" | "ibu"
     posyanduId: string
+    posyanduName: string
   }
 }
 
@@ -24,6 +26,7 @@ declare module "@auth/core/jwt" {
   interface JWT {
     role: "kader" | "ibu"
     posyanduId: string
+    posyanduName: string
   }
 }
 
@@ -41,6 +44,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const kader = await db.query.kader.findFirst({
           where: eq(kaderTable.username, credentials.username as string),
+          with: { posyandu: { columns: { nama: true } } },
           columns: { id: true, nama: true, password: true, posyanduId: true },
         })
 
@@ -54,6 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: kader.nama,
           role: "kader" as const,
           posyanduId: kader.posyanduId,
+          posyanduName: kader.posyandu?.nama ?? "Posyandu",
         }
       },
     }),
@@ -90,6 +95,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.role = user.role
         token.posyanduId = user.posyanduId
+        token.posyanduName = user.posyanduName
       }
       return token
     },
@@ -97,6 +103,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = token.sub!
       session.user.role = token.role as "kader" | "ibu"
       session.user.posyanduId = token.posyanduId as string
+      session.user.posyanduName = token.posyanduName as string
       return session
     },
   },

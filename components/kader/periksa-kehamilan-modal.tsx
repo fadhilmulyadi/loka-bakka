@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { X } from "lucide-react"
+import { X, TriangleAlert } from "lucide-react"
 import {
   Dialog,
   DialogPortal,
@@ -12,9 +12,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { savePengukuran } from "@/lib/actions/kader"
-import { calcHeightZScore, stuntingLabel } from "@/lib/growth-standards/stunting-calc"
+import { savePregnancyVisit } from "@/lib/actions/pregnancy"
+import { getWeightGainStatus, weightGainLabel } from "@/lib/growth-standards/imt-calc"
 import { StatusBadge } from "@/components/status-badge"
+import { FieldLabel, StyledTextarea } from "@/components/kader/tambah-pasien-modal"
 
 const ACCENT = "#52A9E3"
 
@@ -28,6 +29,7 @@ function MetricCard({
   onChange,
   stateLabel,
   stable,
+  alert,
 }: {
   label: string
   value: string
@@ -36,9 +38,10 @@ function MetricCard({
   onChange: (v: string) => void
   stateLabel?: string
   stable?: boolean
+  alert?: boolean
 }) {
   return (
-    <div className="rounded-[14px] border border-gray-200 py-4 px-[18px]">
+    <div className={cn("rounded-[14px] border py-4 px-[18px]", alert ? "border-[#F4E2BC] bg-[#FFFBF2]" : "border-gray-200")}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
         {stateLabel && (
@@ -61,7 +64,7 @@ function MetricCard({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="0.0"
-            className="w-full text-[20px] font-bold text-[#173753] outline-none bg-transparent tabular-nums"
+            className={cn("w-full text-[20px] font-bold outline-none bg-transparent tabular-nums", alert ? "text-[#8A6100]" : "text-[#173753]")}
           />
           <span className="text-[12px] text-muted-foreground flex-shrink-0">{unit}</span>
         </div>
@@ -74,24 +77,28 @@ function MetricCard({
   )
 }
 
-interface CatatKunjunganModalProps {
+interface PeriksaKehamilanModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  child: {
+  ibu: {
     id: string
-    name: string
-    gender: string
-    ageMo: number
+    nama: string
+    gestationalWeeks: number
+    trimester: number
+    bbPrepregnancyKg: number
+    weeklyGainMinKg: number
+    weeklyGainMaxKg: number
   }
   onSaved: () => void
 }
 
-export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: CatatKunjunganModalProps) {
+export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: PeriksaKehamilanModalProps) {
   const [tab, setTab] = useState<"alat" | "manual">("alat")
   const [bb, setBb] = useState("")
-  const [tb, setTb] = useState("")
   const [bbState, setBbState] = useState<ReadState>("measuring")
-  const [tbState, setTbState] = useState<ReadState>("measuring")
+  const [lila, setLila] = useState("")
+  const [hb, setHb] = useState("")
+  const [catatan, setCatatan] = useState("")
   const [saving, setSaving] = useState(false)
 
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -99,9 +106,7 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
 
   const startSession = async () => {
     setBb("")
-    setTb("")
     setBbState("measuring")
-    setTbState("measuring")
     setSessionId(null)
 
     try {
@@ -139,7 +144,7 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
   // Poll session data
   useEffect(() => {
     if (!open || tab !== "alat" || !sessionId) return
-    
+
     const pollSession = async () => {
       try {
         const res = await fetch(`/api/pengukuran/${sessionId}/status`)
@@ -149,10 +154,6 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
           if (s.statusBerat === "selesai") {
             setBb(s.nilaiBerat?.toString() || "")
             setBbState("stable")
-          }
-          if (s.statusTinggi === "selesai") {
-            setTb(s.nilaiTinggi?.toString() || "")
-            setTbState("stable")
           }
         }
       } catch (err) {}
@@ -172,25 +173,39 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
     if (!open) {
       setTab("alat")
       setBb("")
-      setTb("")
+      setLila("")
+      setHb("")
+      setCatatan("")
     }
   }, [open])
 
-  const sex = child.gender === "Laki-laki" ? "L" : "P"
   const bbNum = bb ? parseFloat(bb) : null
-  const tbNum = tb ? parseFloat(tb) : null
+  const lilaNum = lila ? parseFloat(lila.replace(",", ".")) : null
+  const hbNum = hb ? parseFloat(hb.replace(",", ".")) : null
 
-  const ready = tab === "manual"
-    ? bbNum != null && tbNum != null
-    : bbState === "stable" && tbState === "stable"
+  const bbReady = tab === "manual" ? bbNum != null : bbState === "stable"
+  const ready = bbReady && lilaNum != null && hbNum != null
 
-  const zTBU = ready && tbNum != null ? calcHeightZScore(tbNum, child.ageMo, sex) : null
+  const weightGainKg = bbNum != null ? bbNum - ibu.bbPrepregnancyKg : null
+  const gainStatus = weightGainKg != null
+    ? getWeightGainStatus(weightGainKg, ibu.gestationalWeeks, ibu)
+    : null
+
+  const lilaLow = lilaNum != null && lilaNum < 23.5
+  const hbLow = hbNum != null && hbNum < 11
+  const showRiskAlert = lilaLow || hbLow
 
   const handleSubmit = async () => {
-    if (!ready || bbNum == null || tbNum == null) return
+    if (!ready || bbNum == null || lilaNum == null || hbNum == null) return
     setSaving(true)
     try {
-      await savePengukuran({ anakId: child.id, beratBadan: bbNum, tinggiBadan: tbNum })
+      await savePregnancyVisit({
+        ibuId: ibu.id,
+        currentWeightKg: bbNum,
+        lilaCm: lilaNum,
+        hbGdl: hbNum,
+        catatanKader: catatan.trim() || undefined,
+      })
       onSaved()
       onOpenChange(false)
     } catch (err) {
@@ -210,10 +225,10 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
           <div className="pt-5 px-[26px] pb-0 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <DialogTitle className="text-[17px] font-semibold text-[#173753] leading-tight">
-                Catat Kunjungan
+                Pemeriksaan Kehamilan
               </DialogTitle>
               <DialogDescription className="text-[12px] text-muted-foreground mt-0.5">
-                {child.name} · {sex} · {child.ageMo} bulan
+                {ibu.nama} · {ibu.gestationalWeeks} minggu · Trimester {ibu.trimester}
               </DialogDescription>
             </div>
             <DialogClose className="h-[30px] w-[30px] rounded-full flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-[#173753] transition-colors flex-shrink-0">
@@ -251,7 +266,7 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-[14px]">
+            <div className="grid grid-cols-3 gap-[14px]">
               <MetricCard
                 label="BERAT BADAN"
                 value={bb}
@@ -262,30 +277,53 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
                 stable={bbState === "stable"}
               />
               <MetricCard
-                label="TINGGI BADAN"
-                value={tb}
+                label="LILA"
+                value={lila}
                 unit="cm"
-                editable={tab === "manual"}
-                onChange={setTb}
-                stateLabel={tab === "alat" ? (tbState === "stable" ? "Selesai" : "Mengukur") : undefined}
-                stable={tbState === "stable"}
+                editable
+                onChange={setLila}
+                alert={lilaLow}
+              />
+              <MetricCard
+                label="HEMOGLOBIN"
+                value={hb}
+                unit="g/dL"
+                editable
+                onChange={setHb}
+                alert={hbLow}
               />
             </div>
 
-            {ready && zTBU && (
+            {weightGainKg != null && gainStatus && (
               <div className="rounded-xl bg-[#F7FBFF] px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[12px] font-medium text-muted-foreground">Hasil skrining otomatis</p>
-                  <span className="text-[11px] font-semibold text-[#173753] bg-white px-2 py-0.5 rounded-full flex-shrink-0">TB/U</span>
+                  <p className="text-[12px] font-medium text-muted-foreground">Skrining kenaikan berat badan</p>
+                  <span className="text-[11px] font-semibold text-[#173753] bg-white px-2 py-0.5 rounded-full flex-shrink-0">BB</span>
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[15px] font-bold text-[#173753] tabular-nums">
-                    {zTBU.zScore.toFixed(1).replace(".", ",")} SD
+                    {weightGainKg >= 0 ? "+" : ""}{weightGainKg.toFixed(1).replace(".", ",")} kg
                   </span>
-                  <StatusBadge status={stuntingLabel[zTBU.status]} />
+                  <StatusBadge status={weightGainLabel[gainStatus]} />
                 </div>
               </div>
             )}
+
+            {showRiskAlert && (
+              <div className="flex items-start gap-3 rounded-2xl px-4 py-3.5 bg-[#FFF7E6] border border-[#F4E2BC]">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#D99100] text-white flex-shrink-0">
+                  <TriangleAlert className="w-4 h-4" />
+                </div>
+                <p className="text-[12px] text-[#8A6100] leading-relaxed">
+                  Skrining: Risiko {lilaLow && hbLow ? "KEK + Anemia" : lilaLow ? "KEK" : "Anemia"}. Sistem akan menandai untuk tindak lanjut dan menyarankan rujukan ke Puskesmas. Catatan rujukan bisa ditambahkan sebelum menyimpan.
+                </p>
+              </div>
+            )}
+
+            <div>
+              <FieldLabel label="Catatan Kader (opsional)" />
+              <StyledTextarea value={catatan} onChange={setCatatan} placeholder="mis. Disarankan rujukan ke Puskesmas, diberikan PMT ibu hamil." rows={2} />
+            </div>
           </div>
 
           {/* Footer */}

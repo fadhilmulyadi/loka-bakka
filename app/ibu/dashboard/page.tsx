@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { getIbuData, getIbuAnakForDashboard } from '@/lib/actions/ibu'
 import { getPregnancyProfile, getPregnancyVisits } from '@/lib/actions/pregnancy'
 import { getDailyTaskStats } from '@/lib/actions/tasks'
+import { getIbuNotifications } from '@/lib/actions/notifikasi'
 import { type PregnancyProfileData, type PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 import PregnancyDashboardView from '@/components/ibu/pregnancy-dashboard-view'
 import ChildDashboardView from '@/components/ibu/child-dashboard-view'
@@ -43,6 +44,7 @@ function DashboardContent() {
   const [error, setError] = useState(false)
   const [score, setScore] = useState(0)
   const [doneCount, setDoneCount] = useState(0)
+  const [notifications, setNotifications] = useState<Awaited<ReturnType<typeof getIbuNotifications>>>([])
 
   useEffect(() => {
     let mounted = true
@@ -50,24 +52,26 @@ function DashboardContent() {
     setError(false)
 
     if (childId) {
-      Promise.all([getIbuAnakForDashboard(childId), getDailyTaskStats()])
-        .then(([data, stats]) => {
+      Promise.all([getIbuAnakForDashboard(childId), getDailyTaskStats(), getIbuNotifications()])
+        .then(([data, stats, notifs]) => {
           if (!mounted) return
           setChildData(data)
           setScore(stats.score)
           setDoneCount(stats.doneCount)
+          setNotifications(notifs)
           setLoading(false)
         })
         .catch(() => { if (mounted) { setError(true); setLoading(false) } })
     } else {
-      Promise.all([getIbuData(), getPregnancyProfile(), getPregnancyVisits(), getDailyTaskStats()])
-        .then(([data, p, v, stats]) => {
+      Promise.all([getIbuData(), getPregnancyProfile(), getPregnancyVisits(), getDailyTaskStats(), getIbuNotifications()])
+        .then(([data, p, v, stats, notifs]) => {
           if (!mounted) return
           setIbuData(data)
           setProfile(p)
           setVisits(v)
           setScore(stats.score)
           setDoneCount(stats.doneCount)
+          setNotifications(notifs)
           setLoading(false)
         })
         .catch(() => { if (mounted) { setError(true); setLoading(false) } })
@@ -81,7 +85,7 @@ function DashboardContent() {
 
   if (childId) {
     if (!childData) return <ErrorState />
-    return <ChildDashboardView data={childData} score={score} doneCount={doneCount} />
+    return <ChildDashboardView data={childData} score={score} doneCount={doneCount} notifications={notifications} />
   }
 
   if (!ibuData) return <ErrorState />
@@ -94,11 +98,12 @@ function DashboardContent() {
         doneCount={doneCount}
         profile={profile}
         visits={visits}
+        notifications={notifications}
       />
     )
   }
 
-  return <ChildDashboardView data={ibuData} score={score} doneCount={doneCount} />
+  return <ChildDashboardView data={ibuData} score={score} doneCount={doneCount} notifications={notifications} />
 }
 
 export default function IbuDashboardPage() {

@@ -27,6 +27,8 @@ export interface PregnancyVisitData {
   lilaCm: number
   hbGdl: number
   isOnTrack: boolean
+  catatanKader: string | null
+  kirimKeIbu: boolean
 }
 
 export function calculateIMT(weightKg: number, heightCm: number): number {
@@ -50,4 +52,29 @@ const IOM_TABLE: Record<IMTCategory, IOMTargets> = {
 
 export function getIOMTargets(category: IMTCategory): IOMTargets {
   return IOM_TABLE[category]
+}
+
+export type WeightGainStatus = 'kurang' | 'normal' | 'lebih'
+
+/**
+ * Klasifikasi kenaikan BB kumulatif terhadap target IOM pada usia kandungan saat ini.
+ * Target mingguan (weeklyGainMinKg/MaxKg) diasumsikan linear terhadap usia kandungan,
+ * konsisten dengan penyederhanaan yang sudah dipakai untuk targetGainMinKg/MaxKg.
+ */
+export function getWeightGainStatus(
+  weightGainKg: number,
+  weeksPregnant: number,
+  targets: Pick<IOMTargets, 'weeklyGainMinKg' | 'weeklyGainMaxKg'>
+): WeightGainStatus {
+  const expectedMinKg = targets.weeklyGainMinKg * weeksPregnant
+  const expectedMaxKg = targets.weeklyGainMaxKg * weeksPregnant
+  if (weightGainKg < expectedMinKg) return 'kurang'
+  if (weightGainKg > expectedMaxKg) return 'lebih'
+  return 'normal'
+}
+
+export const weightGainLabel: Record<WeightGainStatus, string> = {
+  kurang: 'Kenaikan Kurang',
+  normal: 'Normal',
+  lebih: 'Kenaikan Berlebih',
 }

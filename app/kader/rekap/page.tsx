@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState, useMemo, useEffect } from "react"
+import React, { useState, useMemo, useEffect, useRef, Suspense } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Card, CardContent,
 } from "@/components/ui/card"
@@ -9,58 +10,48 @@ import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { KaderUserPill } from "@/components/kader/kader-user-pill"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  LogOut, TriangleAlert, Clock, Search,
-  ChevronDown, ChevronLeft, ChevronRight, ChevronRight as ArrowRight,
+  Search,
+  ChevronLeft, ChevronRight, ChevronRight as ArrowRight,
   CircleCheck, CircleAlert, Activity, Download, Plus, MoreHorizontal,
   SlidersHorizontal, X, Stethoscope, User, FileText, Bell, Pencil, PowerOff,
 } from "lucide-react"
-import { signOut, useSession } from "next-auth/react"
+
 import { cn } from "@/lib/utils"
-import { getChildren, getDashboardStats, getIbuHamil } from "@/lib/actions/kader"
+import { getCached, setCached } from "@/lib/client-cache"
+import { getChildren, getRekapStats, getIbuHamil } from "@/lib/actions/kader"
 import { toCSV, downloadCSV } from "@/lib/csv"
 import { ImportPasienDialog } from "@/components/kader/import-pasien-dialog"
-import { NotificationBell } from "@/components/kader/notification-bell"
+import { TambahPasienModal } from "@/components/kader/tambah-pasien-modal"
+import { Topbar } from "@/components/kader/topbar"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
-
-function useTime() {
-  const [time, setTime] = useState(() => {
-    const n = new Date()
-    return `${n.getDate()} ${MONTHS_ID[n.getMonth()]} ${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`
-  })
-  useEffect(() => {
-    const fmt = () => {
-      const n = new Date()
-      return `${n.getDate()} ${MONTHS_ID[n.getMonth()]} ${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`
-    }
-    const id = setInterval(() => setTime(fmt()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-  return time
-}
+import { CatatKunjunganModal } from "@/components/kader/catat-kunjungan-modal"
+import { IngatkanIbuModal } from "@/components/kader/ingatkan-ibu-modal"
 
 type Status = "Normal" | "Berisiko" | "Stunting"
 
 type Child = {
   no: number
   id: string
+  ibuId: string
   nama: string
   sex: "L" | "P"
+  ageMo: number
   usia: string
   bb: string
   tb: string
   status: Status
   sudah: boolean
   tgl: string
+  ibuName: string
+  noHp: string | null
+  terakhirDiingatkan: Date | null
 }
 
 type Tab = "anak" | "ibu-hamil"
@@ -83,13 +74,31 @@ import { StatusBadge } from "@/components/status-badge"
 
 
 export default function RekapPosyanduPage() {
-  const { data: session } = useSession()
-  const time = useTime()
-  const [children, setChildren] = useState<Child[]>([])
-  const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, posyanduName: string } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>("anak")
-  const [ibuHamil, setIbuHamil] = useState<IbuHamilRow[]>([])
+  return (
+    <Suspense fallback={null}>
+      <RekapPosyanduPageInner />
+    </Suspense>
+  )
+}
+
+const REKAP_STATS_CACHE_KEY = "kader-rekap-stats"
+const REKAP_TABLE_CACHE_KEY = "kader-rekap-table"
+
+type RekapStats = { totalChildren: number, measuredThisMonth: number, posyanduName: string }
+type RekapTable = { children: Child[], ibuHamil: IbuHamilRow[] }
+
+function RekapPosyanduPageInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const cachedTable = getCached<RekapTable>(REKAP_TABLE_CACHE_KEY)
+  const [children, setChildren] = useState<Child[]>(cachedTable?.children ?? [])
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [visitChild, setVisitChild] = useState<Child | null>(null)
+  const [ingatkanAnak, setIngatkanAnak] = useState<Child | null>(null)
+  const [stats, setStats] = useState<RekapStats | null>(getCached<RekapStats>(REKAP_STATS_CACHE_KEY) ?? null)
+  const [loading, setLoading] = useState(!cachedTable)
+  const [activeTab, setActiveTab] = useState<Tab>(() => (searchParams.get("tab") === "ibu-hamil" ? "ibu-hamil" : "anak"))
+  const [ibuHamil, setIbuHamil] = useState<IbuHamilRow[]>(cachedTable?.ibuHamil ?? [])
 
 
   const [hamilTrimesterFilter, setHamilTrimesterFilter] = useState("")
@@ -100,19 +109,28 @@ export default function RekapPosyanduPage() {
 
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
-  const [checkFilter, setCheckFilter] = useState("")
+  const [checkFilter, setCheckFilter] = useState(() => searchParams.get("check") || "")
   const [tempStatus, setTempStatus] = useState("")
-  const [tempCheck, setTempCheck] = useState("")
+  const [tempCheck, setTempCheck] = useState(() => searchParams.get("check") || "")
+  const skipNextTabReset = useRef(true)
 
-  const loadData = () =>
-    Promise.all([getChildren(), getDashboardStats(), getIbuHamil()])
-      .then(([childData, statData, hamilData]) => {
+  const [tambahPasienOpen, setTambahPasienOpen] = useState(false)
+
+  const loadData = () => {
+    // Stats load secara independen — tidak blok tabel
+    getRekapStats().then((data) => {
+      setStats(data)
+      setCached(REKAP_STATS_CACHE_KEY, data)
+    })
+    // Tabel anak + ibu hamil load bersamaan, skeleton hilang saat keduanya siap
+    Promise.all([getChildren(), getIbuHamil()])
+      .then(([childData, hamilData]) => {
         setChildren(childData as Child[])
-        setStats(statData)
         setIbuHamil(hamilData as IbuHamilRow[])
-
         setLoading(false)
+        setCached<RekapTable>(REKAP_TABLE_CACHE_KEY, { children: childData as Child[], ibuHamil: hamilData as IbuHamilRow[] })
       })
+  }
 
   useEffect(() => { loadData() }, [])
 
@@ -144,6 +162,10 @@ export default function RekapPosyanduPage() {
 
 
   useEffect(() => {
+    if (skipNextTabReset.current) {
+      skipNextTabReset.current = false
+      return
+    }
     setQuery("")
     setStatusFilter("")
     setCheckFilter("")
@@ -184,6 +206,12 @@ export default function RekapPosyanduPage() {
 
   const total = children.length
 
+  const alertStats = !loading && stats ? {
+    stuntingCount: children.filter((c) => c.status === "Stunting").length,
+    berisikoCount: children.filter((c) => c.status === "Berisiko").length,
+    belumDiperiksa: stats.totalChildren - stats.measuredThisMonth,
+  } : null
+
   const handleExport = () => {
     const today = new Date().toISOString().slice(0, 10)
     if (activeTab === "anak") {
@@ -204,42 +232,11 @@ export default function RekapPosyanduPage() {
 
   return (
     <div className="min-h-full bg-[#EBF2F8] flex flex-col">
-      {/* Topbar */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2 z-10">
-        <div className="relative w-[291px] flex-none">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#173753] z-10" />
-          <Input
-            className="pl-8 h-8 text-xs text-[#173753] placeholder:text-[#BBBBBB] bg-white rounded-[50px] border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)] focus-visible:ring-1 focus-visible:ring-gray-200"
-            placeholder="Search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
-        <div className="flex-1 flex items-center gap-2 px-4 h-8 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-          <TriangleAlert className="w-3.5 h-3.5 text-[#E53935] flex-none" />
-          <span className="text-xs text-[#173753] truncate font-medium">
-            {loading
-              ? <Skeleton className="h-3.5 w-52 inline-block rounded" />
-              : `${stats!.totalChildren - stats!.measuredThisMonth} pasien belum diperiksa bulan ini`
-            }
-          </span>
-        </div>
-        <div className="flex items-center gap-2 flex-none">
-          <div className="flex items-center gap-2 px-4 h-8 text-xs text-[#173753] bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{time || "—"}</span>
-          </div>
-          <NotificationBell />
-          <Button
-            variant="ghost" size="sm"
-            className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Log Out
-          </Button>
-        </div>
-      </div>
+      <Topbar
+        searchValue={query}
+        onSearchChange={setQuery}
+        alertStats={alertStats}
+      />
 
       <div className="p-6 space-y-5 flex-1">
         {/* Title + User */}
@@ -248,43 +245,31 @@ export default function RekapPosyanduPage() {
             <h1 className="text-2xl font-medium text-[#173753]">Pasien</h1>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/kader/tambah-pasien">
-              <Button
-                size="sm"
-                className="gap-1.5 text-xs h-8 px-4 rounded-[50px] text-white border-none font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity"
-                style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Tambah Pasien
-              </Button>
-            </Link>
+            <button
+              type="button"
+              onClick={() => setTambahPasienOpen(true)}
+              className="gap-1.5 text-xs h-8 px-4 rounded-[50px] text-white border-none font-medium hover:opacity-90 transition-opacity flex items-center"
+              style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Tambah Pasien
+            </button>
             <ImportPasienDialog kind={activeTab === "anak" ? "anak" : "ibu"} onImported={loadData} />
             <Button
               variant="ghost" size="sm"
               disabled={activeCount === 0}
               onClick={handleExport}
-              className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
+              className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] text-[#173753] hover:bg-white/80"
             >
               <Download className="w-3.5 h-3.5" />
               Ekspor
             </Button>
-            <div className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-teal-100 text-teal-700 text-xs font-semibold">
-                  {session?.user?.name?.slice(0, 2).toUpperCase() ?? "ZA"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-xs text-[#173753] font-medium leading-none">{session?.user?.name ?? "Kader"}</p>
-                <p className="text-xs font-medium text-muted-foreground mt-0.5">Kader {stats?.posyanduName || "..."}</p>
-              </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </div>
+            <KaderUserPill />
           </div>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex p-1 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] gap-1 w-fit">
+        <div className="flex p-1 rounded-[50px] bg-white gap-1 w-fit">
           {(["anak", "ibu-hamil"] as const).map((tab) => {
             const labels: Record<string, string> = { anak: "Anak", "ibu-hamil": "Ibu Hamil" }
             const counts: Record<string, number> = { anak: children.length, "ibu-hamil": ibuHamil.length }
@@ -296,7 +281,7 @@ export default function RekapPosyanduPage() {
                 className={cn(
                   "flex items-center gap-2 px-5 py-1.5 text-[12px] font-medium rounded-[50px] transition-all",
                   isActive
-                    ? "bg-[#52A9E3] text-white shadow-sm"
+                    ? "bg-[#52A9E3] text-white"
                     : "text-[#173753] hover:bg-[#52A9E3]/10"
                 )}
               >
@@ -321,13 +306,13 @@ export default function RekapPosyanduPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">Filter</span>
               <Select value={tempStatus} onValueChange={(v) => setTempStatus(v as string)}>
-                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white text-xs text-[#173753] border-none shadow-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Status Gizi:</span>
                     <SelectValue placeholder="Semua" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                <SelectContent className="rounded-xl border-none shadow-none">
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="Normal" className="text-xs text-[#173753]">Normal</SelectItem>
                   <SelectItem value="Berisiko" className="text-xs text-[#173753]">Berisiko</SelectItem>
@@ -335,13 +320,13 @@ export default function RekapPosyanduPage() {
                 </SelectContent>
               </Select>
               <Select value={tempCheck} onValueChange={(v) => setTempCheck(v as string)}>
-                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white text-xs text-[#173753] border-none shadow-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Status Periksa:</span>
                     <SelectValue placeholder="Semua" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                <SelectContent className="rounded-xl border-none shadow-none">
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="Sudah Periksa" className="text-xs text-[#173753]">Sudah Periksa</SelectItem>
                   <SelectItem value="Belum Periksa" className="text-xs text-[#173753]">Belum Periksa</SelectItem>
@@ -352,13 +337,13 @@ export default function RekapPosyanduPage() {
           {activeTab === "anak" && (isFilterActive || isFilterChanged) && (
             <div className="flex items-center gap-2">
               {isFilterChanged && (
-                <button onClick={handleApplyFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
+                <button onClick={handleApplyFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   Terapkan Filter
                 </button>
               )}
               {isFilterActive && (
-                <button onClick={handleResetFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
+                <button onClick={handleResetFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white text-xs text-[#173753] hover:bg-gray-50">
                   <X className="w-3.5 h-3.5" />
                   Hapus Filter
                 </button>
@@ -371,13 +356,13 @@ export default function RekapPosyanduPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-medium text-muted-foreground">Filter</span>
               <Select value={tempHamilTrimester} onValueChange={(v) => setTempHamilTrimester(v as string)}>
-                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white text-xs text-[#173753] border-none shadow-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Trimester:</span>
                     <SelectValue placeholder="Semua" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                <SelectContent className="rounded-xl border-none shadow-none">
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="1" className="text-xs text-[#173753]">Trimester 1</SelectItem>
                   <SelectItem value="2" className="text-xs text-[#173753]">Trimester 2</SelectItem>
@@ -385,13 +370,13 @@ export default function RekapPosyanduPage() {
                 </SelectContent>
               </Select>
               <Select value={tempHamilKunjungan} onValueChange={(v) => setTempHamilKunjungan(v as string)}>
-                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] border-none focus:ring-0">
+                <SelectTrigger className="w-fit min-w-[140px] h-8 px-3 rounded-[50px] bg-white text-xs text-[#173753] border-none shadow-none focus:ring-0">
                   <div className="flex items-center gap-1">
                     <span className="text-muted-foreground">Kunjungan:</span>
                     <SelectValue placeholder="Semua" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+                <SelectContent className="rounded-xl border-none shadow-none">
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="Sudah" className="text-xs text-[#173753]">Sudah Kunjungan</SelectItem>
                   <SelectItem value="Belum" className="text-xs text-[#173753]">Belum Kunjungan</SelectItem>
@@ -402,13 +387,13 @@ export default function RekapPosyanduPage() {
           {activeTab === "ibu-hamil" && (isHamilFilterActive || isHamilFilterChanged) && (
             <div className="flex items-center gap-2">
               {isHamilFilterChanged && (
-                <button onClick={handleApplyHamilFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium shadow-[2px_2px_8px_rgba(0,0,0,0.08)] hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
+                <button onClick={handleApplyHamilFilters} className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium hover:opacity-90 transition-opacity" style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}>
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   Terapkan Filter
                 </button>
               )}
               {isHamilFilterActive && (
-                <button onClick={handleResetHamilFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-xs text-[#173753] hover:bg-gray-50">
+                <button onClick={handleResetHamilFilters} className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white text-xs text-[#173753] hover:bg-gray-50">
                   <X className="w-3.5 h-3.5" />
                   Hapus Filter
                 </button>
@@ -420,7 +405,7 @@ export default function RekapPosyanduPage() {
         </div>
 
         {/* Table Card */}
-        <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
+        <Card className="ring-0">
           <CardContent className="p-0">
             {/* Anak Table */}
             {activeTab === "anak" && (
@@ -512,29 +497,47 @@ export default function RekapPosyanduPage() {
                           </TableCell>
                           <TableCell className="text-[14px] text-[#173753]">{row.tgl}</TableCell>
                           <TableCell className="text-muted-foreground">
-                            <Popover>
+                            <Popover open={openMenuId === row.id} onOpenChange={(o) => setOpenMenuId(o ? row.id : null)}>
                               <PopoverTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-gray-100">
                                 <MoreHorizontal className="w-4 h-4" />
                               </PopoverTrigger>
-                              <PopoverContent side="left" align="start" className="w-52 p-1.5 rounded-2xl border-none shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+                              <PopoverContent side="left" align="start" className="w-52 p-1.5 rounded-2xl border-none">
                                 {[
-                                  { icon: Stethoscope, label: "Periksa Sekarang",     danger: false },
-                                  { icon: User,        label: "Lihat Profil Anak",    danger: false },
+                                  { icon: Stethoscope, label: "Periksa Sekarang",     danger: false, onClick: () => { setOpenMenuId(null); setVisitChild(row) } },
+                                  { icon: User,        label: "Lihat Profil Anak",    danger: false, onClick: () => { setOpenMenuId(null); router.push(`/kader/anak/${row.id}`) } },
                                   { icon: FileText,    label: "Riwayat Pemeriksaan",  danger: false },
-                                  { icon: Bell,        label: "Ingatkan Ibu",         danger: false },
-                                  { icon: User,        label: "Lihat Profil Ibu",     danger: false },
+                                  { 
+                                    icon: Bell,        
+                                    label: (() => {
+                                      const isRecentlyReminded = row.terakhirDiingatkan && new Date(row.terakhirDiingatkan) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+                                      return isRecentlyReminded ? "✓ Diingatkan hari ini" : "Ingatkan Ibu"
+                                    })(),         
+                                    danger: false, 
+                                    onClick: () => { 
+                                      const isRecentlyReminded = row.terakhirDiingatkan && new Date(row.terakhirDiingatkan) > new Date(Date.now() - 24 * 60 * 60 * 1000)
+                                      if (!isRecentlyReminded) {
+                                        setOpenMenuId(null); 
+                                        setIngatkanAnak(row);
+                                      }
+                                    } 
+                                  },
+                                  { icon: User,        label: "Lihat Profil Ibu",     danger: false, onClick: () => { setOpenMenuId(null); router.push(`/kader/ibu/${row.ibuId}`) } },
                                   { icon: Pencil,      label: "Edit Data",            danger: false },
                                   { icon: PowerOff,    label: "Nonaktifkan Pasien",   danger: true  },
                                 ].map((item, i, arr) => (
-                                  <React.Fragment key={item.label}>
+                                  <React.Fragment key={i}>
                                     {i === arr.length - 1 && (
                                       <div className="my-1 border-t border-gray-100" />
                                     )}
                                     <button
+                                      onClick={item.onClick}
+                                      disabled={item.label === "✓ Diingatkan hari ini"}
                                       className={cn(
                                         "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[8px] text-[12.5px] font-medium transition",
                                         item.danger
                                           ? "text-red-500 hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                                          : item.label === "✓ Diingatkan hari ini"
+                                          ? "text-teal-600 bg-teal-50/50 cursor-not-allowed"
                                           : "text-[#173753] hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
                                       )}
                                     >
@@ -703,6 +706,41 @@ export default function RekapPosyanduPage() {
           </CardContent>
         </Card>
       </div>
+
+      <TambahPasienModal
+        open={tambahPasienOpen}
+        onOpenChange={setTambahPasienOpen}
+        onSaved={loadData}
+      />
+
+      {visitChild && (
+        <CatatKunjunganModal
+          open={!!visitChild}
+          onOpenChange={(o) => { if (!o) setVisitChild(null) }}
+          child={{
+            id: visitChild.id,
+            name: visitChild.nama,
+            gender: visitChild.sex === "L" ? "Laki-laki" : "Perempuan",
+            ageMo: visitChild.ageMo,
+          }}
+          onSaved={loadData}
+        />
+      )}
+
+      {ingatkanAnak && (
+        <IngatkanIbuModal
+          open={!!ingatkanAnak}
+          onOpenChange={(o) => { if (!o) setIngatkanAnak(null) }}
+          child={{
+            id: ingatkanAnak.id,
+            name: ingatkanAnak.nama,
+            ibuName: ingatkanAnak.ibuName,
+            noHp: ingatkanAnak.noHp,
+            posyanduName: stats?.posyanduName,
+          }}
+          onSent={loadData}
+        />
+      )}
     </div>
   )
 }

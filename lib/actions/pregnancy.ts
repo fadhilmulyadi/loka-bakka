@@ -8,9 +8,12 @@ import {
   calculateIMT,
   getIMTCategory,
   getIOMTargets,
+  getWeightGainStatus,
   type PregnancyProfileData,
   type PregnancyVisitData
 } from "@/lib/growth-standards/imt-calc"
+import { calculateGestationalAge } from "@/lib/pregnancy-utils"
+import { notifyPregnancyRisk } from "@/lib/actions/notifikasi"
 
 export async function getPregnancyProfile(): Promise<PregnancyProfileData | null> {
   const session = await auth()
@@ -52,7 +55,59 @@ export async function getPregnancyVisits(): Promise<PregnancyVisitData[]> {
     lilaCm: v.lilaCm,
     hbGdl: v.hbGdl,
     isOnTrack: v.isOnTrack,
+    catatanKader: v.kirimKeIbu ? v.catatanKader : null,
+    kirimKeIbu: v.kirimKeIbu,
   }))
+}
+
+export async function startPregnancy(data: {
+  ibuId: string
+  hpht: Date
+  bbPrepregnancyKg: number
+  heightCm: number
+}) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const ibuRow = await db.query.ibu.findFirst({
+    where: eq(ibu.id, data.ibuId),
+    with: { pregnancyProfile: true },
+  })
+  // isHamil alone isn't reliable: registration can mark an ibu as "Ibu Hamil"
+  // without collecting HPHT/BB/TB yet, leaving isHamil=true with no profile.
+  // Only a real, still-active profile means tracking has actually started.
+  if (ibuRow?.isHamil && ibuRow.pregnancyProfile) {
+    throw new Error("Kehamilan sedang aktif")
+  }
+
+  if (ibuRow?.pregnancyProfile) {
+    // Stale profile from a pregnancy that already ended — delete to start fresh.
+    await db.delete(pregnancyProfile).where(eq(pregnancyProfile.ibuId, data.ibuId))
+  }
+
+  const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
+  const category = getIMTCategory(imt)
+  const targets = getIOMTargets(category)
+
+  await db.insert(pregnancyProfile).values({
+    ibuId: data.ibuId,
+    hpht: data.hpht,
+    bbPrepregnancyKg: data.bbPrepregnancyKg,
+    heightCm: data.heightCm,
+    imtPrepregnancy: imt,
+    imtCategory: category,
+    targetGainMinKg: targets.totalGainMinKg,
+    targetGainMaxKg: targets.totalGainMaxKg,
+    weeklyGainMinKg: targets.weeklyGainMinKg,
+    weeklyGainMaxKg: targets.weeklyGainMaxKg,
+  })
+
+  await db.update(ibu).set({ isHamil: true }).where(eq(ibu.id, data.ibuId))
+
+  const { revalidatePath } = await import("next/cache")
+  revalidatePath(`/kader/ibu/${data.ibuId}`)
+  revalidatePath("/kader/rekap")
+  revalidatePath("/kader/dashboard")
 }
 
 export async function savePregnancyVisit(data: {
@@ -60,9 +115,7 @@ export async function savePregnancyVisit(data: {
   currentWeightKg: number
   lilaCm: number
   hbGdl: number
-  heightCm: number
-  bbPrepregnancyKg: number
-  hpht: Date
+  catatanKader?: string
 }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
@@ -73,45 +126,48 @@ export async function savePregnancyVisit(data: {
   })
 
   if (!ibuRow) throw new Error("Ibu not found")
-
-  let profile = ibuRow.pregnancyProfile
-
-  if (!profile) {
-    const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
-    const category = getIMTCategory(imt)
-    const targets = getIOMTargets(category)
-
-    const [created] = await db.insert(pregnancyProfile).values({
-      ibuId: data.ibuId,
-      hpht: data.hpht,
-      bbPrepregnancyKg: data.bbPrepregnancyKg,
-      heightCm: data.heightCm,
-      imtPrepregnancy: imt,
-      imtCategory: category,
-      targetGainMinKg: targets.totalGainMinKg,
-      targetGainMaxKg: targets.totalGainMaxKg,
-      weeklyGainMinKg: targets.weeklyGainMinKg,
-      weeklyGainMaxKg: targets.weeklyGainMaxKg,
-    }).returning()
-
-    profile = created
-  }
+  const profile = ibuRow.pregnancyProfile
+  if (!profile) throw new Error("Kehamilan belum dicatat. Catat kehamilan terlebih dahulu.")
 
   const weightGainKg = data.currentWeightKg - profile.bbPrepregnancyKg
-  const isOnTrack = data.lilaCm >= 23.5 && data.hbGdl >= 11.0
+  const weeks = calculateGestationalAge(new Date(profile.hpht))
+  const gainStatus = getWeightGainStatus(weightGainKg, weeks, profile)
+  const isOnTrack = gainStatus === "normal"
+  const lilaLow = data.lilaCm < 23.5
+  const hbLow = data.hbGdl < 11.0
 
   const [result] = await db.insert(pregnancyVisit).values({
     ibuId: data.ibuId,
+    kaderId: session.user.id,
     visitDate: new Date(),
     currentWeightKg: data.currentWeightKg,
     weightGainKg: weightGainKg,
     lilaCm: data.lilaCm,
     hbGdl: data.hbGdl,
     isOnTrack: isOnTrack,
+    catatanKader: data.catatanKader || null,
+    kirimKeIbu: true,
   }).returning()
 
   if (!ibuRow.isHamil) {
     await db.update(ibu).set({ isHamil: true }).where(eq(ibu.id, data.ibuId))
+  }
+
+  if (lilaLow || hbLow || !isOnTrack) {
+    const indikator = lilaLow ? "LILA" : hbLow ? "Hb" : "Kenaikan BB"
+    const nilai = lilaLow
+      ? `${data.lilaCm.toFixed(1).replace(".", ",")} cm`
+      : hbLow
+        ? `${data.hbGdl.toFixed(1).replace(".", ",")} g/dL`
+        : `${weightGainKg >= 0 ? "+" : ""}${weightGainKg.toFixed(1).replace(".", ",")} kg`
+    await notifyPregnancyRisk({
+      posyanduId: ibuRow.posyanduId,
+      ibuId: data.ibuId,
+      nama: ibuRow.nama,
+      usiaKandunganMinggu: weeks,
+      indikator,
+      nilai,
+    })
   }
 
   const { revalidatePath } = await import("next/cache")
@@ -119,4 +175,18 @@ export async function savePregnancyVisit(data: {
   revalidatePath("/kader/dashboard")
 
   return result
+}
+
+export async function endPregnancy(ibuId: string, outcome: string) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+  
+  await db.update(ibu).set({ isHamil: false }).where(eq(ibu.id, ibuId))
+  
+  // TODO: Handle creating baby profile if outcome === "melahirkan"
+  
+  const { revalidatePath } = await import("next/cache")
+  revalidatePath(`/kader/ibu/${ibuId}`)
+  revalidatePath("/kader/rekap")
+  revalidatePath("/kader/dashboard")
 }

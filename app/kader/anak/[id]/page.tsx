@@ -1,17 +1,19 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
   ChevronRight,
-  Search,
-  LogOut,
-  TriangleAlert,
-  Clock,
-  ChevronDown,
   Calendar,
   Baby,
+  Activity,
+  MoreHorizontal,
+  Stethoscope,
+  Bell,
+  User,
+  Pencil,
+  PowerOff,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -21,61 +23,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { signOut, useSession } from "next-auth/react"
+import { KaderUserPill } from "@/components/kader/kader-user-pill"
 import { cn } from "@/lib/utils"
+import { getCached, setCached, KADER_STATS_KEY } from "@/lib/client-cache"
 import { getStatusStyle } from "@/lib/status-styles"
-import { NotificationBell } from "@/components/kader/notification-bell"
-import { getChildDetail } from "@/lib/actions/kader"
+import { Topbar } from "@/components/kader/topbar"
+import { getChildDetail, getDashboardStats } from "@/lib/actions/kader"
 import { StatusBadge } from "@/components/status-badge"
 import { CatatKunjunganModal } from "@/components/kader/catat-kunjungan-modal"
+import { IngatkanIbuModal } from "@/components/kader/ingatkan-ibu-modal"
+import { EditDataAnakModal } from "@/components/kader/edit-data-anak-modal"
+import { ResetPasswordModal } from "@/components/kader/reset-password-modal"
+import { heightForAgeBoys, heightForAgeGirls } from "@/lib/growth-standards/height-for-age"
 
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer
+  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip
 } from "recharts"
 
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart"
-
-const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
-
-function useTime() {
-  const [time, setTime] = useState(() => {
-    const n = new Date()
-    return `${n.getDate()} ${MONTHS_ID[n.getMonth()]} ${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`
-  })
-  useEffect(() => {
-    const fmt = () => {
-      const n = new Date()
-      return `${n.getDate()} ${MONTHS_ID[n.getMonth()]} ${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`
-    }
-    const id = setInterval(() => setTime(fmt()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-  return time
-}
-
-// WHO Reference Data (Boys 0-24 months)
-const WHO_DATA = Array.from({ length: 25 }, (_, i) => ({
-  month: i,
-  wtMedian: [3.3,4.5,5.6,6.4,7.0,7.5,7.9,8.3,8.6,8.9,9.2,9.4,9.6,9.9,10.1,10.3,10.5,10.7,10.9,11.1,11.3,11.5,11.7,11.9,12.0][i],
-  wtSD2:    [2.5,3.4,4.3,4.9,5.5,5.9,6.3,6.7,6.9,7.2,7.5,7.7,7.8,8.0,8.2,8.4,8.5,8.7,8.9,9.1,9.2,9.4,9.5,9.7,9.8][i],
-  wtSD3:    [2.1,2.9,3.8,4.4,4.9,5.3,5.7,6.0,6.3,6.5,6.7,7.0,7.1,7.3,7.4,7.6,7.7,7.9,8.1,8.2,8.4,8.5,8.6,8.8,8.9][i],
-  htMedian: [49.9,54.7,58.4,61.4,63.9,65.9,67.6,69.2,70.6,72.0,73.3,74.5,75.7,76.9,78.0,79.1,80.2,81.2,82.3,83.2,84.2,85.1,86.0,86.9,87.8][i],
-  htSD2:    [46.1,50.8,54.4,57.3,59.7,61.7,63.3,64.8,66.2,67.5,68.7,69.9,71.0,72.2,73.3,74.4,75.3,76.3,77.2,78.1,79.1,79.9,80.9,81.6,82.7][i],
-  htSD3:    [44.2,48.9,52.4,55.3,57.6,59.6,61.2,62.7,64.0,65.2,66.5,67.6,68.6,69.8,70.9,71.9,72.9,73.9,74.7,75.6,76.6,77.4,78.4,79.1,80.2][i],
-}))
+import { ChartContainer } from "@/components/ui/chart"
 
 // ============ DESIGN TOKENS (mapped to project palette) ============
-const NAVY = "#173753"
 const ACCENT = "#52A9E3"
+const PURPLE = "#6A48C4"
+const PURPLE_BG = "#F0EBFB"
 
 // ... (existing imports)
 
@@ -104,6 +76,10 @@ interface ChildDetail {
   id: string
   name: string
   gender: string
+  genderRaw: "L" | "P"
+  birthDateRaw: string
+  beratLahir: number | null
+  panjangLahir: number | null
   birthDate: string
   age: string
   ageMo: number
@@ -136,20 +112,46 @@ interface ChildDetail {
   visits: Visit[]
 }
 
+function GrowthTooltip({ active, payload, label }: {
+  active?: boolean
+  payload?: Array<{ payload: { sd2neg: number; sd2: number; median: number; actual: number | null } }>
+  label?: number
+}) {
+  if (!active || !payload || payload.length === 0) return null
+  const row = payload[0].payload
+  return (
+    <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-[11px] shadow-sm">
+      <p className="font-semibold text-[#173753] mb-1">Usia {label} bulan</p>
+      <p className="text-muted-foreground">Rentang normal: {row.sd2neg.toFixed(1)}–{row.sd2.toFixed(1)} cm</p>
+      <p className="text-muted-foreground">Median WHO: {row.median.toFixed(1)} cm</p>
+      {row.actual != null && (
+        <p className="font-medium text-[#2E7CE4]">Tinggi anak: {row.actual.toFixed(1)} cm</p>
+      )}
+    </div>
+  )
+}
+
 export default function ChildDetailPage() {
-  const { data: session } = useSession()
-  const time = useTime()
   const params = useParams()
+  const router = useRouter()
   const childId = (params?.id as string) ?? "1"
-  const [childDataState, setChildDataState] = useState<ChildDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+  const childCacheKey = `kader-anak-${childId}`
+  const cachedChild = getCached<ChildDetail>(childCacheKey)
+  const [childDataState, setChildDataState] = useState<ChildDetail | null>(cachedChild ?? null)
+  const [loading, setLoading] = useState(!cachedChild)
+  const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, anakStatus: { berisikoGiziKurang: number } } | null>(getCached(KADER_STATS_KEY) ?? null)
   const [visitModalOpen, setVisitModalOpen] = useState(false)
+  const [ingatkanIbuOpen, setIngatkanIbuOpen] = useState(false)
+  const [editDataOpen, setEditDataOpen] = useState(false)
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
+  const [actionMenuOpen, setActionMenuOpen] = useState(false)
 
   const loadChild = () => {
     if (childId) {
       getChildDetail(childId).then((data) => {
         setChildDataState(data as unknown as ChildDetail)
         setLoading(false)
+        setCached(childCacheKey, data as unknown as ChildDetail)
       })
     }
   }
@@ -159,51 +161,47 @@ export default function ChildDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId])
 
+  useEffect(() => {
+    getDashboardStats().then((data) => {
+      setStats(data)
+      setCached(KADER_STATS_KEY, data)
+    })
+  }, [])
+
   if (loading) return <div className="p-8">Loading...</div>
   if (!childDataState) return <div className="p-8">Anak tidak ditemukan</div>
 
-  const chartData = WHO_DATA.map((d, i) => {
-    const visit = childDataState.visits.find((v) => parseInt(v.usia) === i)
-    return {
-      ...d,
-      wtActual: visit ? visit.bb : null,
-      htActual: visit ? visit.tb : null,
-    }
-  })
+  const whoTable = childDataState.gender === "Laki-laki" ? heightForAgeBoys : heightForAgeGirls
+  const chartData = whoTable
+    .filter((d) => d.ageMonths <= 24)
+    .map((d) => {
+      const visit = childDataState.visits.find((v) => parseInt(v.usia) === d.ageMonths)
+      return {
+        month: d.ageMonths,
+        sd2neg: d.sd2neg,
+        band: d.sd2 - d.sd2neg,
+        sd2: d.sd2,
+        median: d.sd0,
+        actual: visit ? visit.tb : null,
+      }
+    })
+
+  const heights = chartData.flatMap((d) => [d.sd2neg, d.sd2, d.actual].filter((v): v is number => v != null))
+  const yMin = Math.floor(Math.min(...heights) / 5) * 5
+  const yMax = Math.ceil(Math.max(...heights) / 5) * 5
+  const yMid = Math.round((yMin + yMax) / 2 / 5) * 5
 
   return (
     <div className="flex-1 bg-[#EBF2F8] flex flex-col">
-      {/* Topbar */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-2 z-10">
-        <div className="relative w-[291px] flex-none">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#173753] z-10" />
-          <Input
-            className="pl-8 h-8 text-xs text-[#173753] placeholder:text-[#BBBBBB] bg-white rounded-[50px] border-none shadow-[2px_2px_8px_rgba(0,0,0,0.08)] focus-visible:ring-1 focus-visible:ring-gray-200"
-            placeholder="Search"
-          />
-        </div>
-        <div className="flex-1 flex items-center gap-2 px-4 h-8 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-          <TriangleAlert className="w-3.5 h-3.5 text-[#E53935] flex-none" />
-          <span className="text-xs text-[#173753] truncate font-medium">6 pasien belum diperiksa bulan ini</span>
-        </div>
-        <div className="flex items-center gap-2 flex-none">
-          <div className="flex items-center gap-2 px-4 h-8 text-xs text-[#173753] bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-            <Clock className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{time || "—"}</span>
-          </div>
-          <NotificationBell />
-          <Button
-            variant="ghost" size="sm"
-            className="gap-1.5 text-xs h-8 px-4 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)] text-[#173753] hover:bg-white/80"
-            onClick={() => signOut({ callbackUrl: "/login" })}
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Log Out
-          </Button>
-        </div>
-      </div>
+      <Topbar
+        alertStats={stats ? {
+          stuntingCount: stats.stuntingCount,
+          berisikoCount: stats.anakStatus.berisikoGiziKurang,
+          belumDiperiksa: stats.totalChildren - stats.measuredThisMonth,
+        } : null}
+      />
 
-      <div className="p-6 lg:p-8 space-y-6">
+      <div className="p-6 lg:p-8 space-y-4">
         {/* Title + User */}
         <div className="flex items-center justify-between">
           <div>
@@ -218,23 +216,12 @@ export default function ChildDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white rounded-[50px] shadow-[2px_2px_8px_rgba(0,0,0,0.08)]">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-teal-100 text-teal-700 text-xs font-semibold">
-                  {session?.user?.name?.slice(0, 2).toUpperCase() ?? "ZA"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-xs text-[#173753] font-medium leading-none">{session?.user?.name ?? "Kader"}</p>
-                <p className="text-xs font-medium text-muted-foreground mt-0.5">Kader {childDataState.posyandu}</p>
-              </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </div>
+            <KaderUserPill />
           </div>
         </div>
 
         {/* Hero Card */}
-        <div className="bg-white rounded-2xl shadow-[2px_2px_8px_rgba(0,0,0,0.08)] px-6 py-5 flex items-center gap-5">
+        <div className="bg-white rounded-2xl px-6 py-5 flex items-center gap-5">
           {/* Avatar */}
           <div className="h-[52px] w-[52px] rounded-full bg-[#DBEAFE] flex items-center justify-center text-[18px] font-bold text-[#1D4ED8] flex-shrink-0">
             {childDataState.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
@@ -253,42 +240,64 @@ export default function ChildDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Periksa Sekarang — opens Pemeriksaan Anak modal */}
+            {/* Periksa Tumbuh Kembang — opens Pemeriksaan Anak modal */}
             <Button
               onClick={() => setVisitModalOpen(true)}
               className="gap-1.5 text-xs h-9 px-4 rounded-[50px] text-white shadow-[0_4px_12px_rgba(82,169,227,0.3)] hover:opacity-90 transition-opacity"
               style={{ background: `linear-gradient(to right, ${ACCENT}, #93D1F7)` }}
             >
-              Periksa Sekarang
+              Periksa Tumbuh Kembang
             </Button>
 
-            {/* Ingatkan Ibu — outlined style */}
+            {/* Ingatkan Ibu */}
             <Button
               variant="ghost"
-              className="gap-1.5 text-xs h-9 px-4 rounded-[50px] text-[#52A9E3] border border-[#52A9E3]/40 bg-[#52A9E3]/5 hover:bg-[#52A9E3]/10 hover:border-[#52A9E3]/60 transition-all"
+              onClick={() => setIngatkanIbuOpen(true)}
+              className="text-xs h-9 px-4 rounded-full bg-gray-100 hover:bg-gray-200 text-[#173753] transition-colors"
             >
               Ingatkan Ibu
             </Button>
 
             {/* Dot menu */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-full bg-gray-100 hover:bg-gray-200 text-[#173753] transition-colors flex-shrink-0"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <circle cx="8" cy="3" r="1.5" />
-                <circle cx="8" cy="8" r="1.5" />
-                <circle cx="8" cy="13" r="1.5" />
-              </svg>
-            </Button>
+            <Popover open={actionMenuOpen} onOpenChange={setActionMenuOpen}>
+              <PopoverTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-[#173753] transition-colors flex-shrink-0">
+                <MoreHorizontal className="w-4 h-4" />
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="end" className="w-52 p-1.5 rounded-2xl border-none shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+                {[
+                  { icon: Stethoscope, label: "Periksa Tumbuh Kembang", danger: false, onClick: () => { setActionMenuOpen(false); setVisitModalOpen(true) } },
+                  { icon: Bell, label: "Ingatkan Ibu", danger: false, onClick: () => { setActionMenuOpen(false); setIngatkanIbuOpen(true) } },
+                  { icon: User, label: "Lihat Profil Ibu", danger: false, onClick: () => { setActionMenuOpen(false); router.push(`/kader/ibu/${childDataState.parent.id}`) } },
+                  { icon: Pencil, label: "Edit Data", danger: false, onClick: () => { setActionMenuOpen(false); setEditDataOpen(true) } },
+                  { icon: PowerOff, label: "Nonaktifkan Pasien", danger: true },
+                ].map((item, i, arr) => (
+                  <React.Fragment key={item.label}>
+                    {i === arr.length - 1 && (
+                      <div className="my-1 border-t border-gray-100" />
+                    )}
+                    <button
+                      onClick={item.onClick}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[8px] text-[12.5px] font-medium transition",
+                        item.danger
+                          ? "text-red-500 hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                          : "text-[#173753] hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                      )}
+                    >
+                      <item.icon className="w-3.5 h-3.5 flex-none" />
+                      {item.label}
+                    </button>
+                  </React.Fragment>
+                ))}
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
         {/* Stats + Growth Chart + Ibu/Wali */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
           {/* Left: 4 stat cards + growth chart */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 {
@@ -324,7 +333,7 @@ export default function ChildDetailPage() {
                   subColor: "text-muted-foreground",
                 },
               ].map((s) => (
-                <div key={s.label} className="bg-white rounded-2xl shadow-[2px_2px_8px_rgba(0,0,0,0.08)] py-3.5 px-4">
+                <div key={s.label} className="bg-white rounded-2xl py-3.5 px-4">
                   <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">{s.label}</p>
                   <p className="text-[20px] font-bold text-[#173753] leading-none">{s.value}</p>
                   {s.delta != null ? (
@@ -338,81 +347,88 @@ export default function ChildDetailPage() {
               ))}
             </div>
 
-            <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+            <Card className="ring-0 bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
               <CardHeader className="px-[22px] pt-[18px]">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-[16px] font-semibold text-[#173753]">Kurva Pertumbuhan</CardTitle>
                     <p className="text-[11px] text-muted-foreground mt-0.5">WHO Growth Standard (0-24 Bulan)</p>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-0.5 bg-[#173753]" />
-                    <span className="text-[11px] font-medium text-[#173753]">Aktual</span>
+                  <div className="flex items-center gap-3 flex-wrap justify-end">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-3 rounded-sm bg-[#DCEAF8]" />
+                      <span className="text-[11px] font-medium text-[#173753]">Rentang Normal (±2 SD)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-0.5 border-t-2 border-dashed border-[#B9D4EE]" />
+                      <span className="text-[11px] font-medium text-[#173753]">Median WHO</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3 h-0.5 bg-[#2E7CE4]" />
+                      <span className="text-[11px] font-medium text-[#173753]">{childDataState.name}</span>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
 
               <CardContent className="pt-3 px-[22px] pb-[18px]">
                 <div className="h-[300px] w-full mt-4">
-                  <ChartContainer config={{ wtActual: { color: NAVY }, htActual: { color: ACCENT } }} className="h-full w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                        <defs>
-                          <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={NAVY} stopOpacity={0.1}/>
-                            <stop offset="95%" stopColor={NAVY} stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis
-                          dataKey="month"
-                          tick={{ fontSize: 10 }}
-                          tickLine={false}
-                          axisLine={false}
-                          padding={{ left: 10, right: 10 }}
-                        />
-                        <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={35} />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Area
-                          type="monotone"
-                          dataKey="htSD2"
-                          stroke="#E5E7EB"
-                          fill="#F3F4F6"
-                          strokeWidth={1}
-                          fillOpacity={1}
-                          name="Normal (SD-2)"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="htMedian"
-                          stroke="#10B981"
-                          fill="#ECFDF5"
-                          strokeWidth={1.5}
-                          fillOpacity={0.4}
-                          name="Median"
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="htActual"
-                          stroke={ACCENT}
-                          strokeWidth={3}
-                          fill="url(#colorActual)"
-                          dot={{ r: 4, fill: ACCENT, strokeWidth: 2, stroke: "#fff" }}
-                          activeDot={{ r: 6, fill: ACCENT, strokeWidth: 2, stroke: "#fff" }}
-                          name="Tinggi Aktual"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                  <ChartContainer config={{}} className="h-full w-full">
+                    <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis
+                        dataKey="month"
+                        type="number"
+                        domain={[0, 24]}
+                        ticks={[0, 6, 12, 18, 24]}
+                        tickFormatter={(v) => `${v} bln`}
+                        tick={{ fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={false}
+                        padding={{ left: 10, right: 10 }}
+                      />
+                      <YAxis
+                        domain={[yMin, yMax]}
+                        ticks={[yMin, yMid, yMax]}
+                        tick={{ fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={35}
+                      />
+                      <ReTooltip content={<GrowthTooltip />} />
+                      {/* stacked base (invisible) + band gives a true sd2neg–sd2 range fill */}
+                      <Area dataKey="sd2neg" stackId="band" stroke="none" fill="transparent" isAnimationActive={false} />
+                      <Area dataKey="band" stackId="band" stroke="none" fill="#DCEAF8" fillOpacity={1} isAnimationActive={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="median"
+                        stroke="#B9D4EE"
+                        strokeWidth={1.5}
+                        strokeDasharray="5 4"
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="actual"
+                        stroke="#2E7CE4"
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: "#2E7CE4", strokeWidth: 2, stroke: "#fff" }}
+                        activeDot={{ r: 6, fill: "#2E7CE4", strokeWidth: 2, stroke: "#fff" }}
+                        connectNulls
+                        isAnimationActive={false}
+                      />
+                    </ComposedChart>
                   </ChartContainer>
                 </div>
               </CardContent>
             </Card>
 
             {/* History Table */}
-            <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+            <Card className="ring-0 bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
               <CardHeader className="px-[22px] pt-[14px]">
                 <div className="flex-none">
-                  <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Riwayat Pengukuran</CardTitle>
+                  <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Riwayat Pemeriksaan</CardTitle>
                   <p className="text-xs text-muted-foreground mt-1">
                     Menampilkan <span className="font-medium text-[#173753]">{childDataState.visits.length}</span> kali pengukuran tercatat
                   </p>
@@ -430,17 +446,28 @@ export default function ChildDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {childDataState.visits.map((v, i) => (
-                      <tr key={i} className="border-b border-[#F0F0F0] hover:bg-[#F7FBFF] transition-colors">
-                        <td className="p-3 text-[14px] text-[#173753] pl-2">{v.tgl}</td>
-                        <td className="p-3 text-[14px] text-[#173753]">{v.bb.toFixed(1).replace(".", ",")} kg</td>
-                        <td className="p-3 text-[14px] text-[#173753]">{v.tb.toFixed(1).replace(".", ",")} cm</td>
-                        <td className="p-3">
-                          <StatusBadge status={v.status} />
+                    {childDataState.visits.length === 0 ? (
+                      <TableRow>
+                        <td colSpan={5}>
+                          <div className="text-center py-8">
+                            <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-[12px] text-muted-foreground">Belum ada riwayat pemeriksaan</p>
+                          </div>
                         </td>
-                        <td className="p-3 text-[14px] text-muted-foreground">{v.examiner}</td>
-                      </tr>
-                    ))}
+                      </TableRow>
+                    ) : (
+                      childDataState.visits.map((v, i) => (
+                        <tr key={i} className="border-b border-[#F0F0F0] hover:bg-[#F7FBFF] transition-colors">
+                          <td className="p-3 text-[14px] text-[#173753] pl-2">{v.tgl}</td>
+                          <td className="p-3 text-[14px] text-[#173753]">{v.bb.toFixed(1).replace(".", ",")} kg</td>
+                          <td className="p-3 text-[14px] text-[#173753]">{v.tb.toFixed(1).replace(".", ",")} cm</td>
+                          <td className="p-3">
+                            <StatusBadge status={v.status} />
+                          </td>
+                          <td className="p-3 text-[14px] text-muted-foreground">{v.examiner}</td>
+                        </tr>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -448,14 +475,20 @@ export default function ChildDetailPage() {
           </div>
 
           {/* Right: Ibu/Wali + Saudara Terdaftar + Jadwal Berikutnya */}
-          <div className="space-y-6">
-            <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+          <div className="space-y-4">
+            <Card className="ring-0 bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
               <CardHeader className="px-5 pt-[18px]">
                 <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Ibu / Wali</CardTitle>
               </CardHeader>
               <CardContent className="pt-3 px-5 pb-[18px]">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-11 w-11 rounded-full bg-[#DBEAFE] flex items-center justify-center text-[14px] font-bold text-[#1D4ED8] flex-shrink-0">
+                  <div
+                    className="h-11 w-11 rounded-full flex items-center justify-center text-[14px] font-bold flex-shrink-0"
+                    style={{
+                      background: childDataState.parent.isHamil ? PURPLE_BG : "#F1F5F9",
+                      color: childDataState.parent.isHamil ? PURPLE : "#5B7A96"
+                    }}
+                  >
                     {childDataState.parent.mother.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
@@ -467,9 +500,12 @@ export default function ChildDetailPage() {
                 </div>
 
                 {childDataState.parent.isHamil && (
-                  <div className="flex items-center gap-1.5 rounded-full bg-pink-50 border border-pink-100 px-3 py-1.5 mb-3 w-fit">
-                    <span className="h-1.5 w-1.5 rounded-full bg-pink-500" />
-                    <span className="text-[11px] font-semibold text-pink-700">
+                  <div
+                    className="flex items-center gap-1.5 rounded-full px-2.5 py-0.5 mb-3 w-fit"
+                    style={{ background: PURPLE_BG }}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: PURPLE }} />
+                    <span className="text-xs font-semibold" style={{ color: PURPLE }}>
                       Sedang hamil{childDataState.parent.gestationalWeek != null ? ` · ${childDataState.parent.gestationalWeek} minggu` : ""}
                     </span>
                   </div>
@@ -478,22 +514,21 @@ export default function ChildDetailPage() {
                 <div className="space-y-2">
                   <Link
                     href={`/kader/ibu/${childDataState.parent.id}`}
-                    className="block text-center px-3 py-2 rounded-lg bg-[#F7FBFF] hover:bg-[#EBF2F8] transition-colors text-[13px] font-medium text-[#173753]"
+                    className="block text-center px-3 py-2 rounded-lg border border-[#52A9E3]/40 hover:border-[#52A9E3]/60 hover:bg-[#52A9E3]/5 transition-all text-[13px] font-medium text-[#52A9E3] bg-transparent"
                   >
                     Lihat Profil Ibu
                   </Link>
-                  <button className="w-full text-center px-3 py-2 rounded-lg bg-[#F7FBFF] hover:bg-[#EBF2F8] transition-colors text-[13px] font-medium text-[#173753]">
-                    Reset Password Akun
+                  <button
+                    onClick={() => setResetPasswordOpen(true)}
+                    className="w-full text-center px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-[13px] font-medium text-[#173753] bg-transparent"
+                  >
+                    Reset Password
                   </button>
                 </div>
-
-                <p className="text-[11px] text-muted-foreground mt-3 pt-3 border-t border-[#F0F0F0]">
-                  Hasil setiap pemeriksaan otomatis terkirim ke aplikasi ibu.
-                </p>
               </CardContent>
             </Card>
 
-            <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+            <Card className="ring-0 bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
               <CardHeader className="px-5 pt-[18px]">
                 <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Saudara Terdaftar</CardTitle>
               </CardHeader>
@@ -507,7 +542,7 @@ export default function ChildDetailPage() {
                   <div className="space-y-1 -mx-1">
                     {childDataState.siblings.map((s) => (
                       <Link key={s.id} href={`/kader/anak/${s.id}`} className="flex items-center gap-3 px-1 py-2 rounded-lg hover:bg-[#F7FBFF] transition-colors">
-                        <div className="h-9 w-9 rounded-xl bg-[#DBEAFE] flex items-center justify-center text-[12px] font-bold text-[#1D4ED8] flex-shrink-0">
+                        <div className="h-9 w-9 rounded-full bg-[#DBEAFE] flex items-center justify-center text-[12px] font-bold text-[#1D4ED8] flex-shrink-0">
                           {s.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -524,7 +559,7 @@ export default function ChildDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+            <Card className="ring-0 bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
               <CardHeader className="px-5 pt-[18px]">
                 <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Jadwal Berikutnya</CardTitle>
               </CardHeader>
@@ -551,7 +586,10 @@ export default function ChildDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[12px] text-muted-foreground text-center py-2">Belum ada jadwal berikutnya</p>
+                  <div className="text-center py-4">
+                    <Calendar className="w-6 h-6 text-gray-300 mx-auto mb-1.5" />
+                    <p className="text-[12px] text-muted-foreground">Belum ada jadwal berikutnya</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -569,6 +607,39 @@ export default function ChildDetailPage() {
           ageMo: childDataState.ageMo,
         }}
         onSaved={loadChild}
+      />
+
+      <IngatkanIbuModal
+        open={ingatkanIbuOpen}
+        onOpenChange={setIngatkanIbuOpen}
+        child={{
+          id: childDataState.id,
+          name: childDataState.name,
+          ibuName: childDataState.parent.mother,
+          noHp: childDataState.parent.phone,
+          posyanduName: childDataState.posyandu,
+        }}
+        onSent={loadChild}
+      />
+
+      <EditDataAnakModal
+        open={editDataOpen}
+        onOpenChange={setEditDataOpen}
+        anak={{
+          id: childDataState.id,
+          nama: childDataState.name,
+          genderRaw: childDataState.genderRaw,
+          birthDateRaw: childDataState.birthDateRaw,
+          beratLahir: childDataState.beratLahir,
+          panjangLahir: childDataState.panjangLahir,
+        }}
+        onSaved={loadChild}
+      />
+
+      <ResetPasswordModal
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
+        ibu={{ id: childDataState.parent.id, nama: childDataState.parent.mother, username: childDataState.parent.username }}
       />
     </div>
   )

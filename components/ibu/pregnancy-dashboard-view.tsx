@@ -2,13 +2,15 @@
 
 import React from 'react'
 import {
-  Bell, Calendar, Clock, ChevronRight,
+  Calendar, Clock, ChevronRight,
   Check, AlertTriangle, Flame, BookOpen,
   CheckSquare, User, RefreshCw, TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
 import { BBChart } from '@/components/ibu/bb-chart'
+import { IbuNotificationBell, type IbuNotifItem } from '@/components/ibu/notification-bell'
 import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
+import type { getIbuNotifications } from '@/lib/actions/notifikasi'
 
 type RiskLevel = 'rendah' | 'sedang' | 'tinggi'
 
@@ -74,9 +76,10 @@ interface PregnancyDashboardViewProps {
   doneCount: number
   profile: PregnancyProfileData | null
   visits: PregnancyVisitData[]
+  notifications?: Awaited<ReturnType<typeof getIbuNotifications>>
 }
 
-export default function PregnancyDashboardView({ data, score, doneCount, profile, visits }: PregnancyDashboardViewProps) {
+export default function PregnancyDashboardView({ data, score, doneCount, profile, visits, notifications = [] }: PregnancyDashboardViewProps) {
   const { pregnancyData } = data
   const radius = 36
   const circumference = 2 * Math.PI * radius
@@ -84,10 +87,40 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
 
   if (!pregnancyData) return null
 
+  const notifItems: IbuNotifItem[] = notifications.map((n) => ({
+    level: n.level as IbuNotifItem['level'],
+    title: n.judul,
+    message: n.pesan,
+    actionLabel: n.actionLabel,
+    actionUrl: n.actionUrl,
+  }))
+  const currentRiskLevel = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
+  if (currentRiskLevel !== 'rendah') {
+    const s = STATUS_MESSAGES[currentRiskLevel]
+    notifItems.push({
+      level: currentRiskLevel === 'tinggi' ? 'merah' : 'kuning',
+      title: s.label,
+      message: s.message,
+      actionLabel: 'Lihat Detail',
+      actionUrl: '/ibu/status',
+    })
+  }
+  for (const v of visits) {
+    if (v.catatanKader) {
+      notifItems.push({
+        level: 'info',
+        title: `Catatan pemeriksaan ${formatDateShort(v.visitDate)}`,
+        message: v.catatanKader,
+        actionLabel: 'Lihat Riwayat',
+        actionUrl: '/ibu/status',
+      })
+    }
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-y-auto no-scrollbar scroll-smooth">
       {/* Header Greeting */}
-      <header className="shrink-0 px-[22px] pt-[6px] pb-4 bg-gradient-to-b from-white to-[#F1F7FE] rounded-b-[24px] shadow-[0_6px_16px_-10px_rgba(17,120,212,0.4)] z-[5]">
+      <header className="shrink-0 px-5 pt-[6px] pb-4 bg-gradient-to-b from-white to-[#F1F7FE] rounded-b-[24px] shadow-[0_6px_16px_-10px_rgba(17,120,212,0.4)] z-[5]">
         <div className="flex items-center gap-3">
           <div className="shrink-0 w-[46px] h-[46px] rounded-[15px] overflow-hidden bg-gradient-to-br from-[#3B93E6] to-[#1178D4] flex items-end justify-center shadow-[0_6px_14px_-6px_rgba(17,120,212,0.6)]">
             <User className="w-[34px] h-[34px] text-white/95" />
@@ -98,13 +131,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
               Hari ini usia kandunganmu <b className="text-[#1178D4] font-bold">{pregnancyData.weeksPregnant} minggu</b>. Yuk, berikan si kecil yang terbaik hari ini.
             </p>
           </div>
-          <button 
-            className="shrink-0 w-[42px] h-[42px] rounded-[13px] bg-white border border-[#E4EDE7] flex items-center justify-center text-[#1178D4] relative shadow-[0_3px_8px_-5px_rgba(9,30,66,0.2)] hover:bg-gray-50 transition-colors"
-            aria-label="Notifikasi"
-          >
-            <span className="absolute top-[9px] right-[11px] w-[7px] h-[7px] rounded-full bg-[#ED5610] border-[1.5px] border-white" />
-            <Bell className="w-[19px] h-[19px]" />
-          </button>
+          <IbuNotificationBell items={notifItems} />
         </div>
       </header>
 

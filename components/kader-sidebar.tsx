@@ -22,7 +22,7 @@ import {
 
 const menusTop = [
   { label: "Dashboard", href: "/kader/dashboard", icon: LayoutDashboard },
-  { label: "Daftar Pasien", href: "/kader/rekap", icon: Activity },
+  { label: "Daftar Pasien", href: "/kader/rekap", icon: Activity, activePrefixes: ["/kader/rekap", "/kader/anak", "/kader/ibu", "/kader/kehamilan"] },
   { label: "Peta Sebaran", href: "/kader/peta-sebaran", icon: MapPin },
 ]
 
@@ -45,16 +45,22 @@ export function KaderSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menusTop.map((menu) => (
-                <SidebarMenuItem key={menu.href}>
-                  <SidebarMenuButton asChild isActive={pathname === menu.href}>
-                    <Link href={menu.href}>
-                      <menu.icon className="h-4 w-4" />
-                      <span>{menu.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {menusTop.map((menu) => {
+                const isActive = menu.activePrefixes 
+                  ? menu.activePrefixes.some(prefix => pathname.startsWith(prefix))
+                  : pathname === menu.href
+
+                return (
+                  <SidebarMenuItem key={menu.href}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link href={menu.href}>
+                        <menu.icon className="h-4 w-4" />
+                        <span>{menu.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

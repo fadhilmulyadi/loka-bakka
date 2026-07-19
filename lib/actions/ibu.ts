@@ -128,7 +128,7 @@ export async function getIbuProfile() {
     tanggalLahir: ibuRow.tanggalLahir,
     alamat: ibuRow.alamat,
     posyandu: ibuRow.posyandu.nama,
-    kelurahan: ibuRow.posyandu.kelurahan,
+    kelurahan: ibuRow.kelurahan,
     kecamatan: ibuRow.posyandu.kecamatan,
     isPregnant: ibuRow.isHamil,
     lastSkrining: ibuRow.skrinings[0] ?? null,
