@@ -58,3 +58,9 @@ export const stuntingColor: Record<StuntingStatus, string> = {
   risiko_stunting: '#eab308', // yellow-500 (or orange-500 if preferred)
   normal: '#22c55e',            // green-500
 }
+
+export const stuntingEdukasi: Record<StuntingStatus, string> = {
+  normal: "Tinggi badan sesuai usia. Pertahankan gizi seimbang dan rutin timbang di posyandu tiap bulan.",
+  risiko_stunting: "Terindikasi stunting. Konsultasikan dengan bidan/petugas gizi dan pantau ketat tiap bulan.",
+  stunting: "Stunting berat. Segera rujuk ke puskesmas untuk pemeriksaan dan penanganan lanjutan.",
+}

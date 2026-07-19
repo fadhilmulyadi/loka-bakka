@@ -24,6 +24,12 @@ export const statusMap: Record<string, StatusStyle> = {
   Bahaya:          { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
   Aktif:           { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
   "Non-aktif":     { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
+  NORMAL:          { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
+  PENDEK:          { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
+  "SANGAT PENDEK": { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
+  RENDAH:          { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
+  SEDANG:          { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
+  TINGGI:          { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
   Default:         { bg: "#F3F4F6", text: "#6B7280", dot: "#9CA3AF", border: "#E5E7EB" },
 }
 
