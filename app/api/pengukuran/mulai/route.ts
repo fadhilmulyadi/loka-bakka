@@ -6,7 +6,11 @@ import { eq } from "drizzle-orm";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { deviceId } = body;
+    const { deviceId, kategori, anakId, ibuId, lilaCm, hbGdl } = body;
+
+    if (kategori !== "anak" && kategori !== "ibu") {
+      return NextResponse.json({ success: false, error: "kategori harus 'anak' atau 'ibu'" }, { status: 400 });
+    }
 
     const id = deviceId || "esp32-01";
 
@@ -14,7 +18,7 @@ export async function POST(request: Request) {
     const existingDevice = await db.query.device.findFirst({
       where: eq(device.id, id)
     });
-    
+
     if (!existingDevice) {
       await db.insert(device).values({
         id: id,
@@ -24,8 +28,11 @@ export async function POST(request: Request) {
 
     const newSession = await db.insert(sesiPengukuran).values({
       deviceId: id,
-      statusTinggi: "menunggu",
-      statusBerat: "menunggu",
+      kategori,
+      anakId: kategori === "anak" ? anakId : null,
+      ibuId: kategori === "ibu" ? ibuId : null,
+      lilaCm: kategori === "ibu" ? lilaCm : null,
+      hbGdl: kategori === "ibu" ? hbGdl : null,
     }).returning({ id: sesiPengukuran.id });
 
     return NextResponse.json({ success: true, sessionId: newSession[0].id });
