@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db/client"
-import { pregnancyProfile, pregnancyVisit, ibu } from "@/lib/db/schema"
+import { pregnancyProfile, pregnancyVisit, ibu, sesiPengukuran, skriningShamil } from "@/lib/db/schema"
 import { eq, desc } from "drizzle-orm"
 import { auth } from "@/auth"
 import {
@@ -189,4 +189,46 @@ export async function endPregnancy(ibuId: string, outcome: string) {
   revalidatePath(`/kader/ibu/${ibuId}`)
   revalidatePath("/kader/rekap")
   revalidatePath("/kader/dashboard")
+}
+
+export async function saveSkriningDariSesi(data: {
+  sessionId: string
+  catatanKader?: string
+}) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  const sesi = await db.query.sesiPengukuran.findFirst({
+    where: eq(sesiPengukuran.id, data.sessionId),
+  })
+
+  if (!sesi) throw new Error("Sesi tidak ditemukan")
+  if (sesi.kategori !== "ibu" || !sesi.ibuId) throw new Error("Sesi bukan untuk ibu hamil")
+  if (sesi.statusHasil !== "selesai") throw new Error("Sesi belum selesai diproses alat")
+  if (sesi.nilaiBerat == null || sesi.lilaCm == null || sesi.hbGdl == null || sesi.skorAkhir == null || !sesi.kategoriHasil) {
+    throw new Error("Data hasil sesi tidak lengkap")
+  }
+
+  const visit = await savePregnancyVisit({
+    ibuId: sesi.ibuId,
+    currentWeightKg: sesi.nilaiBerat,
+    lilaCm: sesi.lilaCm,
+    hbGdl: sesi.hbGdl,
+    catatanKader: data.catatanKader,
+  })
+
+  await db.insert(skriningShamil).values({
+    ibuId: sesi.ibuId,
+    posyanduId: session.user.posyanduId!,
+    kaderId: session.user.id!,
+    skorRisiko: sesi.skorAkhir,
+    kategori: sesi.kategoriHasil,
+    jawaban: sesi.jawaban ?? {},
+  })
+
+  const { revalidatePath: revalidate } = await import("next/cache")
+  revalidate(`/kader/ibu/${sesi.ibuId}`)
+  revalidate("/kader/dashboard")
+
+  return visit
 }
