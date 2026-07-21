@@ -13,7 +13,9 @@
 #define DEVICE_ID     "esp32-01"
 
 // ==== Pin TFT (ILI9488 480x320) ====
-// MOSI/SCLK/MISO diatur di User_Setup.h milik library TFT_eSPI, bukan di sini.
+// CATATAN: nilai di bawah TIDAK dibaca kode manapun — TFT_eSPI ambil semua pin
+// (MOSI/SCLK/MISO + CS/DC/RST) dari User_Setup.h di folder library. Ini cuma
+// dokumentasi wiring; kalau diubah, ubah juga User_Setup.h atau layar putih.
 #define PIN_TFT_CS   5
 #define PIN_TFT_DC   27
 #define PIN_TFT_RST  33

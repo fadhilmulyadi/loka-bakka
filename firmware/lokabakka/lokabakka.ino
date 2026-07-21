@@ -87,7 +87,7 @@ void kembaliKeMenu() {
   lampMati();                          // matikan semua lampu saat kembali ke menu
   sorotanKategori = 0;
   layarAktif = LAYAR_PILIH_KATEGORI;
-  layarPilihKategori(sorotanKategori, wifiOk);
+  layarPilihKategori(sorotanKategori);
 }
 
 void setup() {
@@ -142,7 +142,7 @@ void loop() {
     case LAYAR_PILIH_KATEGORI:
       if (satu) {
         sorotanKategori = 1 - sorotanKategori;
-        layarPilihKategori(sorotanKategori, wifiOk);
+        layarPilihKategori(sorotanKategori);
       } else if (dua) {
         kategoriDipilih = sorotanKategori == 0 ? "anak" : "ibu";
         bbUkur = readWeightKg(kategoriDipilih);
