@@ -26,6 +26,17 @@
 #define PIN_BTN_SATU 13   // tombol (1) - merah - tidak / ulangi / ganti pilihan
 #define PIN_BTN_DUA  14   // tombol (2) - hijau - ya / lanjut / pilih
 
+// ==== Pin Lampu Status (via Modul Relay 4 Channel) ====
+// Sesuai wiring §11c & §16 — IN1/IN2/IN3 relay 4ch
+#define PIN_LAMP_HIJAU   21  // IN1 → lampu HIJAU  (NORMAL / RISIKO RENDAH)
+#define PIN_LAMP_KUNING  22  // IN2 → lampu KUNING (PENDEK / RISIKO SEDANG)
+#define PIN_LAMP_MERAH    4  // IN3 → lampu MERAH  (SANGAT PENDEK / RISIKO TINGGI)
+//
+// RELAY_ON / RELAY_OFF: Sebagian besar modul optocoupler 5V aktif-LOW.
+// Jika lampu tidak merespons benar, tukar nilai keduanya.
+#define RELAY_ON   LOW   // GPIO LOW  → relay ON  → lampu menyala
+#define RELAY_OFF  HIGH  // GPIO HIGH → relay OFF → lampu mati
+
 // ==== Ukuran layar ====
 #define SCR_W 480
 #define SCR_H 320

@@ -5,6 +5,7 @@
 #include "api.h"
 #include "printer.h"
 #include "screens.h"
+#include "lamps.h"
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -75,6 +76,7 @@ void mulaiKirim() {
         : COL_RED;
     layarHasil(strcmp(kategoriDipilih, "ibu") == 0, hasilTerakhir.bb, hasilTerakhir.tb,
                hasilTerakhir.kategoriHasil, warna, hasilTerakhir.teksEdukasi);
+    lampDariKategori(hasilTerakhir.kategoriHasil); // nyalakan lampu sesuai hasil
   } else {
     layarAktif = LAYAR_GAGAL;
     layarGagal(hasilTerakhir.error);
@@ -82,6 +84,7 @@ void mulaiKirim() {
 }
 
 void kembaliKeMenu() {
+  lampMati();                          // matikan semua lampu saat kembali ke menu
   sorotanKategori = 0;
   layarAktif = LAYAR_PILIH_KATEGORI;
   layarPilihKategori(sorotanKategori, wifiOk);
@@ -93,9 +96,21 @@ void setup() {
   pinMode(PIN_BTN_SATU, INPUT_PULLUP);
   pinMode(PIN_BTN_DUA, INPUT_PULLUP);
 
+  // Inisialisasi lampu — semua mati sebelum apapun terjadi (§16 wiring doc)
+  lampInit();
+
   tft.init();
   tft.setRotation(1);
   layarBoot();
+
+  // Mode komisioning: tahan BTN_SATU saat boot → test sequence lampu
+  // Berguna saat perakitan (§14 langkah 5) sebelum firmware lengkap diflash
+  if (digitalRead(PIN_BTN_SATU) == LOW) {
+    Serial.println("[COMMISSIONING] Mode test lampu aktif (BTN_SATU ditahan)");
+    delay(500); // debounce boot
+    lampTest(800);
+    Serial.println("[COMMISSIONING] Selesai, lanjut normal.");
+  }
 
   prnInit();
 
