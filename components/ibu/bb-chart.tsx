@@ -1,87 +1,119 @@
 'use client'
 
-import { useState } from 'react'
 import {
-  ComposedChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceArea, ResponsiveContainer,
+  ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
 } from 'recharts'
-import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
+import {
+  getIOMTargets, getExpectedGainRange, TERM_WEEK,
+  type PregnancyProfileData, type PregnancyVisitData,
+} from '@/lib/growth-standards/imt-calc'
+import { calculateGestationalAge } from '@/lib/pregnancy-utils'
 
 interface BBChartProps {
-  profile: PregnancyProfileData
-  visits: PregnancyVisitData[]
+  // Sengaja dipersempit ke field yang benar-benar dipakai, supaya baris mentah
+  // dari DB (halaman kader) bisa dioper langsung tanpa dibentuk ulang.
+  profile: Pick<PregnancyProfileData, 'hpht' | 'jumlahJanin' | 'imtCategory' | 'bbPrepregnancyKg'>
+  visits: Pick<PregnancyVisitData, 'visitDate' | 'currentWeightKg'>[]
+  nama: string
 }
 
-type ChartView = 'visit' | 'month'
-
-function formatLabel(date: Date, view: ChartView): string {
-  if (view === 'month') {
-    return new Date(date).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' })
-  }
-  return new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+interface ChartRow {
+  week: number
+  zoneMin: number
+  zoneSpan: number
+  zoneMid: number
+  weight?: number
 }
 
-export function BBChart({ profile, visits }: BBChartProps) {
-  const [view, setView] = useState<ChartView>('visit')
+const kg = (n: number) => n.toFixed(1).replace('.', ',')
 
-  if (visits.length < 2) {
+function BBTooltip({ active, payload, label }: {
+  active?: boolean
+  payload?: Array<{ payload: ChartRow }>
+  label?: number
+}) {
+  if (!active || !payload || payload.length === 0) return null
+  const row = payload[0].payload
+  return (
+    <div className="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-[11px] shadow-sm">
+      <p className="font-semibold text-[#173753] mb-1">Minggu ke-{label}</p>
+      <p className="text-muted-foreground">
+        Target BB: {kg(row.zoneMin)}–{kg(row.zoneMin + row.zoneSpan)} kg
+      </p>
+      {row.weight != null && (
+        <p className="font-medium text-[#6A48C4]">BB ibu: {kg(row.weight)} kg</p>
+      )}
+    </div>
+  )
+}
+
+export function BBChart({ profile, visits, nama }: BBChartProps) {
+  if (visits.length === 0) {
     return (
-      <div className="bg-[#F4F7FA] border border-[#DCE6EF] rounded-[14px] p-5 text-center">
-        <p className="text-[12px] text-[#697079]">
-          Data akan muncul setelah minimal 2 kunjungan tercatat.
-        </p>
-      </div>
+      <p className="text-[12px] text-[#697079] text-center py-10">
+        Data akan muncul setelah kunjungan pertama tercatat.
+      </p>
     )
   }
 
-  const sorted = [...visits].sort(
-    (a, b) => new Date(a.visitDate).getTime() - new Date(b.visitDate).getTime()
-  )
+  const hpht = new Date(profile.hpht)
+  const targets = getIOMTargets(profile.imtCategory, profile.jumlahJanin)
 
-  const data = sorted.map(v => ({
-    label: formatLabel(new Date(v.visitDate), view),
-    weight: v.currentWeightKg,
-    isOnTrack: v.isOnTrack,
-  }))
+  // Titik BB aktual dipetakan ke usia kandungan saat kunjungan, bukan ke tanggal,
+  // supaya sejajar dengan zona target yang juga berbasis minggu.
+  const byWeek = new Map<number, number>()
+  for (const v of visits) {
+    const w = Math.max(0, Math.min(calculateGestationalAge(hpht, new Date(v.visitDate)), TERM_WEEK))
+    byWeek.set(w, v.currentWeightKg)
+  }
 
-  const targetMin = profile.bbPrepregnancyKg + profile.targetGainMinKg
-  const targetMax = profile.bbPrepregnancyKg + profile.targetGainMaxKg
+  const data: ChartRow[] = Array.from({ length: TERM_WEEK + 1 }, (_, week) => {
+    const range = getExpectedGainRange(week, targets)
+    const zoneMin = profile.bbPrepregnancyKg + range.minKg
+    const zoneSpan = range.maxKg - range.minKg
+    return {
+      week,
+      zoneMin,
+      zoneSpan,
+      zoneMid: zoneMin + zoneSpan / 2,
+      weight: byWeek.get(week),
+    }
+  })
 
-  const allWeights = data.map(d => d.weight)
-  const yMin = Math.floor(Math.min(...allWeights, targetMin) - 1)
-  const yMax = Math.ceil(Math.max(...allWeights, targetMax) + 1)
+  const weights = [...byWeek.values()]
+  const yMin = Math.floor(Math.min(...weights, data[0].zoneMin))
+  const yMax = Math.ceil(Math.max(...weights, data[TERM_WEEK].zoneMin + data[TERM_WEEK].zoneSpan))
 
   return (
-    <div className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[12px] font-semibold text-[#1F2937]">Grafik BB</span>
-        <div className="flex bg-[#F4F7FA] border border-[#DCE6EF] rounded-[10px] p-[3px] gap-[3px]">
-          {(['visit', 'month'] as ChartView[]).map(v => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-3 py-1 rounded-[8px] text-[11px] font-semibold transition-all ${
-                view === v
-                  ? 'bg-white text-[#1178D4] shadow-[0_2px_5px_rgba(9,30,66,0.1)]'
-                  : 'text-[#697079]'
-              }`}
-            >
-              {v === 'visit' ? 'Per Kunjungan' : 'Per Bulan'}
-            </button>
-          ))}
-        </div>
+    <div>
+      <div className="flex items-center justify-end gap-3 flex-wrap mb-3 text-[11px]">
+        <span className="flex items-center gap-1.5 font-medium text-[#173753]">
+          <span className="w-3 h-3 rounded-sm bg-[#F0EBFB] border border-[#D9CCF3] inline-block" />
+          Rentang anjuran IOM
+        </span>
+        <span className="flex items-center gap-1.5 font-medium text-[#173753]">
+          <span className="w-3 h-0.5 border-t-2 border-dashed border-[#C3B0E6] inline-block" />
+          Titik tengah
+        </span>
+        <span className="flex items-center gap-1.5 font-medium text-[#173753]">
+          <span className="w-3 h-0.5 bg-[#6A48C4] inline-block" />
+          {nama}
+        </span>
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F0F4F8" vertical={false} />
+      <ResponsiveContainer width="100%" height={300}>
+        <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
           <XAxis
-            dataKey="label"
+            dataKey="week"
+            type="number"
+            domain={[0, TERM_WEEK]}
+            ticks={[0, 8, 13, 20, 27, 34, 40]}
             tick={{ fontSize: 10, fill: '#697079' }}
             tickLine={false}
             axisLine={false}
-            padding={{ left: 10, right: 10 }}
-            minTickGap={10}
+            tickFormatter={(w) => `${w}mg`}
           />
           <YAxis
             domain={[yMin, yMax]}
@@ -90,62 +122,49 @@ export function BBChart({ profile, visits }: BBChartProps) {
             axisLine={false}
             width={35}
           />
-          <Tooltip
-            contentStyle={{ fontSize: 11, borderRadius: 10, border: '1px solid #E4EDE7', boxShadow: 'none' }}
-            formatter={(value) => [`${value} kg`, 'Berat Badan']}
+          <Tooltip content={<BBTooltip />} />
+          {/* Dua Area bertumpuk membentuk pita target: alas transparan + tinggi pita. */}
+          <Area
+            type="monotone"
+            dataKey="zoneMin"
+            stackId="zona"
+            stroke="none"
+            fill="none"
+            isAnimationActive={false}
+            activeDot={false}
           />
-          <ReferenceArea
-            y1={targetMin}
-            y2={targetMax}
-            fill="#E7F7EF"
-            fillOpacity={0.4}
-            stroke="#C3E9D4"
+          <Area
+            type="monotone"
+            dataKey="zoneSpan"
+            stackId="zona"
+            stroke="#D9CCF3"
             strokeWidth={1}
+            fill="#F0EBFB"
+            fillOpacity={1}
+            isAnimationActive={false}
+            activeDot={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="zoneMid"
+            stroke="#C3B0E6"
+            strokeWidth={1.5}
+            strokeDasharray="5 4"
+            dot={false}
+            isAnimationActive={false}
           />
           <Line
             type="monotone"
             dataKey="weight"
-            stroke="#1178D4"
-            strokeWidth={2}
-            dot={(props) => {
-              const { cx, cy } = props as { cx: number; cy: number; index: number }
-              const index = (props as { cx: number; cy: number; index: number }).index
-              const isOnTrack = data[index]?.isOnTrack ?? true
-              return (
-                <circle
-                  key={`dot-${index}`}
-                  cx={cx}
-                  cy={cy}
-                  r={5}
-                  fill={isOnTrack ? '#1E9E62' : '#D99100'}
-                  stroke="white"
-                  strokeWidth={2}
-                />
-              )
-            }}
-            activeDot={{ r: 6, fill: '#1178D4', stroke: 'white', strokeWidth: 2 }}
+            stroke="#6A48C4"
+            strokeWidth={2.5}
+            connectNulls
+            dot={{ r: 4, fill: '#6A48C4', stroke: 'white', strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: '#6A48C4', stroke: 'white', strokeWidth: 2 }}
+            isAnimationActive={false}
           />
         </ComposedChart>
       </ResponsiveContainer>
-
-      <div className="flex items-center gap-4 mt-3 justify-center flex-wrap">
-        <span className="flex items-center gap-1.5 text-[10px] text-[#697079]">
-          <span className="w-4 h-[2px] bg-[#1178D4] rounded-full inline-block" />
-          BB Aktual
-        </span>
-        <span className="flex items-center gap-1.5 text-[10px] text-[#697079]">
-          <span className="w-3 h-3 rounded-sm bg-[#E7F7EF] border border-[#C3E9D4] inline-block" />
-          Zona Target
-        </span>
-        <span className="flex items-center gap-1.5 text-[10px] text-[#697079]">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#1E9E62] inline-block" />
-          Sesuai
-        </span>
-        <span className="flex items-center gap-1.5 text-[10px] text-[#697079]">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#D99100] inline-block" />
-          Perlu Perhatian
-        </span>
-      </div>
     </div>
   )
 }

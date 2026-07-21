@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { savePregnancyVisit, saveSkriningDariSesi } from "@/lib/actions/pregnancy"
-import { getWeightGainStatus, weightGainLabel } from "@/lib/growth-standards/imt-calc"
+import { getIOMTargets, getWeightGainStatus, weightGainLabel, type IMTCategory } from "@/lib/growth-standards/imt-calc"
 import { StatusBadge } from "@/components/status-badge"
 import { FieldLabel, StyledTextarea } from "@/components/kader/tambah-pasien-modal"
 
@@ -84,8 +84,8 @@ interface PeriksaKehamilanModalProps {
     gestationalWeeks: number
     trimester: number
     bbPrepregnancyKg: number
-    weeklyGainMinKg: number
-    weeklyGainMaxKg: number
+    imtCategory: IMTCategory
+    jumlahJanin: number
   }
   onSaved: () => void
 }
@@ -199,7 +199,7 @@ export function PeriksaKehamilanModal({ open, onOpenChange, ibu, onSaved }: Peri
 
   const weightGainKg = bbNum != null ? bbNum - ibu.bbPrepregnancyKg : null
   const gainStatus = weightGainKg != null
-    ? getWeightGainStatus(weightGainKg, ibu.gestationalWeeks, ibu)
+    ? getWeightGainStatus(weightGainKg, ibu.gestationalWeeks, getIOMTargets(ibu.imtCategory, ibu.jumlahJanin))
     : null
 
   const lilaLow = lilaNum != null && lilaNum < 23.5

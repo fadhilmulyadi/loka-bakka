@@ -1,6 +1,6 @@
-export function calculateGestationalAge(hpht: Date): number {
-  const now = new Date();
-  const diffInMs = now.getTime() - hpht.getTime();
+/** Usia kandungan dalam minggu; `at` untuk menghitung pada tanggal kunjungan lampau. */
+export function calculateGestationalAge(hpht: Date, at: Date = new Date()): number {
+  const diffInMs = at.getTime() - hpht.getTime();
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
   return Math.floor(diffInDays / 7);
 }

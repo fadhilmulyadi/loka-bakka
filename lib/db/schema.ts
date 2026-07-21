@@ -92,6 +92,7 @@ export const pregnancyProfile = pgTable("PregnancyProfile", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   ibuId: text("ibuId").notNull().unique().references(() => ibu.id, { onDelete: "cascade" }),
   hpht: timestamp("hpht", { mode: "date" }).notNull(),
+  jumlahJanin: integer("jumlahJanin").notNull().default(1), // 1 = tunggal, >=2 = kehamilan ganda (target BB berbeda)
   bbPrepregnancyKg: doublePrecision("bbPrepregnancyKg").notNull(),
   heightCm: doublePrecision("heightCm").notNull(),
   imtPrepregnancy: doublePrecision("imtPrepregnancy").notNull(),

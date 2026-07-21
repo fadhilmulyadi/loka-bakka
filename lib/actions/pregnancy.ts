@@ -12,6 +12,7 @@ import {
   type PregnancyProfileData,
   type PregnancyVisitData
 } from "@/lib/growth-standards/imt-calc"
+import { hitungSkorKuesioner, type JawabanKuesioner } from "@/lib/growth-standards/risiko-kehamilan-calc"
 import { calculateGestationalAge } from "@/lib/pregnancy-utils"
 import { notifyPregnancyRisk } from "@/lib/actions/notifikasi"
 
@@ -25,8 +26,18 @@ export async function getPregnancyProfile(): Promise<PregnancyProfileData | null
 
   if (!profile) return null
 
+  const lastSkrining = await db.query.skriningShamil.findFirst({
+    where: eq(skriningShamil.ibuId, session.user.id),
+    orderBy: desc(skriningShamil.tanggal),
+  })
+
   return {
     id: profile.id,
+    hpht: profile.hpht,
+    jumlahJanin: profile.jumlahJanin,
+    kuesionerBand: lastSkrining
+      ? hitungSkorKuesioner(lastSkrining.jawaban as JawabanKuesioner).band
+      : null,
     bbPrepregnancyKg: profile.bbPrepregnancyKg,
     heightCm: profile.heightCm,
     imtPrepregnancy: profile.imtPrepregnancy,
@@ -65,6 +76,7 @@ export async function startPregnancy(data: {
   hpht: Date
   bbPrepregnancyKg: number
   heightCm: number
+  jumlahJanin?: number
 }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
@@ -87,11 +99,13 @@ export async function startPregnancy(data: {
 
   const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
   const category = getIMTCategory(imt)
-  const targets = getIOMTargets(category)
+  const jumlahJanin = data.jumlahJanin ?? 1
+  const targets = getIOMTargets(category, jumlahJanin)
 
   await db.insert(pregnancyProfile).values({
     ibuId: data.ibuId,
     hpht: data.hpht,
+    jumlahJanin,
     bbPrepregnancyKg: data.bbPrepregnancyKg,
     heightCm: data.heightCm,
     imtPrepregnancy: imt,
@@ -131,9 +145,12 @@ export async function savePregnancyVisit(data: {
 
   const weightGainKg = data.currentWeightKg - profile.bbPrepregnancyKg
   const weeks = calculateGestationalAge(new Date(profile.hpht))
-  const gainStatus = getWeightGainStatus(weightGainKg, weeks, profile)
+  const targets = getIOMTargets(profile.imtCategory as PregnancyProfileData["imtCategory"], profile.jumlahJanin)
+  const gainStatus = getWeightGainStatus(weightGainKg, weeks, targets)
   const isOnTrack = gainStatus === "normal"
   const lilaLow = data.lilaCm < 23.5
+  // Ambang notifikasi kader tetap 11 g/dL (batas anemia WHO) supaya peringatan
+  // muncul lebih dini; skoring risiko sendiri memakai ambang 10 g/dL.
   const hbLow = data.hbGdl < 11.0
 
   const [result] = await db.insert(pregnancyVisit).values({

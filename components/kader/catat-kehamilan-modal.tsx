@@ -46,6 +46,7 @@ export function CatatKehamilanModal({ open, onOpenChange, onSaved, onLangsungPer
   const [hpht, setHpht] = useState("")
   const [bbPrepregnancyKg, setBbPrepregnancyKg] = useState("")
   const [heightCm, setHeightCm] = useState("")
+  const [jumlahJanin, setJumlahJanin] = useState(1)
   const [langsungPeriksa, setLangsungPeriksa] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +57,7 @@ export function CatatKehamilanModal({ open, onOpenChange, onSaved, onLangsungPer
         setHpht("")
         setBbPrepregnancyKg("")
         setHeightCm("")
+        setJumlahJanin(1)
         setLangsungPeriksa(true)
         setError(null)
         setSaving(false)
@@ -88,6 +90,7 @@ export function CatatKehamilanModal({ open, onOpenChange, onSaved, onLangsungPer
         hpht: hphtDate,
         bbPrepregnancyKg: bbNum,
         heightCm: tbNum,
+        jumlahJanin,
       })
       onOpenChange(false)
       if (langsungPeriksa) {
@@ -158,6 +161,25 @@ export function CatatKehamilanModal({ open, onOpenChange, onSaved, onLangsungPer
                 <div>
                   <FieldLabel label="Tinggi Badan (cm)" required />
                   <StyledInput value={heightCm} onChange={setHeightCm} type="number" placeholder="mis. 156" />
+                </div>
+              </div>
+              <div>
+                <FieldLabel label="Jumlah Janin" />
+                <div className="flex gap-2">
+                  {[1, 2].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setJumlahJanin(n)}
+                      className={`flex-1 rounded-[12px] border px-3 py-2 text-[12px] font-semibold transition-colors ${
+                        jumlahJanin === n
+                          ? "border-[#1178D4] bg-[#EAF3FC] text-[#1178D4]"
+                          : "border-[#DCE6EF] bg-white text-[#697079]"
+                      }`}
+                    >
+                      {n === 1 ? "Tunggal" : "Ganda (kembar)"}
+                    </button>
+                  ))}
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground leading-snug">
