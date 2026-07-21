@@ -8,6 +8,10 @@
 
 bool wifiConnect() {
   WiFi.mode(WIFI_STA);
+  // Hapus kredensial sisa di NVS dari flash sebelumnya — penyebab umum error
+  // "Association refused too many times, max allowed 1".
+  WiFi.disconnect(true, true);
+  delay(100);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
