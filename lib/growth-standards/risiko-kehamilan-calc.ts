@@ -53,6 +53,35 @@ export function hitungSkorGabungan(input: SkorGabunganInput): SkorGabunganResult
   return { skor, kategori }
 }
 
+export type RiskLevel = "rendah" | "sedang" | "tinggi"
+
+export const kategoriToLevel: Record<KategoriRisiko, RiskLevel> = {
+  RENDAH: "rendah",
+  SEDANG: "sedang",
+  TINGGI: "tinggi",
+}
+
+/**
+ * Satu-satunya sumber status ibu untuk UI. Dipakai halaman ibu maupun kader
+ * supaya labelnya tidak berbeda-beda per halaman.
+ * kuesionerBand default RENDAH ketika ibu belum pernah mengisi kuesioner —
+ * skor lain (IMT/LILA/Hb) tetap dihitung penuh.
+ */
+export function hitungRisikoIbu(input: {
+  imtCategory: ImtCategory
+  lilaCm: number
+  hbGdl: number
+  kuesionerBand?: KategoriRisiko | null
+}): { skor: number; kategori: KategoriRisiko; level: RiskLevel } {
+  const { skor, kategori } = hitungSkorGabungan({
+    imtCategory: input.imtCategory,
+    lilaCm: input.lilaCm,
+    hbGdl: input.hbGdl,
+    kuesionerBand: input.kuesionerBand ?? "RENDAH",
+  })
+  return { skor, kategori, level: kategoriToLevel[kategori] }
+}
+
 export const edukasiIbu: Record<KategoriRisiko, string> = {
   RENDAH: "Kondisi kehamilan Bunda baik. BB, Hb, dan LILA normal. Tetap minum tablet Fe, makan protein 3 kali sehari, dan rutin ke posyandu.",
   SEDANG: "Ada kondisi (Hb, BB, atau LILA) yang belum ideal. Segera hubungi kader/bidan minggu ini, rutin minum tablet Fe, dan penuhi target kenaikan BB.",

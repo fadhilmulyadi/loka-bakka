@@ -12,13 +12,7 @@ import { IbuNotificationBell, type IbuNotifItem } from '@/components/ibu/notific
 import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 import type { getIbuNotifications } from '@/lib/actions/notifikasi'
 
-type RiskLevel = 'rendah' | 'sedang' | 'tinggi'
-
-function computeRiskLevel(lila: number, hb: number, isOnTrack: boolean | null): RiskLevel {
-  if (lila < 23.5 || hb < 11) return 'tinggi'
-  if (isOnTrack === false) return 'sedang'
-  return 'rendah'
-}
+import { hitungRisikoIbu, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 
 const STATUS_MESSAGES: Record<RiskLevel, {
   bg: string; border: string; iconBg: string; textColor: string;
@@ -94,7 +88,14 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
     actionLabel: n.actionLabel,
     actionUrl: n.actionUrl,
   }))
-  const currentRiskLevel = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
+  const currentRiskLevel: RiskLevel = profile
+    ? hitungRisikoIbu({
+        imtCategory: profile.imtCategory,
+        lilaCm: pregnancyData.lila,
+        hbGdl: pregnancyData.hb,
+        kuesionerBand: profile.kuesionerBand,
+      }).level
+    : 'rendah'
   if (currentRiskLevel !== 'rendah') {
     const s = STATUS_MESSAGES[currentRiskLevel]
     notifItems.push({
@@ -235,7 +236,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
           <div className="mt-1">
             <div className="relative h-[11px] rounded-full bg-gradient-to-r from-[#1E9E62] from-33% via-[#F2B705] via-66% to-[#E0524E]">
               {(() => {
-                const level = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
+                const level = currentRiskLevel
                 const pos = { rendah: '16%', sedang: '50%', tinggi: '83%' }[level]
                 const color = { rendah: '#1E9E62', sedang: '#F2B705', tinggi: '#E0524E' }[level]
                 return (
@@ -314,7 +315,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                 </span>
               </div>
               <div className="w-full">
-                <BBChart profile={profile} visits={visits} />
+                <BBChart profile={profile} visits={visits} nama="BB Anda" />
               </div>
               <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#E4EDE7] text-[10.5px] text-[#697079] font-medium leading-[1.4] text-pretty">
                 <Check className="w-[14px] h-[14px] shrink-0 text-[#1E9E62]" />
@@ -366,7 +367,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
 
         {/* STATUS NOTIF */}
         {(() => {
-          const currentLevel = computeRiskLevel(pregnancyData.lila, pregnancyData.hb, pregnancyData.isOnTrack)
+          const currentLevel = currentRiskLevel
           const s = STATUS_MESSAGES[currentLevel]
           return (
             <>

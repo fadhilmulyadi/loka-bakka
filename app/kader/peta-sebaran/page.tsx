@@ -3,11 +3,10 @@
 import dynamic from "next/dynamic"
 import { useState, useCallback, useEffect } from "react"
 import { KaderUserPill } from "@/components/kader/kader-user-pill"
-import {
-  ChevronDown, ChevronRight,
-  SlidersHorizontal, X, User,
-} from "lucide-react"
+import { ChevronRight, X, User } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { StatusBadge } from "@/components/status-badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { getCached, setCached } from "@/lib/client-cache"
 import { getKelurahanStats, getKelurahanPatients, getUncheckedChildren } from "@/lib/actions/kader"
 import { Topbar } from "@/components/kader/topbar"
@@ -32,7 +31,8 @@ export type KelurahanPatient = {
   type: "anak" | "bumil"
   name: string
   desc: string
-  status: "Normal" | "Berisiko" | "Stunting"
+  // "Risiko Stunting" untuk anak, "Berisiko" untuk bumil.
+  status: "Normal" | "Risiko Stunting" | "Berisiko" | "Stunting"
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -46,12 +46,6 @@ function stuntingInfo(rate: number): StatusInfo {
   if (rate < 10) return { fill: "#A5D6A7", label: "Aman",      badgeClass: "bg-green-100 text-green-800" }
   if (rate < 20) return { fill: "#FFE082", label: "Ada Kasus", badgeClass: "bg-amber-100 text-amber-800" }
   return         { fill: "#EF9A9A", label: "Prioritas", badgeClass: "bg-red-100 text-red-800" }
-}
-
-function progressGradient(rate: number): string {
-  if (rate >= 20) return "linear-gradient(to right, #EF9A9A, #C62828)"
-  if (rate >= 10) return "linear-gradient(to right, #FFE082, #F57F17)"
-  return "linear-gradient(to right, #A5D6A7, #2E7D32)"
 }
 
 function progressRateColor(rate: number): string {
@@ -72,48 +66,6 @@ const LeafletMap = dynamic(() => import("./LeafletMap"), {
     </div>
   ),
 })
-
-// ── Filter Bar ───────────────────────────────────────────────────────────────
-function FilterBar() {
-  const filters = [
-    { label: "Kecamatan", value: "Semua" },
-    { label: "Kelurahan",  value: "Semua" },
-    { label: "Status",    value: "Semua" },
-    { label: "Periode",   value: "Semua" },
-  ]
-
-  return (
-    <div className="flex items-center justify-between flex-wrap gap-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs font-medium text-muted-foreground">Filter</span>
-        {filters.map((f) => (
-          <button
-            key={f.label}
-            className="flex items-center gap-1 px-3 h-8 rounded-[50px] bg-white text-xs text-[#173753] hover:bg-gray-50 transition-colors"
-          >
-            <span className="text-muted-foreground">{f.label}:</span>
-            <span className="font-medium ml-0.5">{f.value}</span>
-            <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" aria-hidden="true" />
-          </button>
-        ))}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <button
-          className="flex items-center gap-1.5 px-4 h-8 rounded-[50px] text-white text-xs font-medium hover:opacity-90 transition-opacity"
-          style={{ background: "linear-gradient(to right, #52A9E3, #93D1F7)" }}
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden="true" />
-          Terapkan Filter
-        </button>
-        <button className="flex items-center gap-1.5 px-3 h-8 rounded-[50px] bg-white text-xs text-[#173753] hover:bg-gray-50 transition-colors">
-          <X className="w-3.5 h-3.5" aria-hidden="true" />
-          Hapus Filter
-        </button>
-      </div>
-    </div>
-  )
-}
 
 const PETA_KELURAHAN_KEY = "kader-peta-kelurahan"
 const PETA_UNCHECKED_KEY = "kader-peta-unchecked"
@@ -151,8 +103,6 @@ export default function PetaSebaranPage() {
   }, [])
   const handleBack = useCallback(() => setSelected(null), [])
 
-  if (loading) return <div className="p-8">Loading...</div>
-
   // ── Totals ───────────────────────────────────────────────────────────────────
   const totals = kelurahanListData.reduce(
     (acc, k) => ({
@@ -177,7 +127,7 @@ export default function PetaSebaranPage() {
             {`${selected.nama}: ${pct(selected.stunting, selected.total)}% prevalensi stunting`}
           </span>
         ) : undefined}
-        alertStats={selected ? undefined : {
+        alertStats={selected || loading ? undefined : {
           stuntingCount: totals.stunting,
           berisikoCount: totals.risiko,
           belumDiperiksa: uncheckedChildren.length,
@@ -195,14 +145,15 @@ export default function PetaSebaranPage() {
           <KaderUserPill />
         </div>
 
-        {/* ── Filter Bar ── */}
-        <FilterBar />
-
         {/* ── Map + Panel ── */}
         <div className="flex flex-1 min-h-0 gap-3">
           {/* Map */}
+          {/* LeafletMap init sekali di mount (deps []), jadi jangan dirender sebelum data ada
+              — kalau tidak polygonnya nyangkut abu-abu selamanya. */}
           <div className="flex-1 min-h-0 min-w-0 rounded-2xl overflow-hidden relative z-0">
-            <LeafletMap kelurahan={kelurahanListData} onSelect={handleSelect} />
+            {loading
+              ? <Skeleton className="w-full h-full rounded-2xl" />
+              : <LeafletMap kelurahan={kelurahanListData} onSelect={handleSelect} />}
           </div>
 
           {/* Side Panel */}
@@ -210,7 +161,9 @@ export default function PetaSebaranPage() {
             aria-label="Panel informasi kelurahan"
             className="w-[340px] flex-none flex flex-col gap-3.5 overflow-y-auto"
           >
-            {selected ? (
+            {loading ? (
+              <PanelSkeleton />
+            ) : selected ? (
               <DetailPanel
                 k={selected}
                 onBack={handleBack}
@@ -247,6 +200,46 @@ export default function PetaSebaranPage() {
         }}
       />
     </div>
+  )
+}
+
+// Mengikuti bentuk DefaultPanel: kartu ringkasan, kartu tengah, kartu ranking.
+function PanelSkeleton() {
+  return (
+    <>
+      <div className="flex-none bg-white rounded-2xl px-5 py-4.5">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-3 w-48 mt-2" />
+        <div className="grid grid-cols-3 gap-2 mt-3.5">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="bg-[#F8FAFD] rounded-[10px] px-2.5 py-2.5">
+              <Skeleton className="h-5 w-8" />
+              <Skeleton className="h-2.5 w-14 mt-1.5" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-[180px] bg-white rounded-2xl p-5 flex flex-col items-center justify-center gap-2.5">
+        <Skeleton className="w-[52px] h-[52px] rounded-full" />
+        <Skeleton className="h-3.5 w-44" />
+        <Skeleton className="h-2.5 w-52" />
+        <Skeleton className="h-2.5 w-40" />
+      </div>
+
+      <div className="flex-none bg-white rounded-2xl px-4.5 py-4">
+        <Skeleton className="h-4 w-52 mb-3" />
+        <div className="flex flex-col gap-2.5">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className="flex items-center gap-2 py-0.5">
+              <Skeleton className="h-3 w-16 flex-none" />
+              <Skeleton className="h-1.5 flex-1 rounded-full" />
+              <Skeleton className="h-3 w-[32px] flex-none" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -355,12 +348,6 @@ function DefaultPanel({ onSelect, sorted, totals }: { onSelect: (k: KelurahanDat
 // DETAIL PANEL — state: kelurahan terpilih (design 7a)
 // ════════════════════════════════════════════════════════════════════════════
 // ════════════════════════════════════════════════════════════════════════════
-const PATIENT_STATUS_STYLE: Record<KelurahanPatient["status"], string> = {
-  Stunting: "text-[#E24B4A] bg-[#FEF2F2]",
-  Berisiko: "text-[#EF9F27] bg-[#FFF8ED]",
-  Normal: "text-[#378ADD] bg-[#EBF5FF]",
-}
-
 function DetailPanel({ k, onBack, onSelect, sorted, onOpenIngatkan, patients, patientsLoading }: {
   k: KelurahanData
   onBack: () => void
@@ -417,12 +404,8 @@ function DetailPanel({ k, onBack, onSelect, sorted, onOpenIngatkan, patients, pa
       <div className="bg-white rounded-2xl p-4 flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[16px] font-medium text-[#173753]">Kasus di {k.nama}</p>
-          <button className="text-[11px] font-medium text-muted-foreground hover:text-[#173753] flex items-center gap-1 transition-colors">
-            Urutkan: Prioritas
-            <ChevronDown className="w-3 h-3" />
-          </button>
         </div>
-        
+
         {patientsLoading ? (
           <p className="text-xs text-muted-foreground py-6 text-center">Memuat pasien...</p>
         ) : visiblePatients.length === 0 ? (
@@ -445,9 +428,7 @@ function DetailPanel({ k, onBack, onSelect, sorted, onOpenIngatkan, patients, pa
                     {pasien.desc}
                   </p>
                 </div>
-                <span className={cn("text-[9px] font-medium rounded-full px-2 py-0.5 flex-none", PATIENT_STATUS_STYLE[pasien.status])}>
-                  {pasien.status}
-                </span>
+                <StatusBadge status={pasien.status} className="text-[9px] px-2 py-0.5 flex-none" />
                 <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#52A9E3] flex-none transition-colors" />
               </div>
             ))}

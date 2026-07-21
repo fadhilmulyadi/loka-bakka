@@ -13,7 +13,6 @@ import {
   Bell,
   User,
   Pencil,
-  PowerOff,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -139,12 +138,13 @@ export default function ChildDetailPage() {
   const cachedChild = getCached<ChildDetail>(childCacheKey)
   const [childDataState, setChildDataState] = useState<ChildDetail | null>(cachedChild ?? null)
   const [loading, setLoading] = useState(!cachedChild)
-  const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, anakStatus: { berisikoGiziKurang: number } } | null>(getCached(KADER_STATS_KEY) ?? null)
+  const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, anakStatus: { risiko: number } } | null>(getCached(KADER_STATS_KEY) ?? null)
   const [visitModalOpen, setVisitModalOpen] = useState(false)
   const [ingatkanIbuOpen, setIngatkanIbuOpen] = useState(false)
   const [editDataOpen, setEditDataOpen] = useState(false)
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const [actionMenuOpen, setActionMenuOpen] = useState(false)
+  const [showAllVisits, setShowAllVisits] = useState(false)
 
   const loadChild = () => {
     if (childId) {
@@ -196,7 +196,7 @@ export default function ChildDetailPage() {
       <Topbar
         alertStats={stats ? {
           stuntingCount: stats.stuntingCount,
-          berisikoCount: stats.anakStatus.berisikoGiziKurang,
+          berisikoCount: stats.anakStatus.risiko,
           belumDiperiksa: stats.totalChildren - stats.measuredThisMonth,
         } : null}
       />
@@ -269,12 +269,8 @@ export default function ChildDetailPage() {
                   { icon: Bell, label: "Ingatkan Ibu", danger: false, onClick: () => { setActionMenuOpen(false); setIngatkanIbuOpen(true) } },
                   { icon: User, label: "Lihat Profil Ibu", danger: false, onClick: () => { setActionMenuOpen(false); router.push(`/kader/ibu/${childDataState.parent.id}`) } },
                   { icon: Pencil, label: "Edit Data", danger: false, onClick: () => { setActionMenuOpen(false); setEditDataOpen(true) } },
-                  { icon: PowerOff, label: "Nonaktifkan Pasien", danger: true },
-                ].map((item, i, arr) => (
+                ].map((item) => (
                   <React.Fragment key={item.label}>
-                    {i === arr.length - 1 && (
-                      <div className="my-1 border-t border-gray-100" />
-                    )}
                     <button
                       onClick={item.onClick}
                       className={cn(
@@ -430,7 +426,7 @@ export default function ChildDetailPage() {
                 <div className="flex-none">
                   <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Riwayat Pemeriksaan</CardTitle>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Menampilkan <span className="font-medium text-[#173753]">{childDataState.visits.length}</span> kali pengukuran tercatat
+                    <span className="font-medium text-[#173753]">{childDataState.visits.length}</span> kali pengukuran tercatat
                   </p>
                 </div>
               </CardHeader>
@@ -456,7 +452,7 @@ export default function ChildDetailPage() {
                         </td>
                       </TableRow>
                     ) : (
-                      childDataState.visits.map((v, i) => (
+                      (showAllVisits ? childDataState.visits : childDataState.visits.slice(0, 5)).map((v, i) => (
                         <tr key={i} className="border-b border-[#F0F0F0] hover:bg-[#F7FBFF] transition-colors">
                           <td className="p-3 text-[14px] text-[#173753] pl-2">{v.tgl}</td>
                           <td className="p-3 text-[14px] text-[#173753]">{v.bb.toFixed(1).replace(".", ",")} kg</td>
@@ -470,6 +466,18 @@ export default function ChildDetailPage() {
                     )}
                   </TableBody>
                 </Table>
+
+                {childDataState.visits.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllVisits(v => !v)}
+                    className="w-full mt-1 py-2.5 text-[12px] font-medium text-[#52A9E3] hover:bg-[#F7FBFF] rounded-lg transition-colors"
+                  >
+                    {showAllVisits
+                      ? "Tampilkan lebih sedikit"
+                      : `Tampilkan semua (${childDataState.visits.length})`}
+                  </button>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -20,7 +20,7 @@ import {
   Search,
   ChevronLeft, ChevronRight, ChevronRight as ArrowRight,
   CircleCheck, CircleAlert, Activity, Download, Plus, MoreHorizontal,
-  SlidersHorizontal, X, Stethoscope, User, FileText, Bell, Pencil, PowerOff,
+  SlidersHorizontal, X, Stethoscope, User, Bell, Pencil, PowerOff,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -33,8 +33,15 @@ import { Topbar } from "@/components/kader/topbar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CatatKunjunganModal } from "@/components/kader/catat-kunjungan-modal"
 import { IngatkanIbuModal } from "@/components/kader/ingatkan-ibu-modal"
+import { PeriksaKehamilanModal } from "@/components/kader/periksa-kehamilan-modal"
+import { AkhiriKehamilanModal } from "@/components/kader/akhiri-kehamilan-modal"
+import { IngatkanIbuKehamilanModal } from "@/components/kader/ingatkan-ibu-kehamilan-modal"
+import { EditDataIbuModal } from "@/components/kader/edit-data-ibu-modal"
+import { EditDataAnakModal } from "@/components/kader/edit-data-anak-modal"
+import { TrimesterPill } from "@/components/ibu/trimester-pill"
+import type { IMTCategory } from "@/lib/growth-standards/imt-calc"
 
-type Status = "Normal" | "Berisiko" | "Stunting"
+type Status = "Normal" | "Risiko Stunting" | "Stunting"
 
 type Child = {
   no: number
@@ -52,6 +59,9 @@ type Child = {
   ibuName: string
   noHp: string | null
   terakhirDiingatkan: Date | null
+  birthDateRaw: string
+  beratLahir: number | null
+  panjangLahir: number | null
 }
 
 type Tab = "anak" | "ibu-hamil"
@@ -60,12 +70,18 @@ type IbuHamilRow = {
   no: number
   id: string
   nama: string
-  usia: string
+  gestationalWeeks: number | null
   trimester: 1 | 2 | 3 | null
-  bbSaatIni: string
-  hpl: string
+  statusRisiko: "RENDAH" | "SEDANG" | "TINGGI" | null
   sudahKunjungan: boolean
   lastVisit: string
+  imtCategory: IMTCategory
+  bbPrepregnancyKg: number
+  jumlahJanin: number
+  jumlahKehamilan: number
+  noHp: string | null
+  kelurahan: string | null
+  alamat: string | null
 }
 
 
@@ -99,6 +115,8 @@ function RekapPosyanduPageInner() {
   const [loading, setLoading] = useState(!cachedTable)
   const [activeTab, setActiveTab] = useState<Tab>(() => (searchParams.get("tab") === "ibu-hamil" ? "ibu-hamil" : "anak"))
   const [ibuHamil, setIbuHamil] = useState<IbuHamilRow[]>(cachedTable?.ibuHamil ?? [])
+  const [ibuAction, setIbuAction] = useState<{ row: IbuHamilRow; type: "periksa" | "akhiri" | "ingatkan" | "edit" } | null>(null)
+  const [editAnakRow, setEditAnakRow] = useState<Child | null>(null)
 
 
   const [hamilTrimesterFilter, setHamilTrimesterFilter] = useState("")
@@ -208,7 +226,7 @@ function RekapPosyanduPageInner() {
 
   const alertStats = !loading && stats ? {
     stuntingCount: children.filter((c) => c.status === "Stunting").length,
-    berisikoCount: children.filter((c) => c.status === "Berisiko").length,
+    berisikoCount: children.filter((c) => c.status === "Risiko Stunting").length,
     belumDiperiksa: stats.totalChildren - stats.measuredThisMonth,
   } : null
 
@@ -221,8 +239,8 @@ function RekapPosyanduPageInner() {
       ))
     } else if (activeTab === "ibu-hamil") {
       downloadCSV(`rekap-ibu-hamil-${today}.csv`, toCSV(
-        ["No", "Nama", "Usia", "Trimester", "BB Saat Ini", "HPL", "Kunjungan Bulan Ini", "Terakhir Kunjungan"],
-        filteredHamil.map((r) => [r.no, r.nama, r.usia, r.trimester ?? "-", r.bbSaatIni, r.hpl, r.sudahKunjungan ? "Sudah" : "Belum", r.lastVisit])
+        ["No", "Nama", "Usia Kandungan", "Status Risiko", "Periksa Bulan Ini", "Terakhir Periksa"],
+        filteredHamil.map((r) => [r.no, r.nama, r.gestationalWeeks != null ? `${r.gestationalWeeks} mgg` : "-", r.statusRisiko ?? "-", r.sudahKunjungan ? "Sudah" : "Belum", r.lastVisit])
       ))
     }
   }
@@ -315,7 +333,7 @@ function RekapPosyanduPageInner() {
                 <SelectContent className="rounded-xl border-none shadow-none">
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="Normal" className="text-xs text-[#173753]">Normal</SelectItem>
-                  <SelectItem value="Berisiko" className="text-xs text-[#173753]">Berisiko</SelectItem>
+                  <SelectItem value="Risiko Stunting" className="text-xs text-[#173753]">Risiko Stunting</SelectItem>
                   <SelectItem value="Stunting" className="text-xs text-[#173753]">Stunting</SelectItem>
                 </SelectContent>
               </Select>
@@ -505,8 +523,7 @@ function RekapPosyanduPageInner() {
                                 {[
                                   { icon: Stethoscope, label: "Periksa Sekarang",     danger: false, onClick: () => { setOpenMenuId(null); setVisitChild(row) } },
                                   { icon: User,        label: "Lihat Profil Anak",    danger: false, onClick: () => { setOpenMenuId(null); router.push(`/kader/anak/${row.id}`) } },
-                                  { icon: FileText,    label: "Riwayat Pemeriksaan",  danger: false },
-                                  { 
+                                  {
                                     icon: Bell,        
                                     label: (() => {
                                       const isRecentlyReminded = row.terakhirDiingatkan && new Date(row.terakhirDiingatkan) > new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -522,13 +539,9 @@ function RekapPosyanduPageInner() {
                                     } 
                                   },
                                   { icon: User,        label: "Lihat Profil Ibu",     danger: false, onClick: () => { setOpenMenuId(null); router.push(`/kader/ibu/${row.ibuId}`) } },
-                                  { icon: Pencil,      label: "Edit Data",            danger: false },
-                                  { icon: PowerOff,    label: "Nonaktifkan Pasien",   danger: true  },
-                                ].map((item, i, arr) => (
+                                  { icon: Pencil,      label: "Edit Data",            danger: false, onClick: () => { setOpenMenuId(null); setEditAnakRow(row) } },
+                                ].map((item, i) => (
                                   <React.Fragment key={i}>
-                                    {i === arr.length - 1 && (
-                                      <div className="my-1 border-t border-gray-100" />
-                                    )}
                                     <button
                                       onClick={item.onClick}
                                       disabled={item.label === "✓ Diingatkan hari ini"}
@@ -565,12 +578,10 @@ function RekapPosyanduPageInner() {
                     <TableRow className="border-b border-[#E8E8E8]">
                       <TableHead className="text-[14px] text-[#173753] font-medium pl-2 w-10">No</TableHead>
                       <TableHead className="text-[14px] text-[#173753] font-medium">Nama</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Usia</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Trimester</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">BB Saat Ini</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">HPL</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Kunjungan Bulan Ini</TableHead>
-                      <TableHead className="text-[14px] text-[#173753] font-medium">Terakhir Kunjungan</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Usia Kandungan</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Status Risiko</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Periksa Bulan Ini</TableHead>
+                      <TableHead className="text-[14px] text-[#173753] font-medium">Terakhir Periksa</TableHead>
                       <TableHead className="text-[14px] text-[#173753] font-medium">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -580,10 +591,8 @@ function RekapPosyanduPageInner() {
                         <TableRow key={i} className="border-b border-[#F0F0F0]">
                           <TableCell className="pl-2"><Skeleton className="h-4 w-6" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-36" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-14" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-10 rounded-full" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-14" /></TableCell>
-                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24 rounded-full" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
                           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-7 w-7 rounded-full" /></TableCell>
@@ -591,7 +600,7 @@ function RekapPosyanduPageInner() {
                       ))
                     ) : filteredHamil.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-16">
+                        <TableCell colSpan={7} className="text-center py-16">
                           <div className="flex flex-col items-center gap-2">
                             <Search className="w-8 h-8 text-gray-200" />
                             <p className="text-sm font-medium text-muted-foreground">Tidak ada data yang cocok</p>
@@ -614,21 +623,22 @@ function RekapPosyanduPageInner() {
                               {row.nama}
                             </Link>
                           </TableCell>
-                          <TableCell className="text-[14px] text-[#173753]">{row.usia}</TableCell>
-                          <TableCell>
-                            {row.trimester !== null ? (
-                              <span className={cn(
-                                "text-[13px] font-semibold px-2 py-0.5 rounded-full",
-                                row.trimester === 1 ? "bg-blue-50 text-blue-600" :
-                                row.trimester === 2 ? "bg-purple-50 text-purple-600" :
-                                                      "bg-pink-50 text-pink-600"
-                              )}>
-                                T{row.trimester}
+                          <TableCell className="text-[14px] text-[#173753]">
+                            {row.gestationalWeeks !== null ? (
+                              <span className="inline-flex items-center gap-2">
+                                {row.gestationalWeeks} mgg
+                                {row.trimester !== null && <TrimesterPill trimester={row.trimester} />}
                               </span>
                             ) : "-"}
                           </TableCell>
-                          <TableCell className="text-[14px] text-[#173753]">{row.bbSaatIni}</TableCell>
-                          <TableCell className="text-[14px] text-[#173753]">{row.hpl}</TableCell>
+                          <TableCell>
+                            {row.statusRisiko ? (
+                              <StatusBadge
+                                status={row.statusRisiko}
+                                label={row.statusRisiko[0] + row.statusRisiko.slice(1).toLowerCase()}
+                              />
+                            ) : "-"}
+                          </TableCell>
                           <TableCell>
                             {row.sudahKunjungan ? (
                               <span className="text-[14px] font-medium text-green-700 flex items-center gap-1">
@@ -643,10 +653,37 @@ function RekapPosyanduPageInner() {
                             )}
                           </TableCell>
                           <TableCell className="text-[14px] text-[#173753]">{row.lastVisit}</TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100 rounded-full">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
+                          <TableCell className="text-muted-foreground">
+                            <Popover open={openMenuId === row.id} onOpenChange={(o) => setOpenMenuId(o ? row.id : null)}>
+                              <PopoverTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-gray-100">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </PopoverTrigger>
+                              <PopoverContent side="left" align="start" className="w-52 p-1.5 rounded-2xl border-none">
+                                {[
+                                  { icon: Stethoscope, label: "Catat Kunjungan", danger: false, onClick: () => { setOpenMenuId(null); setIbuAction({ row, type: "periksa" }) } },
+                                  { icon: User,        label: "Lihat Profil",     danger: false, onClick: () => { setOpenMenuId(null); router.push(`/kader/ibu/${row.id}`) } },
+                                  { icon: Bell,        label: "Ingatkan Ibu",     danger: false, onClick: () => { setOpenMenuId(null); setIbuAction({ row, type: "ingatkan" }) } },
+                                  { icon: Pencil,      label: "Edit Data",        danger: false, onClick: () => { setOpenMenuId(null); setIbuAction({ row, type: "edit" }) } },
+                                  { icon: PowerOff,    label: "Akhiri Kehamilan", danger: true,  onClick: () => { setOpenMenuId(null); setIbuAction({ row, type: "akhiri" }) } },
+                                ].map((item, i, arr) => (
+                                  <React.Fragment key={i}>
+                                    {i === arr.length - 1 && <div className="my-1 border-t border-gray-100" />}
+                                    <button
+                                      onClick={item.onClick}
+                                      className={cn(
+                                        "w-full flex items-center gap-2.5 px-3 py-1.5 rounded-[8px] text-[12.5px] font-medium transition",
+                                        item.danger
+                                          ? "text-red-500 hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                                          : "text-[#173753] hover:bg-[#52A9E3] hover:text-[#F5F7FA]"
+                                      )}
+                                    >
+                                      <item.icon className="w-3.5 h-3.5 flex-none" />
+                                      {item.label}
+                                    </button>
+                                  </React.Fragment>
+                                ))}
+                              </PopoverContent>
+                            </Popover>
                           </TableCell>
                         </TableRow>
                       ))
@@ -741,6 +778,71 @@ function RekapPosyanduPageInner() {
           onSent={loadData}
         />
       )}
+
+      {ibuAction?.type === "periksa" && (
+        <PeriksaKehamilanModal
+          open
+          onOpenChange={(o) => { if (!o) setIbuAction(null) }}
+          onSaved={loadData}
+          ibu={{
+            id: ibuAction.row.id,
+            nama: ibuAction.row.nama,
+            gestationalWeeks: ibuAction.row.gestationalWeeks ?? 0,
+            trimester: ibuAction.row.trimester ?? 1,
+            bbPrepregnancyKg: ibuAction.row.bbPrepregnancyKg,
+            imtCategory: ibuAction.row.imtCategory,
+            jumlahJanin: ibuAction.row.jumlahJanin,
+          }}
+        />
+      )}
+
+      {ibuAction?.type === "akhiri" && (
+        <AkhiriKehamilanModal
+          open
+          onOpenChange={(o) => { if (!o) setIbuAction(null) }}
+          onSaved={loadData}
+          ibu={{
+            id: ibuAction.row.id,
+            nama: ibuAction.row.nama,
+            pregnancyInfo: `kehamilan ke-${ibuAction.row.jumlahKehamilan} · ${ibuAction.row.gestationalWeeks ?? 0} minggu`,
+          }}
+        />
+      )}
+
+      {ibuAction?.type === "ingatkan" && (
+        <IngatkanIbuKehamilanModal
+          open
+          onOpenChange={(o) => { if (!o) setIbuAction(null) }}
+          onSent={loadData}
+          ibu={{ id: ibuAction.row.id, nama: ibuAction.row.nama, noHp: ibuAction.row.noHp, posyanduName: stats?.posyanduName }}
+        />
+      )}
+
+      {ibuAction?.type === "edit" && (
+        <EditDataIbuModal
+          open
+          onOpenChange={(o) => { if (!o) setIbuAction(null) }}
+          onSaved={loadData}
+          ibu={{ id: ibuAction.row.id, nama: ibuAction.row.nama, noHp: ibuAction.row.noHp, kelurahan: ibuAction.row.kelurahan, alamat: ibuAction.row.alamat }}
+        />
+      )}
+
+      {editAnakRow && (
+        <EditDataAnakModal
+          open
+          onOpenChange={(o) => { if (!o) setEditAnakRow(null) }}
+          onSaved={loadData}
+          anak={{
+            id: editAnakRow.id,
+            nama: editAnakRow.nama,
+            genderRaw: editAnakRow.sex,
+            birthDateRaw: editAnakRow.birthDateRaw,
+            beratLahir: editAnakRow.beratLahir,
+            panjangLahir: editAnakRow.panjangLahir,
+          }}
+        />
+      )}
+
     </div>
   )
 }

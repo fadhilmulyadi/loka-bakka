@@ -12,7 +12,6 @@ import {
   Stethoscope,
   Bell,
   Pencil,
-  PowerOff,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -30,6 +29,10 @@ import { cn } from "@/lib/utils"
 import { getCached, setCached, KADER_STATS_KEY } from "@/lib/client-cache"
 import { getIbuById, getDashboardStats } from "@/lib/actions/kader"
 import { calculateGestationalAge, calculateHPL } from "@/lib/pregnancy-utils"
+import { imtCategoryLabel, type IMTCategory } from "@/lib/growth-standards/imt-calc"
+import { BBChart } from "@/components/ibu/bb-chart"
+import { TrimesterPill } from "@/components/ibu/trimester-pill"
+import { hitungRisikoIbu, hitungSkorKuesioner, type JawabanKuesioner } from "@/lib/growth-standards/risiko-kehamilan-calc"
 import { Topbar } from "@/components/kader/topbar"
 import { StatusBadge } from "@/components/status-badge"
 import { TambahAnakModal } from "@/components/kader/tambah-anak-modal"
@@ -59,7 +62,7 @@ export default function IbuProfilePage() {
   const cachedIbu = getCached<IbuProfile>(ibuCacheKey)
   const [ibu, setIbu] = useState<IbuProfile | null>(cachedIbu ?? null)
   const [loading, setLoading] = useState(!cachedIbu)
-  const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, anakStatus: { berisikoGiziKurang: number } } | null>(getCached(KADER_STATS_KEY) ?? null)
+  const [stats, setStats] = useState<{ totalChildren: number, measuredThisMonth: number, stuntingCount: number, anakStatus: { risiko: number } } | null>(getCached(KADER_STATS_KEY) ?? null)
   const [tambahAnakOpen, setTambahAnakOpen] = useState(false)
   const [tambahAnakInitialDate, setTambahAnakInitialDate] = useState<string>("")
   const [catatKehamilanOpen, setCatatKehamilanOpen] = useState(false)
@@ -69,6 +72,7 @@ export default function IbuProfilePage() {
   const [editDataOpen, setEditDataOpen] = useState(false)
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const [actionMenuOpen, setActionMenuOpen] = useState(false)
+  const [showAllVisits, setShowAllVisits] = useState(false)
 
   const loadIbu = async () => {
     if (!id) return
@@ -109,14 +113,31 @@ export default function IbuProfilePage() {
   const deltaBB = latestVisit && previousVisit
     ? +(latestVisit.currentWeightKg - previousVisit.currentWeightKg).toFixed(1)
     : null
-  const overallStatus = latestVisit ? (latestVisit.isOnTrack ? "Normal" : "Waspada") : "Normal"
+  const lastSkrining = ibu.skrinings?.[0] ?? null
+  const kuesionerBand = lastSkrining
+    ? hitungSkorKuesioner(lastSkrining.jawaban as JawabanKuesioner).band
+    : null
+
+  // Status ibu memakai skor gabungan yang sama dengan alat & aplikasi ibu,
+  // bukan sekadar kenaikan BB, supaya labelnya konsisten di semua layar.
+  const risikoIbu = latestVisit && ibu.pregnancyProfile
+    ? hitungRisikoIbu({
+        imtCategory: ibu.pregnancyProfile.imtCategory as IMTCategory,
+        lilaCm: latestVisit.lilaCm,
+        hbGdl: latestVisit.hbGdl,
+        kuesionerBand: kuesionerBand,
+      })
+    : null
+  const overallStatus = risikoIbu
+    ? { rendah: "Normal", sedang: "Waspada", tinggi: "Risiko Tinggi" }[risikoIbu.level]
+    : "Normal"
 
   return (
     <div className="flex-1 bg-[#EBF2F8] flex flex-col min-h-screen">
       <Topbar
         alertStats={stats ? {
           stuntingCount: stats.stuntingCount,
-          berisikoCount: stats.anakStatus.berisikoGiziKurang,
+          berisikoCount: stats.anakStatus.risiko,
           belumDiperiksa: stats.totalChildren - stats.measuredThisMonth,
         } : null}
       />
@@ -204,12 +225,8 @@ export default function IbuProfilePage() {
                       },
                       { icon: Bell, label: "Ingatkan Ibu", danger: false, onClick: () => { setActionMenuOpen(false); setIngatkanKehamilanOpen(true) } },
                       { icon: Pencil, label: "Edit Data", danger: false, onClick: () => { setActionMenuOpen(false); setEditDataOpen(true) } },
-                      { icon: PowerOff, label: "Nonaktifkan Pasien", danger: true },
-                    ].map((item, i, arr) => (
+                    ].map((item) => (
                       <React.Fragment key={item.label}>
-                        {i === arr.length - 1 && (
-                          <div className="my-1 border-t border-gray-100" />
-                        )}
                         <button
                           onClick={item.onClick}
                           className={cn(
@@ -277,20 +294,40 @@ export default function IbuProfilePage() {
                   ))}
                 </div>
 
-                <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                {ibu.pregnancyProfile && (
+                  <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                    <CardHeader className="px-5 pt-[18px] pb-3">
+                      <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">
+                        Kurva Kenaikan Berat Badan
+                      </CardTitle>
+                      <p className="text-[11px] text-[#697079] mt-1">
+                        Zona hijau = target IMT {imtCategoryLabel[ibu.pregnancyProfile.imtCategory as IMTCategory]} sebelum hamil
+                        {" "}({ibu.pregnancyProfile.imtPrepregnancy.toFixed(1).replace(".", ",")} kg/m²)
+                        {ibu.pregnancyProfile.jumlahJanin >= 2 ? ", kehamilan ganda" : ""}.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="px-5 pb-5">
+                      <BBChart
+                        nama={ibu.nama}
+                        profile={{
+                          hpht: ibu.pregnancyProfile.hpht,
+                          jumlahJanin: ibu.pregnancyProfile.jumlahJanin,
+                          imtCategory: ibu.pregnancyProfile.imtCategory as IMTCategory,
+                          bbPrepregnancyKg: ibu.pregnancyProfile.bbPrepregnancyKg,
+                        }}
+                        visits={visits}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px] pb-3 flex flex-row items-center justify-between space-y-0">
                     <div className="flex items-center gap-2.5">
                       <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Riwayat Pemeriksaan
                         
                       </CardTitle>
-                      {trimester != null && (
-                        <span
-                          className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full"
-                          style={{ background: PURPLE_BG, color: PURPLE }}
-                        >
-                          Trimester {trimester}
-                        </span>
-                      )}
+                      <TrimesterPill trimester={trimester as 1 | 2 | 3 | null} long />
                     </div>
                     <button
                       type="button"
@@ -325,7 +362,7 @@ export default function IbuProfilePage() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          visitsDesc.map((v) => (
+                          (showAllVisits ? visitsDesc : visitsDesc.slice(0, 5)).map((v) => (
                             <TableRow key={v.id} className="border-b border-[#F0F0F0] hover:bg-[#F7FBFF] transition-colors">
                               <TableCell className="text-[14px] text-[#173753] pl-2">
                                 {new Date(v.visitDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
@@ -342,10 +379,22 @@ export default function IbuProfilePage() {
                         )}
                       </TableBody>
                     </Table>
+
+                    {visitsDesc.length > 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllVisits(v => !v)}
+                        className="w-full mt-1 py-2.5 text-[12px] font-medium text-[#52A9E3] hover:bg-[#F7FBFF] rounded-lg transition-colors"
+                      >
+                        {showAllVisits
+                          ? "Tampilkan lebih sedikit"
+                          : `Tampilkan semua (${visitsDesc.length})`}
+                      </button>
+                    )}
                   </CardContent>
                 </Card>
 
-                <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px] pb-3 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Anak Terdaftar</CardTitle>
                     <button
@@ -395,7 +444,7 @@ export default function IbuProfilePage() {
               </div>
 
               <div>
-                <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px]">
                     <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Akun Aplikasi Ibu</CardTitle>
                   </CardHeader>
@@ -403,10 +452,6 @@ export default function IbuProfilePage() {
                     <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-500 font-medium">Username</span>
                       <span className="text-[13px] font-bold text-[#173753]">{ibu.username}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[12px] text-slate-500 font-medium">Status</span>
-                      <StatusBadge status={ibu.isActive ? "Aktif" : "Non-aktif"} />
                     </div>
                     <button
                       type="button"
@@ -468,12 +513,8 @@ export default function IbuProfilePage() {
                     {[
                       { icon: Stethoscope, label: "Catat Kehamilan", danger: false, onClick: () => { setActionMenuOpen(false); setCatatKehamilanOpen(true) } },
                       { icon: Pencil, label: "Edit Data", danger: false, onClick: () => { setActionMenuOpen(false); setEditDataOpen(true) } },
-                      { icon: PowerOff, label: "Nonaktifkan Pasien", danger: true },
-                    ].map((item, i, arr) => (
+                    ].map((item) => (
                       <React.Fragment key={item.label}>
-                        {i === arr.length - 1 && (
-                          <div className="my-1 border-t border-gray-100" />
-                        )}
                         <button
                           onClick={item.onClick}
                           className={cn(
@@ -496,7 +537,7 @@ export default function IbuProfilePage() {
             {/* Anak Terdaftar (left) / Status Kehamilan + Akun Aplikasi Ibu (right) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
               <div className="lg:col-span-2 space-y-4">
-                <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px] pb-3 flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Anak Terdaftar</CardTitle>
                     <button
@@ -546,7 +587,7 @@ export default function IbuProfilePage() {
               </div>
 
               <div className="space-y-4">
-                <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px]">
                     <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Status Kehamilan</CardTitle>
                   </CardHeader>
@@ -558,7 +599,7 @@ export default function IbuProfilePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="ring-0 shadow-[2px_2px_8px_rgba(0,0,0,0.08)] bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
+                <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px]">
                     <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Akun Aplikasi Ibu</CardTitle>
                   </CardHeader>
@@ -566,10 +607,6 @@ export default function IbuProfilePage() {
                     <div className="flex justify-between items-center">
                       <span className="text-[12px] text-slate-500 font-medium">Username</span>
                       <span className="text-[13px] font-bold text-[#173753]">{ibu.username}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[12px] text-slate-500 font-medium">Status</span>
-                      <StatusBadge status={ibu.isActive ? "Aktif" : "Non-aktif"} />
                     </div>
                     <button
                       type="button"
@@ -616,8 +653,8 @@ export default function IbuProfilePage() {
             gestationalWeeks: gestationalAge ?? 0,
             trimester: trimester ?? 1,
             bbPrepregnancyKg: ibu.pregnancyProfile.bbPrepregnancyKg,
-            weeklyGainMinKg: ibu.pregnancyProfile.weeklyGainMinKg,
-            weeklyGainMaxKg: ibu.pregnancyProfile.weeklyGainMaxKg,
+            imtCategory: ibu.pregnancyProfile.imtCategory as IMTCategory,
+            jumlahJanin: ibu.pregnancyProfile.jumlahJanin,
           }}
         />
       )}

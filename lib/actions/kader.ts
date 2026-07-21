@@ -2,13 +2,17 @@
 
 import { randomInt } from "crypto"
 import { db } from "@/lib/db/client"
-import { posyandu, ibu, anak, pengukuran, pregnancyProfile, pregnancyVisit } from "@/lib/db/schema"
+import { posyandu, ibu, anak, pengukuran, pregnancyProfile, pregnancyVisit, skriningShamil } from "@/lib/db/schema"
 import { eq, and, desc, asc, inArray, notInArray, gte, count } from "drizzle-orm"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
 import { calculateIMT, getIMTCategory, getIOMTargets } from "@/lib/growth-standards/imt-calc"
-import { calcHeightZScore, stuntingLabel } from "@/lib/growth-standards/stunting-calc"
+import { calcHeightZScore, statusAnak, stuntingLabel, type StatusAnak } from "@/lib/growth-standards/stunting-calc"
+import {
+  hitungRisikoIbu, hitungSkorKuesioner,
+  type ImtCategory, type JawabanKuesioner, type KategoriRisiko,
+} from "@/lib/growth-standards/risiko-kehamilan-calc"
 import { notifyChildRisk } from "@/lib/actions/notifikasi"
 import { KELURAHAN_LIST, KELURAHAN_NAMES } from "@/lib/constants/kelurahan"
 
@@ -47,12 +51,15 @@ export async function getChildren() {
       usia: `${ageMonths} bln`,
       bb: lastPengukuran ? lastPengukuran.beratBadan.toFixed(1).replace(".", ",") : "-",
       tb: lastPengukuran ? lastPengukuran.tinggiBadan.toFixed(1).replace(".", ",") : "-",
-      status: (lastPengukuran?.statusTBU || "Normal") as "Normal" | "Berisiko" | "Stunting",
+      status: statusAnak(lastPengukuran),
       sudah: lastPengukuran ? new Date(lastPengukuran.tanggal).getMonth() === now.getMonth() && new Date(lastPengukuran.tanggal).getFullYear() === now.getFullYear() : false,
       tgl: lastPengukuran ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(lastPengukuran.tanggal)) : "-",
       ibuName: anakRow.ibu.nama,
       noHp: anakRow.ibu.noHp,
       terakhirDiingatkan: anakRow.terakhirDiingatkan,
+      birthDateRaw: birthDate.toISOString().slice(0, 10),
+      beratLahir: anakRow.beratLahir,
+      panjangLahir: anakRow.panjangLahir,
     }
   })
 }
@@ -114,93 +121,77 @@ export async function getDashboardStats() {
   })
 
   let normalCount = 0
-  let giziKurangCount = 0
   let risikoStuntingCount = 0
-  let stuntingBeratCount = 0
+  let stuntingCount = 0
 
   const totalMeasured = allChildren.filter(c => c.pengukurans.length > 0).length
 
   allChildren.forEach(c => {
-    const status = c.pengukurans[0]?.statusTBU
+    if (!c.pengukurans[0]) return
+    const status = statusAnak(c.pengukurans[0])
     if (status === "Normal") normalCount++
-    if (status === "Gizi Kurang") giziKurangCount++
-    if (status === "Berisiko" || status === "Risiko Stunting") risikoStuntingCount++
-    if (status === "Stunting" || status === "Stunting Berat") stuntingBeratCount++
+    else if (status === "Risiko Stunting") risikoStuntingCount++
+    else stuntingCount++
   })
 
-  const getStatusScore = (status?: string) => {
-    if (!status) return 0
-    if (status === "Normal") return 5
-    if (status === "Gizi Kurang") return 4
-    if (status === "Risiko Stunting" || status === "Berisiko") return 3
-    if (status === "Stunting") return 2
-    if (status === "Stunting Berat") return 1
-    return 0
-  }
+  // Membaik = naik band, bukan sekadar z-score naik sedikit (itu noise pengukuran).
+  const bandRank: Record<StatusAnak, number> = { Stunting: 1, "Risiko Stunting": 2, Normal: 3 }
 
   let improvedCount = 0
   allChildren.forEach(c => {
-    if (c.pengukurans.length >= 2) {
-      const latestScore = getStatusScore(c.pengukurans[0].statusTBU)
-      const prevScore = getStatusScore(c.pengukurans[1].statusTBU)
-      if (latestScore > prevScore) {
-        improvedCount++
-      }
+    if (c.pengukurans.length >= 2 &&
+        bandRank[statusAnak(c.pengukurans[0])] > bandRank[statusAnak(c.pengukurans[1])]) {
+      improvedCount++
     }
   })
 
   const statusData = [
-    { name: "Stunting Berat", value: totalMeasured ? Math.round((stuntingBeratCount / totalMeasured) * 100) : 0, fill: "#E24B4A" },
+    { name: "Stunting", value: totalMeasured ? Math.round((stuntingCount / totalMeasured) * 100) : 0, fill: "#E24B4A" },
     { name: "Risiko Stunting", value: totalMeasured ? Math.round((risikoStuntingCount / totalMeasured) * 100) : 0, fill: "#EF9F27" },
-    { name: "Gizi Kurang", value: totalMeasured ? Math.round((giziKurangCount / totalMeasured) * 100) : 0, fill: "#7F77DD" },
     { name: "Anak Normal", value: totalMeasured ? Math.round((normalCount / totalMeasured) * 100) : 0, fill: "#378ADD" },
   ]
 
-  const stuntingCount = allChildren.filter(c =>
-    c.pengukurans[0]?.statusTBU === "Stunting" ||
-    c.pengukurans[0]?.statusTBU === "Stunting Berat"
-  ).length
-
-  // Ibu hamil status: derived from the latest visit's LILA/Hb, same risk logic as getKelurahanPatients.
-  // ponytail: anemia-only (no KEK) folds into the "Risiko KEK" bucket — the dashboard only has 3
-  // buckets by design; upgrade to a 4th bucket if anemia-only needs its own count later.
+  // Status ibu memakai hitungRisikoIbu() — skor gabungan yang sama dengan alat,
+  // aplikasi ibu, dan halaman profil — supaya bandnya tidak beda per layar.
   const allIbuHamil = await db.query.ibu.findMany({
     where: and(eq(ibu.posyanduId, posyanduId), eq(ibu.isHamil, true)),
     with: {
+      pregnancyProfile: true,
       pregnancyVisits: { orderBy: desc(pregnancyVisit.visitDate), limit: 2 },
+      skrinings: { orderBy: desc(skriningShamil.tanggal), limit: 1 },
     },
   })
 
-  let ibuNormalCount = 0
-  let ibuRisikoKekCount = 0
-  let ibuKekAnemiaCount = 0
+  let ibuRendahCount = 0
+  let ibuSedangCount = 0
+  let ibuTinggiCount = 0
   let ibuImprovedCount = 0
-  const ibuTotalMeasured = allIbuHamil.filter(m => m.pregnancyVisits.length > 0).length
+  const ibuTotalMeasured = allIbuHamil.filter(m => m.pregnancyVisits.length > 0 && m.pregnancyProfile).length
 
-  const ibuRiskScore = (v?: { lilaCm: number; hbGdl: number }) => {
-    if (!v) return null
-    const kek = v.lilaCm < 23.5
-    const anemia = v.hbGdl < 11.0
-    if (kek && anemia) return 1
-    if (kek || anemia) return 2
-    return 3
-  }
+  const ibuBandRank: Record<KategoriRisiko, number> = { TINGGI: 1, SEDANG: 2, RENDAH: 3 }
 
   allIbuHamil.forEach(m => {
-    const latest = m.pregnancyVisits[0]
-    if (!latest) return
-    const kek = latest.lilaCm < 23.5
-    const anemia = latest.hbGdl < 11.0
-    if (kek && anemia) ibuKekAnemiaCount++
-    else if (kek || anemia) ibuRisikoKekCount++
-    else ibuNormalCount++
+    if (!m.pregnancyProfile) return
+    const kuesionerBand = m.skrinings[0]
+      ? hitungSkorKuesioner(m.skrinings[0].jawaban as JawabanKuesioner).band
+      : null
 
-    const prev = m.pregnancyVisits[1]
-    if (prev) {
-      const s0 = ibuRiskScore(latest)!
-      const s1 = ibuRiskScore(prev)!
-      if (s0 > s1) ibuImprovedCount++
-    }
+    const bandOf = (v?: { lilaCm: number; hbGdl: number }) =>
+      v ? hitungRisikoIbu({
+        imtCategory: m.pregnancyProfile!.imtCategory as ImtCategory,
+        lilaCm: v.lilaCm,
+        hbGdl: v.hbGdl,
+        kuesionerBand,
+      }).kategori : null
+
+    const band = bandOf(m.pregnancyVisits[0])
+    if (!band) return
+    if (band === "RENDAH") ibuRendahCount++
+    else if (band === "SEDANG") ibuSedangCount++
+    else ibuTinggiCount++
+
+    const prevBand = bandOf(m.pregnancyVisits[1])
+    if (prevBand && ibuBandRank[band] > ibuBandRank[prevBand]) ibuImprovedCount++
   })
 
   return {
@@ -215,8 +206,8 @@ export async function getDashboardStats() {
     posyanduName: posyanduRow?.nama || "Posyandu",
     statusData,
     improvedCount: improvedCount + ibuImprovedCount,
-    anakStatus: { total: totalMeasured, normal: normalCount, berisikoGiziKurang: giziKurangCount + risikoStuntingCount, stunting: stuntingBeratCount },
-    ibuStatus: { total: ibuTotalMeasured, normal: ibuNormalCount, risikoKek: ibuRisikoKekCount, kekAnemia: ibuKekAnemiaCount },
+    anakStatus: { total: totalMeasured, normal: normalCount, risiko: risikoStuntingCount, stunting: stuntingCount },
+    ibuStatus: { total: ibuTotalMeasured, rendah: ibuRendahCount, sedang: ibuSedangCount, tinggi: ibuTinggiCount },
   }
 }
 
@@ -232,7 +223,7 @@ export async function getSixMonthTrend() {
   const [[{ value: totalChildren }], [{ value: totalIbuHamil }], pengukurans, visits] = await Promise.all([
     db.select({ value: count() }).from(anak).where(inArray(anak.ibuId, ibuIds)),
     db.select({ value: count() }).from(ibu).where(and(eq(ibu.posyanduId, posyanduId), eq(ibu.isHamil, true))),
-    db.select({ tanggal: pengukuran.tanggal, anakId: pengukuran.anakId, statusTBU: pengukuran.statusTBU })
+    db.select({ tanggal: pengukuran.tanggal, anakId: pengukuran.anakId, zScoreTBU: pengukuran.zScoreTBU })
       .from(pengukuran)
       .where(and(eq(pengukuran.posyanduId, posyanduId), gte(pengukuran.tanggal, sixMonthsAgo))),
     db.select({ visitDate: pregnancyVisit.visitDate, ibuId: pregnancyVisit.ibuId })
@@ -248,7 +239,7 @@ export async function getSixMonthTrend() {
     const pInMonth = pengukurans.filter(p => p.tanggal >= start && p.tanggal < end)
     const anakMeasured = new Set(pInMonth.map(p => p.anakId)).size
     const stuntingAnak = new Set(
-      pInMonth.filter(p => p.statusTBU === "Stunting" || p.statusTBU === "Stunting Berat").map(p => p.anakId)
+      pInMonth.filter(p => statusAnak(p) === "Stunting").map(p => p.anakId)
     ).size
 
     const vInMonth = visits.filter(v => v.visitDate >= start && v.visitDate < end)
@@ -283,7 +274,7 @@ export async function getRecentMeasurements() {
     waktu: new Date(m.tanggal).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
     posyandu: session.user.posyanduId ? "Melati" : "Posyandu",
     nama: m.anak.nama,
-    status: m.statusTBU,
+    status: statusAnak(m),
     kader: m.kader.nama,
   }))
 }
@@ -417,11 +408,8 @@ export async function getTindakLanjutList() {
     href: string
   }
 
-  const anakSeverity = (status?: string) => {
-    if (status === "Stunting" || status === "Stunting Berat") return 3
-    if (status === "Gizi Kurang" || status === "Berisiko" || status === "Risiko Stunting") return 2
-    return 0
-  }
+  const anakSeverity = (status: StatusAnak) =>
+    status === "Stunting" ? 3 : status === "Risiko Stunting" ? 2 : 0
 
   const anakItems: Item[] = children.flatMap((c) => {
     const last = c.pengukurans[0]
@@ -432,7 +420,7 @@ export async function getTindakLanjutList() {
       c.pengukurans[1].beratBadan <= c.pengukurans[2].beratBadan &&
       last.beratBadan <= c.pengukurans[1].beratBadan
 
-    const severity = Math.max(anakSeverity(last.statusTBU), bbTidakNaik ? 2 : 0)
+    const severity = Math.max(anakSeverity(statusAnak(last)), bbTidakNaik ? 2 : 0)
     if (severity === 0) return []
 
     const birthDate = new Date(c.tanggalLahir)
@@ -447,7 +435,7 @@ export async function getTindakLanjutList() {
       id: c.id,
       type: "anak" as const,
       nama: c.nama,
-      badge: last.statusTBU,
+      badge: statusAnak(last),
       meta: `ANAK · ${ageMonths} BLN`,
       detail,
       severity,
@@ -551,7 +539,7 @@ export async function getChildDetail(id: string) {
       isHamil: anakRow.ibu.isHamil,
       gestationalWeek,
     },
-    status: lastPengukuran?.statusTBU || "Normal",
+    status: statusAnak(lastPengukuran),
     latestCheckDate: lastPengukuran ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(lastPengukuran.tanggal)) : "-",
     latestTB: lastPengukuran?.tinggiBadan || 0,
     latestBB: lastPengukuran?.beratBadan || 0,
@@ -570,7 +558,7 @@ export async function getChildDetail(id: string) {
         id: s.id,
         name: s.nama,
         age: `${sAgeMonths} bulan`,
-        status: s.pengukurans[0]?.statusTBU || "Normal",
+        status: statusAnak(s.pengukurans[0]),
       }
     }),
     visits: anakRow.pengukurans.map((p) => ({
@@ -579,12 +567,16 @@ export async function getChildDetail(id: string) {
       bb: p.beratBadan,
       tb: p.tinggiBadan,
       zTb: p.zScoreTBU.toFixed(1),
-      status: p.statusTBU,
+      status: statusAnak(p),
       examiner: p.kader.nama,
       latest: p.id === lastPengukuran?.id,
     })),
   }
 }
+
+// Dipakai getKelurahanStats + getKelurahanPatients supaya ringkasan dan daftar tidak drift.
+const bumilBerisiko = (v?: { lilaCm: number; hbGdl: number }) =>
+  !!v && (v.lilaCm < 23.5 || v.hbGdl < 11.0)
 
 export async function getKelurahanStats() {
   const session = await auth()
@@ -598,6 +590,7 @@ export async function getKelurahanStats() {
       anaks: {
         with: { pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 } },
       },
+      pregnancyVisits: { orderBy: desc(pregnancyVisit.visitDate), limit: 1 },
     },
   })
 
@@ -641,15 +634,17 @@ export async function getKelurahanStats() {
 
     ibuRow.anaks.forEach((anakRow) => {
       data.total++
-      const lastP = anakRow.pengukurans[0]
-      if (!lastP || lastP.statusTBU === "Normal") {
-        data.normal++
-      } else if (lastP.statusTBU === "Berisiko") {
-        data.risiko++
-      } else {
-        data.stunting++
-      }
+      const status = statusAnak(anakRow.pengukurans[0])
+      if (status === "Normal") data.normal++
+      else if (status === "Risiko Stunting") data.risiko++
+      else data.stunting++
     })
+
+    if (ibuRow.isHamil) {
+      data.total++
+      if (bumilBerisiko(ibuRow.pregnancyVisits[0])) data.risiko++
+      else data.normal++
+    }
   })
 
   return Array.from(kelurahanMap.values())
@@ -670,14 +665,15 @@ export async function getKelurahanPatients(kelurahanNama: string) {
   })
 
   const now = new Date()
-  const rank = { Stunting: 0, Berisiko: 1, Normal: 2 } as const
+  // "Risiko Stunting" untuk anak, "Berisiko" untuk bumil — beda subjek, urutan sama.
+  const rank = { Stunting: 0, "Risiko Stunting": 1, Berisiko: 1, Normal: 2 } as const
 
   const patients = ibus.flatMap((ibuRow) => {
     const anakPatients = ibuRow.anaks.map((anakRow) => {
       const lastP = anakRow.pengukurans[0]
       const birthDate = new Date(anakRow.tanggalLahir)
       const ageMonths = (now.getFullYear() - birthDate.getFullYear()) * 12 + (now.getMonth() - birthDate.getMonth())
-      const status = (lastP?.statusTBU || "Normal") as keyof typeof rank
+      const status: keyof typeof rank = statusAnak(lastP)
 
       return {
         id: anakRow.id,
@@ -691,9 +687,6 @@ export async function getKelurahanPatients(kelurahanNama: string) {
     if (!ibuRow.isHamil) return anakPatients
 
     const visit = ibuRow.pregnancyVisits[0]
-    const issues = visit
-      ? [visit.lilaCm < 23.5 && "KEK", visit.hbGdl < 11.0 && "anemia"].filter(Boolean).join(" + ")
-      : ""
 
     return [
       ...anakPatients,
@@ -702,7 +695,7 @@ export async function getKelurahanPatients(kelurahanNama: string) {
         type: "bumil" as const,
         name: ibuRow.nama,
         desc: `Bumil${visit ? ` · LILA ${visit.lilaCm.toFixed(1)} cm · Hb ${visit.hbGdl.toFixed(1)} g/dL` : ""}`,
-        status: (issues ? "Berisiko" : "Normal") as keyof typeof rank,
+        status: (bumilBerisiko(visit) ? "Berisiko" : "Normal") as keyof typeof rank,
       },
     ]
   })
@@ -765,12 +758,18 @@ export async function getIbuHamil() {
   const list = await db.query.ibu.findMany({
     where: and(eq(ibu.posyanduId, session.user.posyanduId), eq(ibu.isHamil, true)),
     with: {
-      pregnancyProfile: { columns: { hpht: true } },
+      pregnancyProfile: { columns: { hpht: true, imtCategory: true, bbPrepregnancyKg: true, jumlahJanin: true } },
       pregnancyVisits: {
         orderBy: (pv, { desc }) => desc(pv.visitDate),
         limit: 1,
-        columns: { visitDate: true, currentWeightKg: true },
+        columns: { visitDate: true, lilaCm: true, hbGdl: true },
       },
+      skrinings: {
+        orderBy: (s, { desc }) => desc(s.tanggal),
+        limit: 1,
+        columns: { jawaban: true },
+      },
+      anaks: { columns: { id: true } },
     },
     orderBy: asc(ibu.createdAt),
   })
@@ -780,14 +779,9 @@ export async function getIbuHamil() {
   return list.map((ibuRow, i) => {
     const hpht = ibuRow.pregnancyProfile?.hpht ? new Date(ibuRow.pregnancyProfile.hpht) : null
     const diffDays = hpht ? Math.floor((now.getTime() - hpht.getTime()) / 86_400_000) : null
-    const weeks = diffDays !== null ? Math.floor(diffDays / 7) : null
+    const gestationalWeeks = diffDays !== null ? Math.floor(diffDays / 7) : null
     const trimester: 1 | 2 | 3 | null =
-      weeks === null ? null : weeks < 14 ? 1 : weeks < 28 ? 2 : 3
-
-    const hpl = hpht ? new Date(hpht.getTime() + 280 * 86_400_000) : null
-    const hplStr = hpl
-      ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" }).format(hpl)
-      : "-"
+      gestationalWeeks === null ? null : gestationalWeeks < 14 ? 1 : gestationalWeeks < 28 ? 2 : 3
 
     const visit = ibuRow.pregnancyVisits[0] ?? null
     const sudahKunjungan = visit
@@ -795,23 +789,40 @@ export async function getIbuHamil() {
         new Date(visit.visitDate).getFullYear() === now.getFullYear()
       : false
 
-    const birth = ibuRow.tanggalLahir ? new Date(ibuRow.tanggalLahir) : null
-    const usiaYears = birth
-      ? Math.floor((now.getTime() - birth.getTime()) / (365.25 * 86_400_000))
+    // Status risiko: sumber & rumus sama dengan dashboard/profil (hitungRisikoIbu),
+    // butuh profil + minimal satu kunjungan (LILA/Hb). Null bila belum ada.
+    const kuesionerBand = ibuRow.skrinings[0]
+      ? hitungSkorKuesioner(ibuRow.skrinings[0].jawaban as JawabanKuesioner).band
+      : null
+    const statusRisiko: KategoriRisiko | null = visit && ibuRow.pregnancyProfile
+      ? hitungRisikoIbu({
+          imtCategory: ibuRow.pregnancyProfile.imtCategory as ImtCategory,
+          lilaCm: visit.lilaCm,
+          hbGdl: visit.hbGdl,
+          kuesionerBand,
+        }).kategori
       : null
 
     return {
       no: i + 1,
       id: ibuRow.id,
       nama: ibuRow.nama,
-      usia: usiaYears !== null ? `${usiaYears} th` : "-",
+      gestationalWeeks,
       trimester,
-      bbSaatIni: visit ? `${visit.currentWeightKg} kg` : "-",
-      hpl: hplStr,
+      statusRisiko,
       sudahKunjungan,
       lastVisit: visit
         ? new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date(visit.visitDate))
         : "-",
+      // Dipakai modal aksi di daftar pasien (periksa/akhiri/ingatkan/edit).
+      // ponytail: default 0/normal/1 bila profil belum ada — modal aksi memakai profil.
+      imtCategory: ibuRow.pregnancyProfile?.imtCategory ?? "normal",
+      bbPrepregnancyKg: ibuRow.pregnancyProfile?.bbPrepregnancyKg ?? 0,
+      jumlahJanin: ibuRow.pregnancyProfile?.jumlahJanin ?? 1,
+      jumlahKehamilan: ibuRow.anaks.length + 1,
+      noHp: ibuRow.noHp,
+      kelurahan: ibuRow.kelurahan,
+      alamat: ibuRow.alamat,
     }
   })
 }
@@ -1031,6 +1042,7 @@ export async function createIbu(data: {
   hpht?: string
   bbPrepregnancyKg?: number
   heightCm?: number
+  jumlahJanin?: number
   currentWeightKg?: number
 }) {
   const posyanduId = await getValidatedPosyanduId()
@@ -1058,9 +1070,11 @@ export async function createIbu(data: {
     if (data.isHamil && data.hpht && data.bbPrepregnancyKg && data.heightCm) {
       const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
       const category = getIMTCategory(imt)
-      const targets = getIOMTargets(category)
+      const jumlahJanin = data.jumlahJanin ?? 1
+      const targets = getIOMTargets(category, jumlahJanin)
 
       await tx.insert(pregnancyProfile).values({
+        jumlahJanin,
         ibuId: ibuRow.id,
         hpht: new Date(data.hpht),
         bbPrepregnancyKg: data.bbPrepregnancyKg,

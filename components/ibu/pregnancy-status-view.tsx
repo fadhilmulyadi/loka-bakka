@@ -5,13 +5,7 @@ import Link from 'next/link'
 import { Activity, Calendar, MapPin, Check, AlertTriangle, Flame, Lightbulb, Heart, Siren, ClipboardList } from 'lucide-react'
 import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'      
 
-type RiskLevel = 'rendah' | 'sedang' | 'tinggi'
-
-function computeRiskLevel(lila: number, hb: number, isOnTrack: boolean): RiskLevel {
-  if (lila < 23.5 || hb < 11) return 'tinggi'
-  if (!isOnTrack) return 'sedang'
-  return 'rendah'
-}
+import { hitungRisikoIbu, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 
 function formatVisitDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('id-ID', {
@@ -32,8 +26,13 @@ interface Props {
 }
 
 export default function PregnancyStatusView({ profile, latestVisit }: Props) {
-  const activeTab = latestVisit
-    ? computeRiskLevel(latestVisit.lilaCm, latestVisit.hbGdl, latestVisit.isOnTrack)
+  const activeTab: RiskLevel = latestVisit && profile
+    ? hitungRisikoIbu({
+        imtCategory: profile.imtCategory,
+        lilaCm: latestVisit.lilaCm,
+        hbGdl: latestVisit.hbGdl,
+        kuesionerBand: profile.kuesionerBand,
+      }).level
     : 'rendah'
 
   return (

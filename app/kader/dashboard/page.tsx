@@ -46,8 +46,8 @@ interface DashboardStats {
   stuntingCount: number
   posyanduName: string
   improvedCount: number
-  anakStatus: { total: number; normal: number; berisikoGiziKurang: number; stunting: number }
-  ibuStatus: { total: number; normal: number; risikoKek: number; kekAnemia: number }
+  anakStatus: { total: number; normal: number; risiko: number; stunting: number }
+  ibuStatus: { total: number; rendah: number; sedang: number; tinggi: number }
 }
 
 interface RecentMeasurement {
@@ -217,7 +217,7 @@ export default function KaderDashboardPage() {
       <Topbar
         alertStats={stats ? {
           stuntingCount: stats.stuntingCount,
-          berisikoCount: stats.anakStatus.berisikoGiziKurang,
+          berisikoCount: stats.anakStatus.risiko,
           belumDiperiksa: belumAnak + belumIbu,
         } : null}
       />
@@ -615,7 +615,7 @@ export default function KaderDashboardPage() {
                     {stats && stats.anakStatus.total > 0 && (
                       <>
                         <div style={{ width: `${(stats.anakStatus.normal / stats.anakStatus.total) * 100}%`, background: "#378ADD" }} />
-                        <div style={{ width: `${(stats.anakStatus.berisikoGiziKurang / stats.anakStatus.total) * 100}%`, background: "#EF9F27" }} />
+                        <div style={{ width: `${(stats.anakStatus.risiko / stats.anakStatus.total) * 100}%`, background: "#EF9F27" }} />
                         <div style={{ width: `${(stats.anakStatus.stunting / stats.anakStatus.total) * 100}%`, background: "#E24B4A" }} />
                       </>
                     )}
@@ -629,9 +629,9 @@ export default function KaderDashboardPage() {
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#EF9F27" }} /> Berisiko
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#EF9F27" }} /> Risiko Stunting
                       </span>
-                      <span className="font-semibold text-[#173753]">{stats?.anakStatus.berisikoGiziKurang ?? 0}</span>
+                      <span className="font-semibold text-[#173753]">{stats?.anakStatus.risiko ?? 0}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
@@ -651,30 +651,30 @@ export default function KaderDashboardPage() {
                   <div className="h-2 w-full rounded-full overflow-hidden flex bg-[#F1F5F9]">
                     {stats && stats.ibuStatus.total > 0 && (
                       <>
-                        <div style={{ width: `${(stats.ibuStatus.normal / stats.ibuStatus.total) * 100}%`, background: "#22C55E" }} />
-                        <div style={{ width: `${(stats.ibuStatus.risikoKek / stats.ibuStatus.total) * 100}%`, background: "#F97316" }} />
-                        <div style={{ width: `${(stats.ibuStatus.kekAnemia / stats.ibuStatus.total) * 100}%`, background: "#E24B4A" }} />
+                        <div style={{ width: `${(stats.ibuStatus.rendah / stats.ibuStatus.total) * 100}%`, background: "#22C55E" }} />
+                        <div style={{ width: `${(stats.ibuStatus.sedang / stats.ibuStatus.total) * 100}%`, background: "#F97316" }} />
+                        <div style={{ width: `${(stats.ibuStatus.tinggi / stats.ibuStatus.total) * 100}%`, background: "#E24B4A" }} />
                       </>
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5 mt-2.5">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#22C55E" }} /> Normal
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#22C55E" }} /> Risiko Rendah
                       </span>
-                      <span className="font-semibold text-[#173753]">{stats?.ibuStatus.normal ?? 0}</span>
+                      <span className="font-semibold text-[#173753]">{stats?.ibuStatus.rendah ?? 0}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#F97316" }} /> Risiko KEK
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#F97316" }} /> Risiko Sedang
                       </span>
-                      <span className="font-semibold text-[#173753]">{stats?.ibuStatus.risikoKek ?? 0}</span>
+                      <span className="font-semibold text-[#173753]">{stats?.ibuStatus.sedang ?? 0}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#E24B4A" }} /> KEK + Anemia
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#E24B4A" }} /> Risiko Tinggi
                       </span>
-                      <span className="font-semibold text-[#173753]">{stats?.ibuStatus.kekAnemia ?? 0}</span>
+                      <span className="font-semibold text-[#173753]">{stats?.ibuStatus.tinggi ?? 0}</span>
                     </div>
                   </div>
                 </div>
