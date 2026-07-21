@@ -32,7 +32,6 @@ export const ibu = pgTable("Ibu", {
   kelurahan: text("kelurahan"),
   terakhirDiingatkanKehamilan: timestamp("terakhirDiingatkanKehamilan", { mode: "date" }),
   isHamil: boolean("isHamil").notNull().default(false),
-  isActive: boolean("isActive").notNull().default(true),
   posyanduId: text("posyanduId").notNull().references(() => posyandu.id),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 })
