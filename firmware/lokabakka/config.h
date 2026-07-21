@@ -2,14 +2,14 @@
 
 // ==== WiFi ====
 // ponytail: ganti dengan kredensial WiFi posyandu sebelum flashing.
-#define WIFI_SSID     "GANTI_SSID"
-#define WIFI_PASSWORD "GANTI_PASSWORD"
+#define WIFI_SSID     "MFMW"
+#define WIFI_PASSWORD "LangitBiruJ18"
 
 // ==== Backend API ====
 // ponytail: ganti dengan domain deployment web (mis. Vercel) dan API key
 // yang sama dengan env ESP32_API_KEY di server.
-#define API_BASE_URL  "https://ganti-domain-anda.example/api"
-#define ESP32_API_KEY "GANTI_API_KEY"
+#define API_BASE_URL  "https://lokabakka.my.id/api"
+#define ESP32_API_KEY "akusayangazizi"
 #define DEVICE_ID     "esp32-01"
 
 // ==== Pin TFT (ILI9488 480x320) ====
