@@ -126,11 +126,13 @@ export function StyledInput({
   onChange,
   placeholder,
   type = "text",
+  className,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
   type?: string
+  className?: string
 }) {
   return (
     <Input
@@ -138,7 +140,7 @@ export function StyledInput({
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className="h-9 text-[13px] border-gray-200 focus-visible:ring-1 focus-visible:ring-[#52A9E3] focus-visible:border-[#52A9E3] rounded-lg text-[#173753] placeholder:text-gray-300"
+      className={cn("h-9 text-[13px] border-gray-200 focus-visible:ring-1 focus-visible:ring-[#52A9E3] focus-visible:border-[#52A9E3] rounded-lg text-[#173753] placeholder:text-gray-300", className)}
     />
   )
 }

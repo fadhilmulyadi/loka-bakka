@@ -73,6 +73,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const ibu = await db.query.ibu.findFirst({
           where: eq(ibuTable.username, credentials.username as string),
+          with: { posyandu: { columns: { nama: true } } },
           columns: { id: true, nama: true, password: true, posyanduId: true },
         })
 
@@ -86,6 +87,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: ibu.nama,
           role: "ibu" as const,
           posyanduId: ibu.posyanduId,
+          posyanduName: ibu.posyandu?.nama ?? "Posyandu",
         }
       },
     }),
