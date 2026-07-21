@@ -5,6 +5,7 @@ import { ibu, anak, pengukuran, skriningShamil } from "@/lib/db/schema"
 import { eq, and, desc, asc } from "drizzle-orm"
 import { auth } from "@/auth"
 import { calculateGestationalAge, calculateHPL, MONTHS_ID } from "@/lib/pregnancy-utils"
+import { statusAnak } from "@/lib/growth-standards/stunting-calc"
 
 export async function getIbuData() {
   const session = await auth()
@@ -84,7 +85,7 @@ export async function getIbuData() {
     lastPengukuran: firstAnak.pengukurans[0] ? {
       beratBadan: firstAnak.pengukurans[0].beratBadan,
       tinggiBadan: firstAnak.pengukurans[0].tinggiBadan,
-      statusTBU: firstAnak.pengukurans[0].statusTBU,
+      statusTBU: statusAnak(firstAnak.pengukurans[0]),
       zScoreTBU: firstAnak.pengukurans[0].zScoreTBU,
       tanggal: firstAnak.pengukurans[0].tanggal,
     } : null,
@@ -92,7 +93,7 @@ export async function getIbuData() {
       tanggal: p.tanggal,
       beratBadan: p.beratBadan,
       tinggiBadan: p.tinggiBadan,
-      statusTBU: p.statusTBU,
+      statusTBU: statusAnak(p),
       zScoreTBU: p.zScoreTBU,
     })),
   } : null
@@ -166,7 +167,7 @@ export async function getIbuAnaks() {
       nama: anakRow.nama,
       jenisKelamin: anakRow.jenisKelamin as "L" | "P",
       usia: months < 12 ? `${months} bln` : `${Math.floor(months / 12)} thn ${months % 12} bln`,
-      status: last?.statusTBU ?? null,
+      status: last ? statusAnak(last) : null,
       bb: last?.beratBadan ?? null,
       tanggalPengukuran: last?.tanggal ?? null,
     }
@@ -204,7 +205,7 @@ export async function getIbuAnakForDashboard(id: string) {
         ? {
             beratBadan: anakRow.pengukurans[0].beratBadan,
             tinggiBadan: anakRow.pengukurans[0].tinggiBadan,
-            statusTBU: anakRow.pengukurans[0].statusTBU,
+            statusTBU: statusAnak(anakRow.pengukurans[0]),
             zScoreTBU: anakRow.pengukurans[0].zScoreTBU,
             tanggal: anakRow.pengukurans[0].tanggal,
           }
@@ -213,7 +214,7 @@ export async function getIbuAnakForDashboard(id: string) {
         tanggal: p.tanggal,
         beratBadan: p.beratBadan,
         tinggiBadan: p.tinggiBadan,
-        statusTBU: p.statusTBU,
+        statusTBU: statusAnak(p),
         zScoreTBU: p.zScoreTBU,
       })),
     },
@@ -262,7 +263,7 @@ export async function getIbuAnakDetail(id: string) {
       ? {
           bb: last.beratBadan,
           tb: last.tinggiBadan,
-          status: last.statusTBU,
+          status: statusAnak(last),
           zScore: last.zScoreTBU.toFixed(1),
           tanggal: fmt(new Date(last.tanggal)),
         }
@@ -277,7 +278,7 @@ export async function getIbuAnakDetail(id: string) {
         usiaBulan: visitMonths,
         bb: p.beratBadan,
         tb: p.tinggiBadan,
-        status: p.statusTBU,
+        status: statusAnak(p),
       }
     }),
   }

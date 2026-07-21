@@ -47,10 +47,22 @@ export function getStuntingStatus(zScore: number): StuntingStatus {
 }
 
 /** Label bahasa Indonesia untuk ditampilkan di UI */
-export const stuntingLabel: Record<StuntingStatus, string> = {
+export const stuntingLabel = {
   stunting: 'Stunting',
   risiko_stunting: 'Risiko Stunting',
   normal: 'Normal',
+} as const satisfies Record<StuntingStatus, string>
+
+export type StatusAnak = (typeof stuntingLabel)[StuntingStatus]
+
+/**
+ * Satu-satunya sumber label status gizi anak untuk UI: selalu diturunkan ulang
+ * dari z-score TB/U, bukan dari kolom statusTBU yang tersimpan. Baris lama masih
+ * menyimpan taksonomi 5-band ("Berisiko", "Gizi Kurang", "Stunting Berat") yang
+ * sudah pensiun, dan itu bikin bucket dashboard salah hitung.
+ */
+export function statusAnak(p?: { zScoreTBU: number } | null): StatusAnak {
+  return p ? stuntingLabel[getStuntingStatus(p.zScoreTBU)] : 'Normal'
 }
 
 export const stuntingColor: Record<StuntingStatus, string> = {
