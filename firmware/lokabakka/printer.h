@@ -3,10 +3,30 @@
 #include <Arduino.h>
 #include "config.h"
 
+// Printer dimatikan lewat relay saat idle (hemat daya + tidak panas). Selama
+// mati, TX ditahan LOW supaya tidak menyuplai printer lewat pin data.
 void prnInit() {
+  pinMode(PIN_PRN_RELAY, OUTPUT);
+  digitalWrite(PIN_PRN_RELAY, PRN_RELAY_OFF);
+  pinMode(PIN_PRN_TX, OUTPUT);
+  digitalWrite(PIN_PRN_TX, LOW);
+}
+
+void prnPowerOn() {
+  digitalWrite(PIN_PRN_RELAY, PRN_RELAY_ON);
+  delay(2000); // printer butuh waktu boot sebelum menerima data
   Serial2.begin(9600, SERIAL_8N1, PIN_PRN_RX, PIN_PRN_TX);
   delay(50);
   Serial2.write(0x1B); Serial2.write(0x40); // ESC @ - reset printer
+}
+
+void prnPowerOff() {
+  Serial2.flush();
+  delay(3000); // tunggu buffer printer habis tercetak sebelum daya dicabut
+  Serial2.end();
+  pinMode(PIN_PRN_TX, OUTPUT);
+  digitalWrite(PIN_PRN_TX, LOW);
+  digitalWrite(PIN_PRN_RELAY, PRN_RELAY_OFF);
 }
 
 void prnAlign(uint8_t n) { // 0 = kiri, 1 = tengah, 2 = kanan
@@ -73,6 +93,8 @@ void prnQR(const String& data) {
 
 void cetakStruk(const String& namaPasien, const String& tanggal, float bb, float tb,
                 const String& kategoriHasil, const String& teksEdukasi) {
+  prnPowerOn();
+
   prnAlign(1);
   prnBold(true);
   prnSize(2, 2);
@@ -109,4 +131,6 @@ void cetakStruk(const String& namaPasien, const String& tanggal, float bb, float
   prnLine("================================");
   prnFeed(3);
   prnCut();
+
+  prnPowerOff();
 }

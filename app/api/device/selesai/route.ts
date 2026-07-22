@@ -11,10 +11,17 @@ import {
   type ImtCategory,
 } from "@/lib/growth-standards/risiko-kehamilan-calc";
 
+// Teks kategori yang tampil di layar & struk alat — taksonomi yang sama dengan web.
 const LABEL_ANAK: Record<string, string> = {
   Normal: "NORMAL",
-  "Risiko Stunting": "PENDEK",
-  Stunting: "SANGAT PENDEK",
+  "Pra Stunting": "PRA STUNTING",
+  Stunting: "STUNTING",
+}
+
+const LABEL_IBU: Record<string, string> = {
+  RENDAH: "NORMAL",
+  SEDANG: "PRA STUNTING",
+  TINGGI: "STUNTING",
 }
 
 export async function POST(request: Request) {
@@ -92,7 +99,7 @@ export async function POST(request: Request) {
       });
 
       namaPasien = ibuRow.nama;
-      kategoriHasil = gabungan.kategori;
+      kategoriHasil = LABEL_IBU[gabungan.kategori];
       teksEdukasi = edukasiIbu[gabungan.kategori];
       skorAkhir = gabungan.skor;
       skorKuesioner = kuesioner.skor;

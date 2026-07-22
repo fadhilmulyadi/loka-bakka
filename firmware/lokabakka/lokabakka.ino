@@ -6,6 +6,7 @@
 #include "printer.h"
 #include "screens.h"
 #include "lamps.h"
+#include "sdcard.h"
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -55,23 +56,26 @@ void mulaiKirim() {
   layarAktif = LAYAR_UKUR; // dipakai sesaat sebelum digambar ulang di bawah
   layarKirim(bbUkur, tbUkur);
 
+  JsonDocument jawabanDoc;
+  JsonDocument* jawabanPtr = nullptr;
   if (strcmp(kategoriDipilih, "ibu") == 0) {
-    JsonDocument jawabanDoc;
     jawabanDoc["protein"] = jawabanIbu[0];
     jawabanDoc["fe"] = jawabanIbu[1];
     jawabanDoc["pengetahuan"] = jawabanIbu[2];
     jawabanDoc["sanitasi"] = jawabanIbu[3];
     jawabanDoc["rokok"] = jawabanIbu[4];
-    hasilTerakhir = kirimHasilPengukuran(kategoriDipilih, bbUkur, tbUkur, &jawabanDoc);
-  } else {
-    hasilTerakhir = kirimHasilPengukuran(kategoriDipilih, bbUkur, tbUkur, nullptr);
+    jawabanPtr = &jawabanDoc;
   }
+
+  // Catat ke SD dulu, baru kirim — angka ukur selamat walau WiFi mati.
+  sdSimpanPengukuran(kategoriDipilih, bbUkur, tbUkur, jawabanPtr);
+  hasilTerakhir = kirimHasilPengukuran(kategoriDipilih, bbUkur, tbUkur, jawabanPtr);
 
   if (hasilTerakhir.ok) {
     layarAktif = LAYAR_HASIL;
-    uint16_t warna = hasilTerakhir.kategoriHasil == "NORMAL" || hasilTerakhir.kategoriHasil == "RENDAH"
+    uint16_t warna = hasilTerakhir.kategoriHasil == "NORMAL"
       ? COL_GREEN
-      : hasilTerakhir.kategoriHasil == "PENDEK" || hasilTerakhir.kategoriHasil == "SEDANG"
+      : hasilTerakhir.kategoriHasil == "PRA STUNTING"
         ? COL_YELLOW
         : COL_RED;
     layarHasil(strcmp(kategoriDipilih, "ibu") == 0, hasilTerakhir.bb, hasilTerakhir.tb,
@@ -103,15 +107,13 @@ void setup() {
   tft.setRotation(1);
   layarBoot();
 
-  // Mode komisioning: tahan BTN_SATU saat boot → test sequence lampu
-  // Berguna saat perakitan (§14 langkah 5) sebelum firmware lengkap diflash
-  if (digitalRead(PIN_BTN_SATU) == LOW) {
-    Serial.println("[COMMISSIONING] Mode test lampu aktif (BTN_SATU ditahan)");
-    delay(500); // debounce boot
-    lampTest(800);
-    Serial.println("[COMMISSIONING] Selesai, lanjut normal.");
-  }
+  // Self-test lampu tiap boot (§14 langkah 5): hijau → kuning → merah → mati.
+  // Alat dinyalakan sekali per hari kegiatan, jadi tambahan aus relay diabaikan
+  // — beda dengan animasi per pengukuran yang menguras umur kontak relay.
+  lampTest();
 
+  sdInit();      // wajib sesudah tft.init() — SPI bersama
+  sensorsInit(); // tare timbangan — platform harus kosong saat alat dinyalakan
   prnInit();
 
   wifiOk = wifiConnect();
@@ -145,8 +147,8 @@ void loop() {
         layarPilihKategori(sorotanKategori);
       } else if (dua) {
         kategoriDipilih = sorotanKategori == 0 ? "anak" : "ibu";
-        bbUkur = readWeightKg(kategoriDipilih);
-        tbUkur = readHeightCm(kategoriDipilih);
+        bbUkur = readWeightKg();
+        tbUkur = readHeightCm();
         layarAktif = LAYAR_UKUR;
         layarUkur(bbUkur, tbUkur);
       }
@@ -154,8 +156,8 @@ void loop() {
 
     case LAYAR_UKUR:
       if (satu) {
-        bbUkur = readWeightKg(kategoriDipilih);
-        tbUkur = readHeightCm(kategoriDipilih);
+        bbUkur = readWeightKg();
+        tbUkur = readHeightCm();
         layarUkur(bbUkur, tbUkur);
       } else if (dua) {
         if (strcmp(kategoriDipilih, "ibu") == 0) {

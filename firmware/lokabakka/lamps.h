@@ -42,23 +42,18 @@ void lampNyala(char warna) {
 
 // ---- Nyalakan lampu sesuai string kategori hasil API ----
 //
-// Kategori anak (z-score TB/U WHO):
-//   "NORMAL"        -> hijau
-//   "PENDEK"        -> kuning  (stunting moderat, -3 < z <= -2)
-//   "SANGAT_PENDEK" -> merah   (stunting berat, z <= -3)
-//
-// Kategori ibu hamil (risiko kehamilan):
-//   "RENDAH"  -> hijau
-//   "SEDANG"  -> kuning
-//   "TINGGI"  -> merah
+// Taksonomi sama untuk anak (z-score TB/U WHO) dan ibu hamil (skor risiko):
+//   "NORMAL"       -> hijau
+//   "PRA STUNTING" -> kuning
+//   "STUNTING"     -> merah
 //
 void lampDariKategori(const String& kategori) {
-  if (kategori == "NORMAL" || kategori == "RENDAH") {
+  if (kategori == "NORMAL") {
     lampNyala('H');
-  } else if (kategori == "PENDEK" || kategori == "SEDANG") {
+  } else if (kategori == "PRA STUNTING") {
     lampNyala('K');
   } else {
-    // "SANGAT_PENDEK", "TINGGI", atau kategori tidak dikenal -> merah
+    // "STUNTING" atau kategori tidak dikenal -> merah
     lampNyala('M');
   }
 }
