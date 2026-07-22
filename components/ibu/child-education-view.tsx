@@ -21,7 +21,7 @@ const CHILD_EDU_DATA = [
         icon: <Droplets className="w-[23px] h-[23px]" />,
         title: 'ASI Eksklusif: Perisai Pertama dari Stunting',
         body: 'Tahukah Bunda? Memberikan ASI eksklusif selama 6 bulan pertama dapat melindungi si kecil dari stunting. ASI menyediakan semua zat gizi yang dibutuhkan, membantu imunitas bayi, serta mendukung tumbuh kembang fisik dan otaknya secara optimal.',
-        tip: 'Cukup ASI saja sampai usia 6 bulan — belum perlu air putih, madu, atau makanan tambahan.'
+        tip: 'Cukup ASI saja sampai usia 6 bulan, belum perlu air putih, madu, atau makanan tambahan.'
       },
       {
         icon: <LayoutList className="w-[23px] h-[23px]" />,
@@ -42,7 +42,7 @@ const CHILD_EDU_DATA = [
             </li>
           </ul>
         ),
-        tip: 'Susui kapan pun bayi mau, siang dan malam — sering menyusu membuat ASI makin banyak.'
+        tip: 'Susui kapan pun bayi mau, siang dan malam. Sering menyusu membuat ASI makin banyak.'
       }
     ]
   },
@@ -65,7 +65,7 @@ const CHILD_EDU_DATA = [
               <span className="font-semibold text-[#0A487F]">6–8 bulan:</span> bubur lumat kental, dihaluskan dengan saringan atau blender.
             </li>
             <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
-              <span className="font-semibold text-[#0A487F]">9–11 bulan:</span> makanan cincang halus — bubur kasar atau nasi tim.
+              <span className="font-semibold text-[#0A487F]">9–11 bulan:</span> makanan cincang halus seperti bubur kasar atau nasi tim.
             </li>
             <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
               <span className="font-semibold text-[#0A487F]">12 bulan ke atas:</span> makanan dengan tekstur lunak.
@@ -120,7 +120,7 @@ const CHILD_EDU_DATA = [
         icon: <Activity className="w-[23px] h-[23px]" />,
         title: 'Fase Akhir Periode Emas 1000 HPK',
         body: 'Halo Bunda! Di usia 1–2 tahun, si kecil memasuki fase akhir periode emas 1000 HPK yang sangat menentukan. Sistem pencernaan anak kini semakin matang dan siap menerima makanan keluarga sebagai sumber pemenuhan energi serta nutrisi utamanya demi mencegah risiko stunting.',
-        tip: '1000 HPK berakhir di usia 2 tahun — manfaatkan momen ini sebaik mungkin.'
+        tip: '1000 HPK berakhir di usia 2 tahun, manfaatkan momen ini sebaik mungkin.'
       },
       {
         icon: <Utensils className="w-[23px] h-[23px]" />,
@@ -128,7 +128,7 @@ const CHILD_EDU_DATA = [
         body: (
           <ul className="list-none flex flex-col gap-2.5 mt-2.5">
             <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
-              <span className="font-semibold text-[#0A487F]">Makanan keluarga:</span> tidak perlu lagi bubur saring — tekstur sudah padat, sama dengan menu orang dewasa di rumah.
+              <span className="font-semibold text-[#0A487F]">Makanan keluarga:</span> tidak perlu lagi bubur saring, tekstur sudah padat, sama dengan menu orang dewasa di rumah.
             </li>
             <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
               <span className="font-semibold text-[#0A487F]">Frekuensi & porsi:</span> 3x makan utama sehari (sekitar ⅓–½ porsi orang dewasa) + 2x camilan sehat di antara jam makan.
@@ -181,7 +181,7 @@ const CHILD_EDU_DATA = [
         icon: <Smile className="w-[23px] h-[23px]" />,
         title: 'Masa Toddler: Si Kecil Mulai Bereksplorasi',
         body: 'Halo Bunda! Setelah berhasil melewati 1000 HPK, si kecil kini memasuki fase toddler (2–3 tahun). Pemantauan status gizi harus tetap optimal karena ia mulai aktif mengeksplorasi lingkungan secara fisik dan membutuhkan fondasi zat pembangun yang kuat.',
-        tip: 'Anak aktif butuh energi besar — pastikan setiap piring lengkap dan seimbang.'
+        tip: 'Anak aktif butuh energi besar, pastikan setiap piring lengkap dan seimbang.'
       },
       {
         icon: <Disc className="w-[23px] h-[23px]" />,
@@ -192,7 +192,7 @@ const CHILD_EDU_DATA = [
               <span className="font-semibold text-[#0A487F]">Karbohidrat (⅓ piring):</span> nasi, ubi, jagung, atau kentang sebagai sumber energi aktivitas fisik.
             </li>
             <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
-              <span className="font-semibold text-[#0A487F]">Protein hewani (⅓ piring):</span> telur, ikan lokal, hati ayam, atau daging — struktur utama penyusun hormon pertumbuhan.
+              <span className="font-semibold text-[#0A487F]">Protein hewani (⅓ piring):</span> telur, ikan lokal, hati ayam, atau daging, struktur utama penyusun hormon pertumbuhan.
             </li>
             <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
               <span className="font-semibold text-[#0A487F]">Sayur & buah (⅓ piring):</span> dibagi seimbang sebagai penunjang imunitas tubuh.
@@ -242,7 +242,7 @@ const CHILD_EDU_DATA = [
         icon: <GraduationCap className="w-[23px] h-[23px]" />,
         title: 'Masa Prasekolah yang Aktif Bersosialisasi',
         body: 'Halo Bunda! Di usia 3–5 tahun, si kecil berada pada masa prasekolah yang aktif bersosialisasi. Pemantauan status kesehatan di kluster usia ini bertujuan mengunci hasil pertumbuhan fisik yang optimal sebelum masa balita berakhir pada batas usia 60 bulan.',
-        tip: 'Ini garis finish balita — kunci pertumbuhan optimal sebelum usia 60 bulan.'
+        tip: 'Ini garis finish balita, kunci pertumbuhan optimal sebelum usia 60 bulan.'
       },
       {
         icon: <Utensils className="w-[23px] h-[23px]" />,
@@ -290,7 +290,7 @@ const CHILD_EDU_DATA = [
             </li>
           </ul>
         ),
-        tip: 'Konsistensi sejak 0 bulan terbayar di sini — jaga grafik tetap di zona normal.'
+        tip: 'Konsistensi sejak 0 bulan terbayar di sini, jaga grafik tetap di zona normal.'
       }
     ]
   }

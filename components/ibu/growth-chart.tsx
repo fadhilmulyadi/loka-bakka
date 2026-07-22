@@ -21,7 +21,7 @@ type MetricView = 'bb' | 'tb'
 
 const STATUS_COLORS: Record<string, string> = {
   'Normal': '#1E9E62',
-  'Risiko Stunting': '#F2B705',
+  'Pra Stunting': '#F2B705',
   'Stunting': '#E0524E',
 }
 
@@ -141,7 +141,7 @@ export default function GrowthChart({ pengukurans }: GrowthChartProps) {
         </span>
         <span className="flex items-center gap-1.5 text-[10px] text-[#697079]">
           <span className="w-2.5 h-2.5 rounded-full bg-[#F2B705] inline-block" />
-          Risiko Stunting
+          Pra Stunting
         </span>
         <span className="flex items-center gap-1.5 text-[10px] text-[#697079]">
           <span className="w-2.5 h-2.5 rounded-full bg-[#E0524E] inline-block" />

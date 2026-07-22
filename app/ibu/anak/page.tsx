@@ -20,7 +20,7 @@ function statusBadge(status: string) {
   const map: Record<string, string> = {
     Normal: "bg-green-100 text-green-700",
     "Stunting Berat": "bg-red-100 text-red-700",
-    "Risiko Stunting": "bg-amber-100 text-amber-700",
+    "Pra Stunting": "bg-amber-100 text-amber-700",
     "Gizi Kurang": "bg-purple-100 text-purple-700",
   }
   return map[status] ?? "bg-gray-100 text-gray-600"

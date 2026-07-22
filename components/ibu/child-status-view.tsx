@@ -12,25 +12,25 @@ type AnakDetail = NonNullable<Awaited<ReturnType<typeof getIbuAnakDetail>>>
 
 function getStatusLevel(status: string): 'rendah' | 'sedang' | 'tinggi' {
   if (status === 'Normal') return 'rendah'
-  if (status === 'Risiko Stunting' || status === 'Gizi Kurang') return 'sedang'
+  if (status === 'Pra Stunting' || status === 'Gizi Kurang') return 'sedang'
   return 'tinggi'
 }
 
 const STATUS_INFO = {
   rendah: {
-    label: 'Status Aman',
+    label: 'Normal',
     bg: 'bg-[#E7F7EF]', border: 'border-[#C3E9D4]',
     iconBg: 'bg-[#1E9E62]', textColor: 'text-[#0E6B3E]',
     Icon: Check,
   },
   sedang: {
-    label: 'Perlu Perhatian',
+    label: 'Pra Stunting',
     bg: 'bg-[#FFF7E6]', border: 'border-[#F4E2BC]',
     iconBg: 'bg-[#D99100]', textColor: 'text-[#8A6100]',
     Icon: AlertTriangle,
   },
   tinggi: {
-    label: 'Risiko Tinggi',
+    label: 'Stunting',
     bg: 'bg-[#FEF1F1]', border: 'border-[#F6D2D2]',
     iconBg: 'bg-[#DC2626]', textColor: 'text-[#9F1C1C]',
     Icon: Flame,
@@ -120,8 +120,8 @@ export default function ChildStatusView({ childId }: { childId: string }) {
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-[11px] font-semibold text-[#1E9E62] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current">Aman</span>
-                  <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Perlu Perhatian</span>
-                  <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Risiko Tinggi</span>
+                  <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Pra Stunting</span>
+                  <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Stunting</span>
                 </div>
               </div>
 

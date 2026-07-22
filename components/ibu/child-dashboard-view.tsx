@@ -66,7 +66,7 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
   // Status mapping
   const getStatusLevel = (status: string) => {
     if (status === 'Normal') return 'rendah'
-    if (status === 'Risiko Stunting' || status === 'Gizi Kurang') return 'sedang'
+    if (status === 'Pra Stunting' || status === 'Gizi Kurang') return 'sedang'
     return 'tinggi'
   }
 
@@ -78,17 +78,17 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
 
   const STATUS_MESSAGES = {
     rendah: {
-      label: 'Status Aman',
+      label: 'Normal',
       message: `Tinggi badan ${childData.nama} sesuai dengan usianya (Normal). Pertumbuhan si kecil terpantau baik. Pertahankan pola makan bergizi dan rutin ke posyandu, ya Bunda!`,
       bg: 'bg-[#E7F7EF]', border: 'border-[#C3E9D4]', iconBg: 'bg-[#1E9E62]', textColor: 'text-[#0E6B3E]', Icon: Check
     },
     sedang: {
-      label: 'Perlu Perhatian',
+      label: 'Pra Stunting',
       message: `Pertumbuhan ${childData.nama} masuk kategori perlu perhatian (gizi kurang / risiko stunting). Tingkatkan asupan protein hewani dan pantau kenaikan berat tiap bulan, ya Bunda.`,
       bg: 'bg-[#FFF7E6]', border: 'border-[#F4E2BC]', iconBg: 'bg-[#D99100]', textColor: 'text-[#8A6100]', Icon: AlertTriangle
     },
     tinggi: {
-      label: 'Risiko Tinggi',
+      label: 'Stunting',
       message: `Tinggi badan ${childData.nama} jauh di bawah standar usianya (stunting / gizi buruk). Jangan ditunda, segera konsultasi ke puskesmas untuk penanganan dan program makanan tambahan (PMT).`,
       bg: 'bg-[#FEF1F1]', border: 'border-[#F6D2D2]', iconBg: 'bg-[#DC2626]', textColor: 'text-[#9F1C1C]', Icon: Flame
     }
@@ -235,8 +235,8 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
                 </div>
                 <div className="flex justify-between mt-2">
                   <span className="text-[11px] font-semibold text-[#1E9E62] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current">Aman</span>
-                  <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Perlu Perhatian</span>
-                  <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Risiko Tinggi</span>
+                  <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Pra Stunting</span>
+                  <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Stunting</span>
                 </div>
               </div>
               {/* 3 metric tiles */}
@@ -308,7 +308,7 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
                   const statusColor =
                     p.statusTBU === 'Normal'
                       ? { bg: '#E7F7EF', text: '#1E9E62' }
-                      : p.statusTBU === 'Risiko Stunting'
+                      : p.statusTBU === 'Pra Stunting'
                       ? { bg: '#FFF7E6', text: '#8A6100' }
                       : { bg: '#FEF1F1', text: '#9F1C1C' }
                   return (

@@ -1,6 +1,7 @@
 import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
-import { getIbuProfile } from "@/lib/actions/ibu"
+import { getIbuProfile, getIbuAnaks, getIbuAnakDetail } from "@/lib/actions/ibu"
+import { getStatusStyle } from "@/lib/status-styles"
 import { calculateGestationalAge, calculateHPL, MONTHS_ID } from "@/lib/pregnancy-utils"
 import { 
   User, 
@@ -9,12 +10,14 @@ import {
   Phone, 
   MapPin, 
   Baby, 
-  ChevronRight,
-  Bell,
-  HelpCircle,
-  Pencil,
   Clock,
-  Droplet
+  Droplet,
+  Users,
+  ChevronDown,
+  Check,
+  Ruler,
+  Scale,
+  TrendingUp
 } from "lucide-react"
 import { format } from "date-fns"
 import { id } from "date-fns/locale"
@@ -27,8 +30,13 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
   }
 
   const { child: childId } = await searchParams
-  const profile = await getIbuProfile()
+  const [profile, anaks] = await Promise.all([getIbuProfile(), getIbuAnaks()])
   if (!profile) return null
+
+  // Ibu tanpa kehamilan tidak punya tampilan miliknya sendiri, jadi anak pertama yang jadi default.
+  const activeChild = anaks.find((a) => a.id === childId) ?? (profile.isPregnant ? undefined : anaks[0])
+  const child = activeChild ? await getIbuAnakDetail(activeChild.id) : null
+  const showSwitcher = (profile.isPregnant ? 1 : 0) + anaks.length >= 2
 
   // Get current date for age calculation once during render
   const now = new Date()
@@ -61,14 +69,11 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
   return (
     <div className="flex flex-col h-full bg-[#E7ECF1]">
       {/* Header */}
-      <header className="relative px-6 pt-[6px] pb-8 text-white overflow-hidden bg-gradient-to-br from-[#2B93E6] via-[#1178D4] to-[#0A487F] rounded-b-[26px] shadow-[0_12px_26px_-16px_rgba(17,120,212,0.6)] z-10">
+      <header className="relative px-6 pt-5 pb-8 text-white overflow-hidden bg-gradient-to-br from-[#2B93E6] via-[#1178D4] to-[#0A487F] rounded-b-[26px] shadow-[0_12px_26px_-16px_rgba(17,120,212,0.6)] z-10">
         <div className="absolute top-[-50px] right-[-40px] w-[170px] h-[170px] rounded-full bg-white/10 blur-2xl" />
         
-        <div className="relative z-10 flex items-center justify-between mb-6">
-          <span className="text-sm font-semibold">Profil Saya</span>
-          <button className="w-9 h-9 flex items-center justify-center bg-white/20 border border-white/30 rounded-xl hover:bg-white/30 transition-colors">
-            <Pencil size={17} />
-          </button>
+        <div className="relative z-10 flex items-center mb-6">
+          <span className="text-sm font-semibold">{child ? "Profil Anak" : "Profil Saya"}</span>
         </div>
 
         <div className="relative z-10 flex items-center gap-4">
@@ -76,22 +81,24 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
             <User size={54} className="text-white/90" />
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-tight">{profile.nama}</h1>
+            <h1 className="text-xl font-bold leading-tight">{child ? child.nama : profile.nama}</h1>
             <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-white/20 border border-white/30 rounded-full text-[11px] font-semibold">
-              {profile.isPregnant ? (
+              {child ? (
+                <>
+                  <Baby size={13} fill="white" />
+                  <span>Anak · {child.usia} · {child.jenisKelamin === "L" ? "Laki-laki" : "Perempuan"}</span>
+                </>
+              ) : (
                 <>
                   <Droplet size={13} fill="white" />
                   <span>Ibu Hamil {weeksPregnant > 0 ? `· ${weeksPregnant} Minggu` : ""}</span>
                 </>
-              ) : (
-                <>
-                  <Baby size={13} fill="white" />
-                  <span>Ibu Balita</span>
-                </>
               )}
             </div>
             <p className="text-[11.5px] mt-2 text-white/80 font-medium">
-              {profile.posyandu.toLowerCase().includes("posyandu") ? profile.posyandu : `Posyandu ${profile.posyandu}`} · {profile.kelurahan}
+              {child ? `Anak dari ${profile.nama} · ` : ""}
+              {profile.posyandu.toLowerCase().includes("posyandu") ? profile.posyandu : `Posyandu ${profile.posyandu}`}
+              {!child && ` · ${profile.kelurahan}`}
             </p>
           </div>
         </div>
@@ -99,7 +106,168 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-5 pt-4 pb-32 space-y-6 scrollbar-hide">
+        {/* Profil Keluarga */}
+        {showSwitcher && (
+          <section>
+            <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Profil Keluarga</h2>
+            <details className="group bg-white border border-[#E4EDE7] rounded-[18px] overflow-hidden shadow-sm">
+              <summary className="flex items-center gap-3.5 px-4 py-3.5 cursor-pointer list-none group-open:border-b group-open:border-[#E4EDE7]">
+                <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                  <Users size={19} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-[10px] font-medium text-[#697079]">Sedang melihat</div>
+                  <div className="text-[13.5px] font-bold text-[#1F2937]">
+                    {activeChild ? `${activeChild.nama} · Anak` : `${profile.nama} · Ibu`}
+                  </div>
+                </div>
+                <ChevronDown size={17} className="text-[#989DA3] transition-transform group-open:rotate-180" />
+              </summary>
+
+              {profile.isPregnant && (
+                <Link
+                  href="/ibu/akun"
+                  className={`flex items-center gap-3 px-4 py-3 border-t border-[#E4EDE7] transition-colors ${!activeChild ? "bg-[#DBEBF9]" : "bg-[#F1F7FE] active:bg-[#DBEBF9]"}`}
+                >
+                  <div className="w-[38px] h-[38px] rounded-xl bg-gradient-to-br from-[#3B93E6] to-[#1178D4] text-white flex items-center justify-center">
+                    <Droplet size={19} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-[#1F2937]">{profile.nama}</div>
+                    <div className="text-[10.5px] font-medium text-[#697079]">
+                      Ibu Hamil{weeksPregnant > 0 ? ` · ${weeksPregnant} Minggu` : ""}
+                    </div>
+                  </div>
+                  {!activeChild && <Check size={18} className="text-[#1178D4]" />}
+                </Link>
+              )}
+
+              {anaks.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/ibu/akun?child=${a.id}`}
+                  className={`flex items-center gap-3 px-4 py-3 border-t border-[#E4EDE7] transition-colors ${activeChild?.id === a.id ? "bg-[#DBEBF9]" : "bg-[#F1F7FE] active:bg-[#DBEBF9]"}`}
+                >
+                  <div className="relative w-[38px] h-[38px] rounded-xl bg-[#E4F3FD] text-[#0C72C4] flex items-center justify-center">
+                    <Baby size={19} />
+                    {a.status && (
+                      <span
+                        className="absolute -right-0.5 -bottom-0.5 w-[11px] h-[11px] rounded-full border-2 border-white"
+                        style={{ backgroundColor: getStatusStyle(a.status).dot }}
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-[#1F2937]">{a.nama}</div>
+                    <div className="text-[10.5px] font-medium text-[#697079]">
+                      {a.usia} · {a.jenisKelamin === "L" ? "Laki-laki" : "Perempuan"}
+                    </div>
+                  </div>
+                  {activeChild?.id === a.id && <Check size={18} className="text-[#1178D4]" />}
+                </Link>
+              ))}
+            </details>
+          </section>
+        )}
+
+        {/* Data Anak */}
+        {child && (
+          <>
+            <section>
+              <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Data Anak</h2>
+              <div className="bg-white border border-[#E4EDE7] rounded-[18px] overflow-hidden shadow-sm">
+                <div className="flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7]">
+                  <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                    <User size={19} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-medium text-[#697079]">Nama Lengkap</div>
+                    <div className="text-[13.5px] font-bold text-[#1F2937]">{child.nama}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7]">
+                  <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                    <Calendar size={19} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-medium text-[#697079]">Tanggal Lahir</div>
+                    <div className="text-[13.5px] font-bold text-[#1F2937]">{child.tanggalLahir} · {child.usia}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7]">
+                  <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                    <Baby size={19} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-medium text-[#697079]">Jenis Kelamin</div>
+                    <div className="text-[13.5px] font-bold text-[#1F2937]">{child.jenisKelamin === "L" ? "Laki-laki" : "Perempuan"}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3.5 px-4 py-3.5">
+                  <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                    <User size={19} />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-medium text-[#697079]">Nama Ibu / Wali</div>
+                    <div className="text-[13.5px] font-bold text-[#1F2937]">{profile.nama}</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {child.latest && (
+              <section>
+                <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Data Pertumbuhan</h2>
+                <div className="bg-white border border-[#E4EDE7] rounded-[18px] overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7]">
+                    <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                      <Ruler size={19} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-medium text-[#697079]">Tinggi Badan</div>
+                      <div className="text-[13.5px] font-bold text-[#1F2937]">{child.latest.tb} cm</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7]">
+                    <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                      <Scale size={19} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-medium text-[#697079]">Berat Badan</div>
+                      <div className="text-[13.5px] font-bold text-[#1F2937]">{child.latest.bb} kg</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3.5 px-4 py-3.5">
+                    <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
+                      <TrendingUp size={19} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[10px] font-medium text-[#697079]">Z-score TB/U · diukur {child.latest.tanggal}</div>
+                      <div className="text-[13.5px] font-bold text-[#1F2937]">{child.latest.zScore} SD</div>
+                    </div>
+                    <span
+                      className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      style={{
+                        backgroundColor: getStatusStyle(child.latest.status).bg,
+                        color: getStatusStyle(child.latest.status).text,
+                      }}
+                    >
+                      {child.latest.status}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+
         {/* Data Diri */}
+        {!child && (
         <section>
           <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Data Diri</h2>
           <div className="bg-white border border-[#E4EDE7] rounded-[18px] overflow-hidden shadow-sm">
@@ -150,9 +318,10 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
             </div>
           </div>
         </section>
+        )}
 
         {/* Data Kehamilan (Only if pregnant) */}
-        {profile.isPregnant && (
+        {!child && profile.isPregnant && (
           <section>
             <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Data Kehamilan</h2>
             <div className="bg-white border border-[#E4EDE7] rounded-[18px] overflow-hidden shadow-sm">
@@ -181,46 +350,6 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
           </section>
         )}
 
-        {/* Pengaturan */}
-        <section>
-          <h2 className="px-1 mb-2.5 text-[11px] font-bold text-[#989DA3] uppercase tracking-wider">Pengaturan</h2>
-          <div className="bg-white border border-[#E4EDE7] rounded-[18px] overflow-hidden shadow-sm">
-            <button className="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7] active:bg-[#F1F7FE] transition-colors">
-              <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
-                <Bell size={19} />
-              </div>
-              <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Pengingat & Notifikasi</div>
-              <ChevronRight size={17} className="text-[#989DA3]" />
-            </button>
-
-            {childId && profile.isPregnant ? (
-              <Link href="/ibu/dashboard" className="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7] active:bg-[#F1F7FE] transition-colors text-decoration-none">
-                <div className="w-[38px] h-[38px] bg-[#EAF6EF] text-[#1E9E62] flex items-center justify-center rounded-xl">
-                  <Droplet size={19} />
-                </div>
-                <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Kembali ke Mode Kehamilan</div>
-                <ChevronRight size={17} className="text-[#989DA3]" />
-              </Link>
-            ) : (
-              <Link href="/ibu/anak" className="w-full flex items-center gap-3.5 px-4 py-3.5 border-b border-[#E4EDE7] active:bg-[#F1F7FE] transition-colors text-decoration-none">
-                <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
-                  <Baby size={19} />
-                </div>
-                <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Lihat Data Anak</div>
-                <ChevronRight size={17} className="text-[#989DA3]" />
-              </Link>
-            )}
-
-            <button className="w-full flex items-center gap-3.5 px-4 py-3.5 active:bg-[#F1F7FE] transition-colors">
-              <div className="w-[38px] h-[38px] bg-[#E7F2FB] text-[#1178D4] flex items-center justify-center rounded-xl">
-                <HelpCircle size={19} />
-              </div>
-              <div className="flex-1 text-left font-bold text-[13.5px] text-[#1F2937]">Bantuan & Tentang Aplikasi</div>
-              <ChevronRight size={17} className="text-[#989DA3]" />
-            </button>
-          </div>
-        </section>
-
         <form action={async () => {
           "use server"
           await signOut({ redirectTo: "/login" })
@@ -231,7 +360,6 @@ export default async function IbuAkunPage({ searchParams }: { searchParams: Prom
           </button>
         </form>
 
-        <p className="text-center text-[10px] text-[#989DA3] font-medium pb-4">Monitoring Stunting · Versi 1.0</p>
       </main>
     </div>
   )

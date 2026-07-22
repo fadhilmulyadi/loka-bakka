@@ -22,21 +22,21 @@ const STATUS_MESSAGES: Record<RiskLevel, {
     bg: 'bg-[#E7F7EF]', border: 'border-[#C3E9D4]',
     iconBg: 'bg-[#1E9E62]', textColor: 'text-[#0E6B3E]',
     Icon: Check,
-    label: 'Status Aman',
+    label: 'Normal',
     message: 'Saat ini, Bunda berada di Status Aman! Kondisi yang sangat ideal untuk tumbuh kembang janin. Pertahankan, ya!',
   },
   sedang: {
     bg: 'bg-[#FFF7E6]', border: 'border-[#F4E2BC]',
     iconBg: 'bg-[#D99100]', textColor: 'text-[#8A6100]',
     Icon: AlertTriangle,
-    label: 'Perlu Perhatian',
+    label: 'Pra Stunting',
     message: 'Kenaikan BB Bunda perlu lebih diperhatikan. Waktunya fokus pada asupan nutrisi harian, jangan lupa makan ekstra protein hewani, ya Bunda.',
   },
   tinggi: {
     bg: 'bg-[#FEF1F1]', border: 'border-[#F6D2D2]',
     iconBg: 'bg-[#DC2626]', textColor: 'text-[#9F1C1C]',
     Icon: Flame,
-    label: 'Risiko Tinggi',
+    label: 'Stunting',
     message: 'Saat ini, Bunda berada di Status Risiko Tinggi. Jangan ditunda, mari jadwalkan periksa ke fasilitas kesehatan terdekat untuk penanganan yang tepat!',
   },
 }
@@ -152,7 +152,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             <span className="text-[17px] font-medium opacity-90 pb-1.5">Minggu Kehamilan</span>
           </div>
           <p className="text-[13px] font-normal opacity-85 mt-2 max-w-[230px] leading-relaxed">
-            {pregnancyData.weeksPregnant > 0 ? 'Si kecil kini sebesar buah jagung — mulai bisa mendengar suara Bunda.' : 'Minta bidan atau kader untuk mencatat HPHT Anda.'}
+            {pregnancyData.weeksPregnant > 0 ? 'Si kecil kini sebesar buah jagung dan mulai bisa mendengar suara Bunda.' : 'Minta bidan atau kader untuk mencatat HPHT Anda.'}
           </p>
           
           <div className="flex gap-2.5 mt-4">
@@ -249,8 +249,8 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             </div>
             <div className="flex justify-between mt-2">
               <span className="text-[11px] font-semibold text-[#1E9E62] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-current">Aman</span>
-              <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Perlu Perhatian</span>
-              <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Risiko Tinggi</span>
+              <span className="text-[11px] font-semibold text-[#B07B00] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#F2B705]">Pra Stunting</span>
+              <span className="text-[11px] font-semibold text-[#C0322E] flex items-center gap-1 before:content-[''] before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#E0524E]">Stunting</span>
             </div>
           </div>
           <div className="flex gap-2 mt-4">
@@ -334,7 +334,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             <section className="bg-white border border-[#E4EDE7] rounded-[18px] px-4 py-1 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
               {visits.map((v, i) => {
                 const isBad = v.lilaCm < 23.5 || v.hbGdl < 11;
-                const badgeLabel = isBad ? 'Risiko Tinggi' : (v.isOnTrack ? 'Sesuai Target' : 'Perlu Perhatian');
+                const badgeLabel = isBad ? 'Stunting' : (v.isOnTrack ? 'Sesuai Target' : 'Perlu Perhatian');
                 const badgeClass = isBad 
                   ? 'bg-[#FEF1F1] text-[#9F1C1C]' 
                   : (v.isOnTrack ? 'bg-[#E7F7EF] text-[#1E9E62]' : 'bg-[#FFF7E6] text-[#A77400]');

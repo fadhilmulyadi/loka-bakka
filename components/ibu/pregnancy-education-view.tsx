@@ -19,7 +19,7 @@ const EDU_DATA = [
         icon: <Heart className="w-[23px] h-[23px]" />,
         title: 'Selamat Atas Kehamilan Anda! Mari Kenali Trimester I (Fase Embriogenesis)',
         body: 'Selamat Ibu! Saat ini, janin di dalam rahim Ibu sedang menjalani fase paling krusial yang disebut embriogenesis. Pada 12 minggu pertama ini, seluruh susunan saraf pusat, otak, jantung, tangan, dan kaki janin sedang dibentuk dari nol. Tubuh Ibu juga sedang mengalami perubahan hormon yang besar. Wajar jika Ibu merasakan mual, muntah (morning sickness), atau merasa sangat lelah. Ingat, mual adalah tanda bahwa hormon kehamilan bekerja dengan baik, namun jangan biarkan asupan nutrisi janin terputus.',
-        tip: 'Mual adalah hal yang wajar — tetap jaga asupan gizi janin agar tidak terputus.'
+        tip: 'Mual adalah hal yang wajar, tetap jaga asupan gizi janin agar tidak terputus.'
       },
       {
         icon: <Pill className="w-[23px] h-[23px]" />,

@@ -54,7 +54,7 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
         </span>
         <h1 className="text-[24px] font-semibold text-[#1F2937] leading-tight tracking-tight">Status</h1>
         <p className="mt-1.5 text-[12px] text-[#697079] leading-[1.45] max-w-[310px]">
-          Ringkasan kondisi terkini Bunda dari hasil pengukuran di posyandu. Data diperbarui setiap kunjungan rutin — Bunda tidak perlu mengisi sendiri.
+          Ringkasan kondisi terkini Bunda dari hasil pengukuran di posyandu. Data diperbarui setiap kunjungan rutin, Bunda tidak perlu mengisi sendiri.
         </p>
       </header>
 
@@ -97,7 +97,7 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
                   <strong className="text-[#1178D4] font-bold">
                     {profile.targetGainMinKg}–{profile.targetGainMaxKg} kg
                   </strong>
-                  {' '}· sekitar {profile.weeklyGainMinKg}–{profile.weeklyGainMaxKg} kg/minggu
+                  {' '}· sekitar {profile.weeklyGainMinKg.toFixed(2)}–{profile.weeklyGainMaxKg.toFixed(2)} kg/minggu
                 </span>
               </div>
             </>
@@ -225,9 +225,9 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
                     : activeTab === 'sedang' ? 'text-[#8A6100]'
                     : 'text-[#9F1C1C]'
                   }`}>
-                    {activeTab === 'rendah' && 'Risiko Rendah · Status Aman'}
-                    {activeTab === 'sedang' && 'Risiko Sedang · Perlu Perhatian'}
-                    {activeTab === 'tinggi' && 'Risiko Tinggi · Status Risiko Tinggi'}
+                    {activeTab === 'rendah' && 'Normal · Status Aman'}
+                    {activeTab === 'sedang' && 'Pra Stunting · Perlu Perhatian'}
+                    {activeTab === 'tinggi' && 'Stunting · Perlu Penanganan'}
                   </div>
                 </div>
               </div>
@@ -318,9 +318,9 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
                   <h3 className="text-[13.5px] font-semibold text-[#9F1C1C] mt-4 leading-snug">3 hal yang harus dilakukan dalam 3 hari ke depan:</h3>
                   <ul className="flex flex-col gap-2.5 mt-2.5 list-none">
                     {[
-                      { lead: 'Pertama — Pergi ke puskesmas atau bidan.', text: 'Kondisi ini perlu diperiksa langsung oleh tenaga kesehatan, bukan hanya dipantau lewat aplikasi. Tunjukkan hasil pemeriksaan ini ke bidan atau dokter, untuk menentukan apakah kamu perlu suplemen tambahan, penanganan anemia khusus, atau program makanan tambahan (PMT) dari puskesmas.' },
-                      { lead: 'Kedua — Perbaiki makan mulai hari ini.', text: 'Pastikan setiap makan ada protein hewani. Tidak harus mahal, kamu bisa makan telur rebus, ikan, atau tempe yang membantu sebagai langkah awal. Makan minimal 3 kali sehari dan tambahkan camilan sehat.' },
-                      { lead: 'Ketiga — Minum tablet Fe malam ini juga.', text: 'Apapun yang terjadi hari ini, jangan sampai tablet Fe-mu terlewat malam ini. Minum dengan air putih atau jus jeruk, jauh dari teh atau kopi.' },
+                      { lead: 'Pertama: Pergi ke puskesmas atau bidan.', text: 'Kondisi ini perlu diperiksa langsung oleh tenaga kesehatan, bukan hanya dipantau lewat aplikasi. Tunjukkan hasil pemeriksaan ini ke bidan atau dokter, untuk menentukan apakah kamu perlu suplemen tambahan, penanganan anemia khusus, atau program makanan tambahan (PMT) dari puskesmas.' },
+                      { lead: 'Kedua: Perbaiki makan mulai hari ini.', text: 'Pastikan setiap makan ada protein hewani. Tidak harus mahal, kamu bisa makan telur rebus, ikan, atau tempe yang membantu sebagai langkah awal. Makan minimal 3 kali sehari dan tambahkan camilan sehat.' },
+                      { lead: 'Ketiga: Minum tablet Fe malam ini juga.', text: 'Apapun yang terjadi hari ini, jangan sampai tablet Fe-mu terlewat malam ini. Minum dengan air putih atau jus jeruk, jauh dari teh atau kopi.' },
                     ].map(({ lead, text }, i) => (
                       <li key={i} className="flex items-baseline gap-2.5 text-[12.5px] text-[#4C545F] leading-[1.6]">
                         <span className="flex-none w-1.5 h-1.5 rounded-full bg-[#1E9E62] translate-y-[-2px]" />

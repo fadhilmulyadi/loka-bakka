@@ -18,7 +18,7 @@ const TASKS = [
     id: 1,
     icon: 'protein',
     name: 'Makan dengan protein hewani',
-    note: 'Pastikan setiap kali makan ada telur, ikan, ayam, atau hati — kunci utama mencegah stunting.',
+    note: 'Pastikan setiap kali makan ada telur, ikan, ayam, atau hati, kunci utama mencegah stunting.',
     pts: 20,
   },
   {
