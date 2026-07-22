@@ -130,12 +130,12 @@ export async function getDashboardStats() {
     if (!c.pengukurans[0]) return
     const status = statusAnak(c.pengukurans[0])
     if (status === "Normal") normalCount++
-    else if (status === "Risiko Stunting") risikoStuntingCount++
+    else if (status === "Pra Stunting") risikoStuntingCount++
     else stuntingCount++
   })
 
   // Membaik = naik band, bukan sekadar z-score naik sedikit (itu noise pengukuran).
-  const bandRank: Record<StatusAnak, number> = { Stunting: 1, "Risiko Stunting": 2, Normal: 3 }
+  const bandRank: Record<StatusAnak, number> = { Stunting: 1, "Pra Stunting": 2, Normal: 3 }
 
   let improvedCount = 0
   allChildren.forEach(c => {
@@ -147,8 +147,8 @@ export async function getDashboardStats() {
 
   const statusData = [
     { name: "Stunting", value: totalMeasured ? Math.round((stuntingCount / totalMeasured) * 100) : 0, fill: "#E24B4A" },
-    { name: "Risiko Stunting", value: totalMeasured ? Math.round((risikoStuntingCount / totalMeasured) * 100) : 0, fill: "#EF9F27" },
-    { name: "Anak Normal", value: totalMeasured ? Math.round((normalCount / totalMeasured) * 100) : 0, fill: "#378ADD" },
+    { name: "Pra Stunting", value: totalMeasured ? Math.round((risikoStuntingCount / totalMeasured) * 100) : 0, fill: "#EF9F27" },
+    { name: "Normal", value: totalMeasured ? Math.round((normalCount / totalMeasured) * 100) : 0, fill: "#378ADD" },
   ]
 
   // Status ibu memakai hitungRisikoIbu() — skor gabungan yang sama dengan alat,
@@ -409,7 +409,7 @@ export async function getTindakLanjutList() {
   }
 
   const anakSeverity = (status: StatusAnak) =>
-    status === "Stunting" ? 3 : status === "Risiko Stunting" ? 2 : 0
+    status === "Stunting" ? 3 : status === "Pra Stunting" ? 2 : 0
 
   const anakItems: Item[] = children.flatMap((c) => {
     const last = c.pengukurans[0]
@@ -636,7 +636,7 @@ export async function getKelurahanStats() {
       data.total++
       const status = statusAnak(anakRow.pengukurans[0])
       if (status === "Normal") data.normal++
-      else if (status === "Risiko Stunting") data.risiko++
+      else if (status === "Pra Stunting") data.risiko++
       else data.stunting++
     })
 
@@ -665,8 +665,8 @@ export async function getKelurahanPatients(kelurahanNama: string) {
   })
 
   const now = new Date()
-  // "Risiko Stunting" untuk anak, "Berisiko" untuk bumil — beda subjek, urutan sama.
-  const rank = { Stunting: 0, "Risiko Stunting": 1, Berisiko: 1, Normal: 2 } as const
+  // Taksonomi yang sama untuk anak dan bumil.
+  const rank = { Stunting: 0, "Pra Stunting": 1, Normal: 2 } as const
 
   const patients = ibus.flatMap((ibuRow) => {
     const anakPatients = ibuRow.anaks.map((anakRow) => {
@@ -695,7 +695,7 @@ export async function getKelurahanPatients(kelurahanNama: string) {
         type: "bumil" as const,
         name: ibuRow.nama,
         desc: `Bumil${visit ? ` · LILA ${visit.lilaCm.toFixed(1)} cm · Hb ${visit.hbGdl.toFixed(1)} g/dL` : ""}`,
-        status: (bumilBerisiko(visit) ? "Berisiko" : "Normal") as keyof typeof rank,
+        status: (bumilBerisiko(visit) ? "Pra Stunting" : "Normal") as keyof typeof rank,
       },
     ]
   })

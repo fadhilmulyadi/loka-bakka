@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
@@ -34,9 +35,7 @@ export function KaderSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#52A9E3]">
-            <span className="text-sm font-bold text-white">L</span>
-          </div>
+          <Image src="/icon-192.png" alt="" width={32} height={32} className="rounded-[8px]" />
           <span className="font-medium text-[#101223]">Loka Bakka</span>
         </div>
       </SidebarHeader>

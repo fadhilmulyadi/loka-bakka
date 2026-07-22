@@ -27,7 +27,7 @@ function resolveAlert(stats: TopbarAlertStats) {
   if (stats.berisikoCount > 0) {
     return {
       Icon: TriangleAlert,
-      color: getStatusStyle("Risiko Stunting").text,
+      color: getStatusStyle("Pra Stunting").text,
       text: `${stats.berisikoCount} anak berisiko stunting, perlu dipantau`,
     }
   }

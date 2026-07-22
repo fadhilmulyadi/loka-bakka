@@ -41,7 +41,7 @@ import { EditDataAnakModal } from "@/components/kader/edit-data-anak-modal"
 import { TrimesterPill } from "@/components/ibu/trimester-pill"
 import type { IMTCategory } from "@/lib/growth-standards/imt-calc"
 
-type Status = "Normal" | "Risiko Stunting" | "Stunting"
+type Status = "Normal" | "Pra Stunting" | "Stunting"
 
 type Child = {
   no: number
@@ -226,7 +226,7 @@ function RekapPosyanduPageInner() {
 
   const alertStats = !loading && stats ? {
     stuntingCount: children.filter((c) => c.status === "Stunting").length,
-    berisikoCount: children.filter((c) => c.status === "Risiko Stunting").length,
+    berisikoCount: children.filter((c) => c.status === "Pra Stunting").length,
     belumDiperiksa: stats.totalChildren - stats.measuredThisMonth,
   } : null
 
@@ -333,7 +333,7 @@ function RekapPosyanduPageInner() {
                 <SelectContent className="rounded-xl border-none shadow-none">
                   <SelectItem value="" className="text-xs text-[#173753]">Semua</SelectItem>
                   <SelectItem value="Normal" className="text-xs text-[#173753]">Normal</SelectItem>
-                  <SelectItem value="Risiko Stunting" className="text-xs text-[#173753]">Risiko Stunting</SelectItem>
+                  <SelectItem value="Pra Stunting" className="text-xs text-[#173753]">Pra Stunting</SelectItem>
                   <SelectItem value="Stunting" className="text-xs text-[#173753]">Stunting</SelectItem>
                 </SelectContent>
               </Select>

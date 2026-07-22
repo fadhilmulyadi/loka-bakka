@@ -629,7 +629,7 @@ export default function KaderDashboardPage() {
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#EF9F27" }} /> Risiko Stunting
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#EF9F27" }} /> Pra Stunting
                       </span>
                       <span className="font-semibold text-[#173753]">{stats?.anakStatus.risiko ?? 0}</span>
                     </div>
@@ -660,19 +660,19 @@ export default function KaderDashboardPage() {
                   <div className="flex flex-col gap-1.5 mt-2.5">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#22C55E" }} /> Risiko Rendah
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#22C55E" }} /> Normal
                       </span>
                       <span className="font-semibold text-[#173753]">{stats?.ibuStatus.rendah ?? 0}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#F97316" }} /> Risiko Sedang
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#F97316" }} /> Pra Stunting
                       </span>
                       <span className="font-semibold text-[#173753]">{stats?.ibuStatus.sedang ?? 0}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-[#173753] font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#E24B4A" }} /> Risiko Tinggi
+                        <span className="w-1.5 h-1.5 rounded-full flex-none" style={{ background: "#E24B4A" }} /> Stunting
                       </span>
                       <span className="font-semibold text-[#173753]">{stats?.ibuStatus.tinggi ?? 0}</span>
                     </div>

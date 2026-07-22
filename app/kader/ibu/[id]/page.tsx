@@ -129,7 +129,7 @@ export default function IbuProfilePage() {
       })
     : null
   const overallStatus = risikoIbu
-    ? { rendah: "Normal", sedang: "Waspada", tinggi: "Risiko Tinggi" }[risikoIbu.level]
+    ? { rendah: "Normal", sedang: "Pra Stunting", tinggi: "Stunting" }[risikoIbu.level]
     : "Normal"
 
   return (
@@ -371,7 +371,18 @@ export default function IbuProfilePage() {
                               <TableCell className="text-[14px] text-[#173753]">{v.lilaCm.toFixed(1).replace(".", ",")} cm</TableCell>
                               <TableCell className="text-[14px] text-[#173753]">{v.hbGdl.toFixed(1).replace(".", ",")}</TableCell>
                               <TableCell>
-                                <StatusBadge status={v.isOnTrack ? "Normal" : "Waspada"} />
+                                <StatusBadge status={
+                                  ibu.pregnancyProfile
+                                    ? { rendah: "Normal", sedang: "Pra Stunting", tinggi: "Stunting" }[
+                                        hitungRisikoIbu({
+                                          imtCategory: ibu.pregnancyProfile.imtCategory as IMTCategory,
+                                          lilaCm: v.lilaCm,
+                                          hbGdl: v.hbGdl,
+                                          kuesionerBand: kuesionerBand,
+                                        }).level
+                                      ]
+                                    : v.isOnTrack ? "Normal" : "Pra Stunting"
+                                } />
                               </TableCell>
                               <TableCell className="text-[14px] text-muted-foreground">{v.kader?.nama ?? "—"}</TableCell>
                             </TableRow>

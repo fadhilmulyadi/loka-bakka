@@ -31,8 +31,8 @@ export type KelurahanPatient = {
   type: "anak" | "bumil"
   name: string
   desc: string
-  // "Risiko Stunting" untuk anak, "Berisiko" untuk bumil.
-  status: "Normal" | "Risiko Stunting" | "Berisiko" | "Stunting"
+  // "Pra Stunting" untuk anak, "Pra Stunting" untuk bumil.
+  status: "Normal" | "Pra Stunting" | "Pra Stunting" | "Stunting"
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -249,7 +249,7 @@ function PanelSkeleton() {
 function StatMiniGrid({ k }: { k: Pick<KelurahanData, "stunting" | "risiko" | "normal"> }) {
   const stats = [
     { label: "Stunting", value: k.stunting, color: "#B03230" },
-    { label: "Berisiko", value: k.risiko, color: "#B87514" },
+    { label: "Pra Stunting", value: k.risiko, color: "#B87514" },
     { label: "Normal", value: k.normal, color: "#173753" },
   ]
   return (

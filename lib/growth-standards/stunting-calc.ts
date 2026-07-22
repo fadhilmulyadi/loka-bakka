@@ -49,7 +49,7 @@ export function getStuntingStatus(zScore: number): StuntingStatus {
 /** Label bahasa Indonesia untuk ditampilkan di UI */
 export const stuntingLabel = {
   stunting: 'Stunting',
-  risiko_stunting: 'Risiko Stunting',
+  risiko_stunting: 'Pra Stunting',
   normal: 'Normal',
 } as const satisfies Record<StuntingStatus, string>
 

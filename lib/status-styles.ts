@@ -1,4 +1,4 @@
-export type StatusType = "Normal" | "Stunting" | "Risiko Stunting" | "Gizi Kurang" | "Buruk"
+export type StatusType = "Normal" | "Stunting" | "Pra Stunting" | "Gizi Kurang" | "Buruk"
 
 export interface StatusStyle {
   bg: string
@@ -11,7 +11,7 @@ export const statusMap: Record<string, StatusStyle> = {
   Normal:          { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
   Stunting:        { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
   "Stunting Berat": { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
-  "Risiko Stunting": { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
+  "Pra Stunting": { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
   Berisiko:        { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
   "Gizi Kurang":   { bg: "#F3E8FD", text: "#8E24AA", dot: "#8E24AA", border: "#E9D5FF" },
   "Risiko KEK":    { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
@@ -26,8 +26,8 @@ export const statusMap: Record<string, StatusStyle> = {
   Aktif:           { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
   "Non-aktif":     { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
   NORMAL:          { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
-  PENDEK:          { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
-  "SANGAT PENDEK": { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
+  "PRA STUNTING":  { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
+  STUNTING:        { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },
   RENDAH:          { bg: "#E6F4EA", text: "#1E8E3E", dot: "#1E8E3E", border: "#DCFCE7" },
   SEDANG:          { bg: "#FFF4E5", text: "#B06000", dot: "#B06000", border: "#FEF3C7" },
   TINGGI:          { bg: "#FCE8E6", text: "#D93025", dot: "#D93025", border: "#FEE2E2" },

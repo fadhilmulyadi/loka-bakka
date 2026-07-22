@@ -172,8 +172,13 @@ export default function ChildDetailPage() {
   if (!childDataState) return <div className="p-8">Anak tidak ditemukan</div>
 
   const whoTable = childDataState.gender === "Laki-laki" ? heightForAgeBoys : heightForAgeGirls
+  // Jendela sumbu X ikut umur anak — dulu dikunci 24 bulan, jadi anak di atas 2
+  // tahun titiknya jatuh di luar grafik dan kurvanya tampak kosong.
+  const latestVisitMonth = childDataState.visits.reduce((m, v) => Math.max(m, parseInt(v.usia) || 0), 0)
+  const chartMaxMonth = Math.min(60, Math.max(24, Math.ceil((latestVisitMonth + 2) / 6) * 6))
+  const chartTicks = Array.from({ length: chartMaxMonth / 6 + 1 }, (_, i) => i * 6)
   const chartData = whoTable
-    .filter((d) => d.ageMonths <= 24)
+    .filter((d) => d.ageMonths <= chartMaxMonth)
     .map((d) => {
       const visit = childDataState.visits.find((v) => parseInt(v.usia) === d.ageMonths)
       return {
@@ -315,7 +320,7 @@ export default function ChildDetailPage() {
                     : "—",
                   sub: childDataState.zScoreTBURaw == null ? null
                     : childDataState.zScoreTBURaw >= -2 ? "Normal (≥ −2 SD)"
-                    : childDataState.zScoreTBURaw >= -3 ? "Risiko Stunting (−3 s/d −2 SD)"
+                    : childDataState.zScoreTBURaw >= -3 ? "Pra Stunting (−3 s/d −2 SD)"
                     : "Stunting (< −3 SD)",
                   subColor: childDataState.zScoreTBURaw == null ? ""
                     : childDataState.zScoreTBURaw >= -2 ? "text-[#15803D]"
@@ -348,7 +353,7 @@ export default function ChildDetailPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-[16px] font-semibold text-[#173753]">Kurva Pertumbuhan</CardTitle>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">WHO Growth Standard (0-24 Bulan)</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">WHO Growth Standard (0-{chartMaxMonth} Bulan)</p>
                   </div>
                   <div className="flex items-center gap-3 flex-wrap justify-end">
                     <div className="flex items-center gap-1.5">
@@ -375,8 +380,8 @@ export default function ChildDetailPage() {
                       <XAxis
                         dataKey="month"
                         type="number"
-                        domain={[0, 24]}
-                        ticks={[0, 6, 12, 18, 24]}
+                        domain={[0, chartMaxMonth]}
+                        ticks={chartTicks}
                         tickFormatter={(v) => `${v} bln`}
                         tick={{ fontSize: 10 }}
                         tickLine={false}
