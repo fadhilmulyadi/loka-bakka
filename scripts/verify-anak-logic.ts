@@ -15,7 +15,7 @@ assert.equal(getStuntingStatus(2.5), "normal") // tidak ada band "Tinggi"
 
 // --- statusAnak: label diturunkan dari z-score, bukan kolom statusTBU ---
 assert.equal(statusAnak({ zScoreTBU: -3.5 }), "Stunting")
-assert.equal(statusAnak({ zScoreTBU: -2.4 }), "Risiko Stunting")
+assert.equal(statusAnak({ zScoreTBU: -2.4 }), "Pra Stunting")
 assert.equal(statusAnak({ zScoreTBU: -1 }), "Normal")
 
 // Anak belum pernah diukur dianggap Normal (dashboard menghitungnya terpisah
@@ -25,6 +25,6 @@ assert.equal(statusAnak(null), "Normal")
 
 // Baris lama dengan label pensiun tetap terklasifikasi benar dari z-score-nya:
 // dulu "Berisiko" jatuh ke cabang else dan salah dihitung sebagai stunting.
-assert.equal(statusAnak({ zScoreTBU: -2.2 }), "Risiko Stunting")
+assert.equal(statusAnak({ zScoreTBU: -2.2 }), "Pra Stunting")
 
 console.log("OK: band status anak konsisten dengan ambang WHO")

@@ -23,6 +23,8 @@ import { neon } from "@neondatabase/serverless"
 import { eq, inArray } from "drizzle-orm"
 import bcrypt from "bcryptjs"
 import * as schema from "../lib/db/schema"
+import { KELURAHAN_LIST } from "../lib/constants/kelurahan"
+import { getIOMTargets, getExpectedGainRange } from "../lib/growth-standards/imt-calc"
 
 // ─── DB setup ─────────────────────────────────────────────────────────────────
 const sql = neon(process.env.DATABASE_URL!)
@@ -159,7 +161,7 @@ async function main() {
     id: posId,
     nama: "Posyandu Melati",
     alamat: "Jl. Kenanga No. 12, Kelurahan Baru",
-    kecamatan: "Rappocini",
+    kecamatan: "Tamalanrea",
     kota: "Makassar",
     latitude: -5.147665,
     longitude: 119.432732,
@@ -207,7 +209,7 @@ async function main() {
   ]
 
   const ibuIds: string[] = []
-  for (const d of ibuData) {
+  for (const [i, d] of ibuData.entries()) {
     const id = uuid()
     ibuIds.push(id)
     await db.insert(schema.ibu).values({
@@ -215,9 +217,11 @@ async function main() {
       password: ibuPass, noHp: d.noHp,
       tanggalLahir: d.lahir, alamat: d.alamat,
       isHamil: d.isHamil,
+      // Peta sebaran mem-bucket per kelurahan; tanpa ini semua wilayah nol.
+      kelurahan: KELURAHAN_LIST[i % KELURAHAN_LIST.length].nama,
     })
   }
-  console.log("   ✓ 20 Ibu dibuat")
+  console.log(`   ✓ 20 Ibu dibuat, tersebar di ${KELURAHAN_LIST.length} kelurahan`)
 
   // ── 4. Anak ─────────────────────────────────────────────────────────────────
   // Status rencana:
@@ -360,55 +364,38 @@ async function main() {
   console.log(`   ✓ ${insertedMeasurements.length} record pengukuran dibuat`)
 
   // ── 6. Ibu Hamil: PregnancyProfile + PregnancyVisit + Skrining ──────────────
+  // Kunjungan ANC dibangkitkan tiap 4 minggu sejak minggu ke-8 supaya kurva
+  // kenaikan BB punya garis penuh, bukan dua titik yang menempel di ujung.
+  // gainFactor = posisi BB terhadap pita IOM (0 = batas bawah, 1 = batas atas).
   const hamilData = [
     // Risiko Rendah: LILA normal, Hb normal, IMT normal
     {
       ibuIdx: 15, hphtWeeksAgo: 20, bbPre: 55.0, height: 158, imt: 22.0, imtCat: "normal" as const,
-      visits: [
-        { weeksAgo: 4, weight: 60.5, lila: 26.0, hb: 12.5 },
-        { weeksAgo: 8, weight: 59.0, lila: 25.8, hb: 12.3 },
-        { weeksAgo: 12, weight: 57.5, lila: 25.5, hb: 12.1 },
-      ],
+      gainFactor: 0.6, lilaFrom: 25.5, lilaTo: 26.2, hbFrom: 12.1, hbTo: 12.5, lastVisitWeeksAgo: 0,
       jawaban: { protein: true, fe: true, pengetahuan: true, sanitasi: false, rokok: false },
     },
-    // Risiko Rendah: sehat
+    // Risiko Rendah: sehat, kehamilan masih muda
     {
       ibuIdx: 16, hphtWeeksAgo: 14, bbPre: 52.0, height: 155, imt: 21.6, imtCat: "normal" as const,
-      visits: [
-        { weeksAgo: 3, weight: 54.5, lila: 25.0, hb: 12.0 },
-        { weeksAgo: 7, weight: 53.5, lila: 24.8, hb: 11.9 },
-      ],
+      gainFactor: 0.5, lilaFrom: 24.8, lilaTo: 25.2, hbFrom: 11.9, hbTo: 12.2, lastVisitWeeksAgo: 0,
       jawaban: { protein: true, fe: true, pengetahuan: true, sanitasi: false, rokok: false },
     },
-    // Risiko Sedang: LILA borderline, Hb oke
+    // Risiko Sedang: LILA borderline, kenaikan BB di bawah anjuran
     {
       ibuIdx: 17, hphtWeeksAgo: 28, bbPre: 45.0, height: 152, imt: 19.5, imtCat: "normal" as const,
-      visits: [
-        { weeksAgo: 2, weight: 52.0, lila: 23.8, hb: 11.5 },
-        { weeksAgo: 6, weight: 50.5, lila: 23.5, hb: 11.2 },
-        { weeksAgo: 10, weight: 49.0, lila: 23.2, hb: 11.0 },
-        { weeksAgo: 14, weight: 47.5, lila: 23.0, hb: 10.8 },
-      ],
+      gainFactor: -0.25, lilaFrom: 23.0, lilaTo: 23.8, hbFrom: 10.8, hbTo: 11.5, lastVisitWeeksAgo: 0,
       jawaban: { protein: false, fe: true, pengetahuan: true, sanitasi: false, rokok: false },
     },
-    // Risiko Tinggi: KEK (LILA < 23.5) + Anemia (Hb < 11)
+    // Risiko Tinggi: KEK (LILA < 23,5) + Anemia (Hb < 11), BB tertinggal jauh
     {
       ibuIdx: 18, hphtWeeksAgo: 32, bbPre: 41.0, height: 150, imt: 18.2, imtCat: "underweight" as const,
-      visits: [
-        { weeksAgo: 5, weight: 46.5, lila: 22.8, hb: 10.2 },
-        { weeksAgo: 9, weight: 45.5, lila: 22.5, hb: 10.0 },
-        { weeksAgo: 13, weight: 44.0, lila: 22.2, hb: 9.8 },
-      ],
+      gainFactor: -0.6, lilaFrom: 22.2, lilaTo: 22.8, hbFrom: 9.8, hbTo: 10.2, lastVisitWeeksAgo: 0,
       jawaban: { protein: false, fe: false, pengetahuan: false, sanitasi: true, rokok: true },
     },
-    // Risiko Sedang: Hb rendah borderline, belum diperiksa bulan ini
+    // Risiko Sedang: Hb rendah, kenaikan BB berlebih, belum diperiksa bulan ini
     {
       ibuIdx: 19, hphtWeeksAgo: 18, bbPre: 60.0, height: 160, imt: 23.4, imtCat: "normal" as const,
-      visits: [
-        // Terakhir periksa 5 minggu lalu, belum bulan ini
-        { weeksAgo: 5, weight: 65.0, lila: 25.0, hb: 10.8 },
-        { weeksAgo: 9, weight: 64.0, lila: 24.8, hb: 10.5 },
-      ],
+      gainFactor: 1.5, lilaFrom: 24.8, lilaTo: 25.2, hbFrom: 10.5, hbTo: 10.8, lastVisitWeeksAgo: 5,
       jawaban: { protein: true, fe: false, pengetahuan: true, sanitasi: false, rokok: false },
     },
   ]
@@ -418,16 +405,12 @@ async function main() {
     const hpht = new Date()
     hpht.setDate(hpht.getDate() - h.hphtWeeksAgo * 7)
 
-    const { totalMin, totalMax, weeklyMin, weeklyMax } = (() => {
-      const iomMap: Record<string, [number, number, number, number]> = {
-        underweight: [12.5, 18, 0.42, 0.59],
-        normal:      [11.5, 16, 0.39, 0.48],
-        overweight:  [7.0,  11.5, 0.23, 0.33],
-        obese:       [5.0,  9,   0.17, 0.27],
-      }
-      const [tMin, tMax, wMin, wMax] = iomMap[h.imtCat]
-      return { totalMin: tMin, totalMax: tMax, weeklyMin: wMin, weeklyMax: wMax }
-    })()
+    // Sumber angka sama dengan yang dipakai grafik, supaya seed tidak drift.
+    const targets = getIOMTargets(h.imtCat, 1)
+    const totalMin = targets.totalGainMinKg
+    const totalMax = targets.totalGainMaxKg
+    const weeklyMin = targets.weeklyGainMinKg
+    const weeklyMax = targets.weeklyGainMaxKg
 
     const profId = uuid()
     await db.insert(schema.pregnancyProfile).values({
@@ -445,22 +428,33 @@ async function main() {
       weeklyGainMaxKg: weeklyMax,
     })
 
-    // Pregnancy visits
-    for (const v of h.visits) {
+    // Kunjungan ANC tiap 4 minggu, minggu ke-8 sampai usia kandungan sekarang.
+    const lastWeek = h.hphtWeeksAgo - h.lastVisitWeeksAgo
+    const visitWeeks: number[] = []
+    for (let w = 8; w <= lastWeek; w += 4) visitWeeks.push(w)
+    if (visitWeeks.length === 0) visitWeeks.push(Math.max(4, lastWeek))
+
+    for (const week of visitWeeks) {
       const visitDate = new Date()
-      visitDate.setDate(visitDate.getDate() - v.weeksAgo * 7)
-      const weightGain = Math.round((v.weight - h.bbPre) * 10) / 10
-      const isOnTrack = weightGain >= totalMin * 0.4
+      visitDate.setDate(visitDate.getDate() - (h.hphtWeeksAgo - week) * 7)
+
+      // gainFactor memosisikan BB relatif pita IOM: <0 kurang, 0-1 di dalam, >1 lebih.
+      const band = getExpectedGainRange(week, targets)
+      const weightGain = Math.round((band.minKg + (band.maxKg - band.minKg) * h.gainFactor) * 10) / 10
+      const t = visitWeeks.length > 1 ? visitWeeks.indexOf(week) / (visitWeeks.length - 1) : 1
+      const lila = Math.round((h.lilaFrom + (h.lilaTo - h.lilaFrom) * t) * 10) / 10
+      const hb = Math.round((h.hbFrom + (h.hbTo - h.hbFrom) * t) * 10) / 10
+      const isOnTrack = weightGain >= band.minKg && weightGain <= band.maxKg
 
       await db.insert(schema.pregnancyVisit).values({
         id: uuid(),
         ibuId,
         kaderId: kaderId1,
         visitDate,
-        currentWeightKg: v.weight,
+        currentWeightKg: Math.round((h.bbPre + weightGain) * 10) / 10,
         weightGainKg: weightGain,
-        lilaCm: v.lila,
-        hbGdl: v.hb,
+        lilaCm: lila,
+        hbGdl: hb,
         isOnTrack,
         catatanKader: isOnTrack ? "Kondisi baik, pertahankan pola makan." : "Perlu perhatian khusus, diskusi dengan bidan.",
         kirimKeIbu: true,
