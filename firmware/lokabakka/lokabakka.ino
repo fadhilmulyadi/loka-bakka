@@ -6,7 +6,6 @@
 #include "printer.h"
 #include "screens.h"
 #include "lamps.h"
-#include "sdcard.h"
 
 TFT_eSPI tft = TFT_eSPI();
 
@@ -20,11 +19,11 @@ enum Layar {
 };
 
 const char* PERTANYAAN[5] = {
-  "Apakah Ibu makan gizi seimbang dan protein hewani (telur, ikan, daging, susu) setiap hari?",
-  "Apakah Ibu rutin minum tablet tambah darah atau makan sumber zat besi (hati, bayam, dll)?",
-  "Apakah Ibu sudah memahami info kehamilan sesuai usia kandungan saat ini?",
+  "Apakah Ibu mengonsumsi makanan gizi seimbang (karbohidrat, protein, sayur, dan buah) dan sumber protein hewani (telur, ikan, daging, atau susu) setiap hari selama hamil?",
+  "Apakah Ibu mengonsumsi tablet tambah darah (zat besi) atau makanan sumber zat besi (seperti hati, bayam, dan sejenisnya) secara rutin selama hamil?",
+  "Apakah Ibu telah mengetahui/memahami informasi kehamilan sesuai dengan usia kandungan saat ini?",
   "Apakah Ibu tinggal di lingkungan tanpa akses air bersih yang layak?",
-  "Apakah Ibu merokok atau sering terpapar asap rokok selama kehamilan?",
+  "Apakah Ibu merokok atau sering terpapar asap rokok selama kehamilan ini?",
 };
 // Urutan tetap: 0=protein 1=fe 2=pengetahuan 3=sanitasi 4=rokok - harus sama
 // dengan key JSON yang dibaca lib/growth-standards/risiko-kehamilan-calc.ts
@@ -67,8 +66,6 @@ void mulaiKirim() {
     jawabanPtr = &jawabanDoc;
   }
 
-  // Catat ke SD dulu, baru kirim — angka ukur selamat walau WiFi mati.
-  sdSimpanPengukuran(kategoriDipilih, bbUkur, tbUkur, jawabanPtr);
   hasilTerakhir = kirimHasilPengukuran(kategoriDipilih, bbUkur, tbUkur, jawabanPtr);
 
   if (hasilTerakhir.ok) {
@@ -112,7 +109,6 @@ void setup() {
   // — beda dengan animasi per pengukuran yang menguras umur kontak relay.
   lampTest();
 
-  sdInit();      // wajib sesudah tft.init() — SPI bersama
   sensorsInit(); // tare timbangan — platform harus kosong saat alat dinyalakan
   prnInit();
 

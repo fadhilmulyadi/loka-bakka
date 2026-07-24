@@ -170,7 +170,10 @@ void layarKuesioner(int nomor, int total, const String& pertanyaan) {
 
   setFont(FONT_M);
   tft.setTextColor(COL_TEXT, COL_BG);
-  drawWrapped(pertanyaan, 22, 88, SCR_W - 44, 26);
+  // ponytail: muat ~6 baris (start 76, lineH 24) untuk pertanyaan terpanjang
+  // ~168 char sebelum tombol di y=220. Kalau teks ditambah lagi, turunkan ke
+  // FONT_S atau geser tombol, dan cek langsung di layar 480x320.
+  drawWrapped(pertanyaan, 22, 76, SCR_W - 44, 24);
 
   int btnY = 220, btnH = 40, gap = 12;
   int btnW = (SCR_W - 44 - gap) / 2;

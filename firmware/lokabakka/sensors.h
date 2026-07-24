@@ -30,7 +30,44 @@ static HX711 timbangan;
 
 // ---- Inisialisasi — panggil di setup(), platform HARUS kosong ----
 void sensorsInit() {
+  // Diagnostik jalur DT: HX711 sehat menarik DOUT ke HIGH saat idle & LOW saat
+  // sampel siap (~10x/detik), jadi pin ini HARUS bergerak. Kalau LOW terus =
+  // HX711 tidak mengirim data (modul mati / power-down / DT tak nyambung).
+  pinMode(PIN_HX_DT, INPUT);
+  int highCount = 0, lowCount = 0;
+  unsigned long t0 = millis();
+  while (millis() - t0 < 300) {
+    if (digitalRead(PIN_HX_DT)) highCount++; else lowCount++;
+  }
+  Serial.printf("[HX711] cek DT: HIGH=%d LOW=%d %s\n", highCount, lowCount,
+                highCount == 0 ? "-> DT MATI (LOW terus, HX711 tak kirim data)" : "-> DT bergerak, HX711 hidup");
+
   timbangan.begin(PIN_HX_DT, PIN_HX_SCK);
+
+  // Reset chip via software: kadang HX711 boot di state nyangkut. power_down()
+  // menahan SCK HIGH, power_up() melepasnya LOW — memaksa konversi mulai ulang.
+  timbangan.power_down();
+  delay(100);
+  timbangan.power_up();
+  delay(200);
+
+  // Probe hidup ~3 dtk: DOUT HX711 sehat turun LOW (is_ready) ~10x/detik. Kalau
+  // READY tak pernah true & raw nol terus → BUKAN masalah code (GND/VCC/kabel
+  // longgar), harus reseat fisik. Kalau READY true & raw berubah saat plat
+  // ditekan → sensor hidup, lupakan probe ini nanti.
+  int nReady = 0;
+  unsigned long tp = millis();
+  while (millis() - tp < 3000) {
+    if (timbangan.is_ready()) {
+      nReady++;
+      Serial.printf("[HX711] READY  raw=%ld\n", timbangan.read());
+      delay(150);
+    }
+  }
+  Serial.printf("[HX711] probe: %d sampel siap dalam 3 dtk %s\n", nReady,
+                nReady == 0 ? "-> HARDWARE (cek GND/VCC/kabel, code tak bisa bantu)"
+                            : "-> HX711 kirim data, sensor hidup");
+
   timbangan.set_scale(HX_SCALE);
   timbangan.tare(20); // titik nol diambil sekali per boot
   Serial.println("[HX711] Tare selesai (platform kosong).");

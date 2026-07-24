@@ -33,6 +33,9 @@ void lampMati() {
 // warna: 'H' = HIJAU, 'K' = KUNING, 'M' = MERAH
 void lampNyala(char warna) {
   lampMati(); // matikan semua dulu, baru nyalakan satu
+#if !LAMP_ENABLED
+  return; // debugging: relay dibiarkan OFF, warna diabaikan
+#endif
   switch (warna) {
     case 'H': digitalWrite(PIN_LAMP_HIJAU,  RELAY_ON); break;
     case 'K': digitalWrite(PIN_LAMP_KUNING, RELAY_ON); break;

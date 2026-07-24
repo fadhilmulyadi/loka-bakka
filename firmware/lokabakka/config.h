@@ -55,16 +55,19 @@
 #define PIN_HX_SCK   32   // HX711 SCK → TB-D 3A
 #define PIN_TRIG     26   // HC-SR04 TRIG → TB-B 3A
 #define PIN_ECHO     34   // HC-SR04 ECHO ← TB-C 2A (input-only, 3,3V via divider)
-#define PIN_SD_CS    15   // microSD CS (SPI berbagi bus dengan TFT, MISO di 19)
 
 // ==== Mode Uji Tanpa Sensor ====
 // 1 = HX711 & HC-SR04 tidak disentuh sama sekali, pengukuran memakai angka
 // tetap di bawah. Dipakai untuk menguji alur layar, skoring server, lampu, dan
 // struk sebelum sensor terpasang. Lihat skenario.md di akar proyek.
 // WAJIB kembali ke 0 setelah sensor asli dipasang.
-#define SENSOR_DUMMY 1
+#define SENSOR_DUMMY 0
 #define DUMMY_BB     12.4f
 #define DUMMY_TB     85.0f
+
+// 1 = lampu status aktif normal. 0 = lampu dimatikan total (relay tak pernah ON)
+// — dipakai saat sesi debugging biar tidak berisik klik relay. Balik ke 1 nanti.
+#define LAMP_ENABLED 0
 
 // ==== Kalibrasi Sensor (§15) — WAJIB disetel per unit alat ====
 //

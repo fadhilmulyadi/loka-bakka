@@ -38,8 +38,7 @@ Setelah sensor terpasang, kembalikan ke `#define SENSOR_DUMMY 0`.
 3. Di alat: pilih kategori dengan tombol **merah**, konfirmasi dengan **hijau**.
 4. Alat "mengukur" (langsung keluar angka dummy), tekan **hijau** untuk lanjut.
 5. Untuk ibu hamil, jawab 5 pertanyaan. Untuk anak, langsung terkirim.
-6. Periksa: kategori di layar, warna lampu, isi struk, dan baris baru di
-   `/pengukuran.jsonl` pada kartu SD.
+6. Periksa: kategori di layar, warna lampu, dan isi struk.
 
 Server mencocokkan hasil ke **sesi "menunggu" paling baru** untuk device ini
 (`app/api/device/selesai/route.ts:41`). Jadi buat satu sesi, uji, selesaikan —
@@ -167,9 +166,6 @@ Setiap skenario di atas sekaligus menguji rantai penuhnya:
 - Pemetaan kategori ke lampu (`lamps.h:50`)
 - Skoring di server, keduanya (`stunting-calc.ts`, `risiko-kehamilan-calc.ts`)
 - Pencetakan struk
-- Penyimpanan ke kartu SD — periksa `/pengukuran.jsonl` bertambah satu baris
-  tiap pengukuran, termasuk objek `jawaban` untuk kategori ibu
 
 Untuk menguji layar gagal: matikan hotspot sebelum menekan hijau di layar ukur.
-Alat harus menampilkan layar gagal, dan barisnya **tetap tersimpan di SD**
-karena penulisan terjadi sebelum pengiriman.
+Alat harus menampilkan layar gagal.
