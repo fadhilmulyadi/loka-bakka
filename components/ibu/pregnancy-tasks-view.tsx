@@ -9,45 +9,38 @@ const C = 2 * Math.PI * R
 const TASKS = [
   {
     id: 0,
-    icon: 'fe',
-    name: 'Minum tablet tambah darah / Fe (zat besi)',
-    note: 'Membantu mencegah kurang darah (anemia) sehingga ibu senantiasa bugar, serta melindungi tubuh untuk proses persalinan yang optimal. (Konsumsi sesuai petunjuk dokter)',
-    pts: 20,
+    icon: 'makan',
+    name: 'Makan sesuai gizi seimbang',
+    note: 'Semua unsur terpenuhi: makanan pokok, protein hewani, protein nabati, sayur, dan buah — termasuk makanan tambahan / porsi ekstra bagi ibu KEK.',
+    pts: 40,
   },
   {
     id: 1,
-    icon: 'folat',
-    name: 'Minum tablet asam folat',
-    note: 'Mengoptimalkan pertumbuhan otak dan tulang belakang janin agar berkembang sehat dan sempurna. (Minum sesuai anjuran dokter)',
-    pts: 20,
+    icon: 'fe',
+    name: 'Minum Tablet Tambah Darah (TTD)',
+    note: '1 tablet diminum sesuai jadwal hari itu. TTD umumnya sudah kombinasi zat besi + asam folat, jadi satu tablet memenuhi kebutuhan keduanya.',
+    pts: 25,
   },
   {
     id: 2,
-    icon: 'kalsium',
-    name: 'Kalsium dan Vitamin D',
-    note: 'Berfungsi membangun tulang dan gigi janin. (Minum sesuai anjuran dokter)',
-    pts: 20,
+    icon: 'air',
+    name: 'Minum air putih cukup',
+    note: 'Tercapai 8–12 gelas (2–3 liter) dalam sehari.',
+    pts: 15,
   },
   {
     id: 3,
     icon: 'aktivitas',
-    name: 'Aktivitas fisik ringan',
-    note: 'Jalan kaki 30 menit, senam hamil, yoga, atau renang yang aman.',
-    pts: 20,
+    name: 'Menjaga aktivitas & istirahat',
+    note: 'Beraktivitas ringan (jalan kaki, senam hamil) dilengkapi istirahat yang cukup.',
+    pts: 15,
   },
   {
     id: 4,
-    icon: 'makan',
-    name: 'Makan makanan bergizi',
-    note: 'Makan 3x sehari yang dilengkapi protein hewani (telur/ikan/ayam), sayur, dan buah segar untuk mengoptimalkan kesehatan ibu dan tumbuh kembang janin.',
-    pts: 10,
-  },
-  {
-    id: 5,
-    icon: 'tidur',
-    name: 'Tidur cukup (7–9 jam)',
-    note: 'Tidur malam yang cukup mendukung hormon pertumbuhan janin.',
-    pts: 10,
+    icon: 'kebersihan',
+    name: 'Menjaga kebersihan diri',
+    note: 'Mandi dan gosok gigi minimal 2x sehari.',
+    pts: 5,
   },
 ]
 
@@ -89,10 +82,18 @@ function TaskIcon({ icon }: { icon: string }) {
           <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
         </svg>
       )
-    case 'tidur':
+    case 'air':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+          <path d="M12 2.7c3.5 4 7 7.2 7 11.3a7 7 0 0 1-14 0c0-4.1 3.5-7.3 7-11.3Z" />
+        </svg>
+      )
+    case 'kebersihan':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 22h10a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2Z" />
+          <path d="M8 11V6a4 4 0 0 1 8 0" />
+          <path d="M9 16h6" />
         </svg>
       )
     default:
@@ -177,7 +178,7 @@ export default function PregnancyTasksView() {
               {!allDone ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-[30px] font-bold leading-none tracking-tight">{score}</span>
-                  <span className="text-[11px] font-medium opacity-80 mt-0.5">/100 Poin</span>
+                  <span className="text-[11px] font-medium opacity-80 mt-0.5">/100%</span>
                 </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -192,7 +193,7 @@ export default function PregnancyTasksView() {
             <div className="flex-1 min-w-0">
               <div className="text-[11px] font-medium opacity-85">Skor Aktif Harian</div>
               <div className="text-[17px] font-semibold mt-0.5 leading-[1.25]">
-                <b className="font-bold">{doneCount}</b> dari 6 tugas selesai
+                <b className="font-bold">{doneCount}</b> dari {TASKS.length} tugas selesai
               </div>
               <div className="mt-2.5 h-[7px] rounded-full bg-white/20 overflow-hidden">
                 <div
@@ -204,7 +205,7 @@ export default function PregnancyTasksView() {
                 <svg className="w-[13px] h-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
-                {score} poin terkumpul
+                {score}% tercapai
               </span>
             </div>
           </div>
@@ -282,7 +283,7 @@ export default function PregnancyTasksView() {
                     ? 'bg-[#1178D4] text-white border-[#1178D4]'
                     : 'bg-[#E7F2FB] text-[#1178D4] border-[#C4DDF5]'
                 }`}>
-                  +{task.pts}
+                  {task.pts}%
                 </span>
               </button>
             )

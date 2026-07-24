@@ -32,12 +32,31 @@ const EDU_DATA = [
                 <span className="font-semibold text-[#0A487F]">Asam Folat:</span> Berperan vital mencegah cacat tabung saraf otak pada janin. Ibu bisa mendapatkannya dari sayuran hijau (bayam, broccoli), kacang-kacangan, dan telur.
               </li>
               <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
-                <span className="font-semibold text-[#0A487F]">Zat Besi (Tablet Tambah Darah/TTD):</span> Mencegah Ibu dari anemia. Jika Ibu mengalami anemia di awal kehamilan, aliran oksigen dan makanan ke janin akan terhambat, meningkatkan risiko stunting sejak di rahim. Minumlah 1 TTD setiap hari.
+                <span className="font-semibold text-[#0A487F]">Zat Besi (Tablet Tambah Darah/TTD):</span> Mencegah Ibu dari anemia. Jika Ibu mengalami anemia di awal kehamilan, aliran oksigen dan makanan ke janin akan terhambat, meningkatkan risiko stunting sejak di rahim. Minumlah 1 TTD setiap hari. Tips mengurangi mual: minum TTD di malam hari sebelum tidur dengan air putih atau air jeruk (vitamin C membantu penyerapan). Jangan minum bersama teh atau kopi karena zat gizi akan terbuang.
               </li>
             </ul>
+            <p className="mt-3">Pada trimester 1, kebutuhan porsi makan harian Ibu adalah 5 porsi makanan pokok, 4 porsi protein hewani, 4 porsi protein nabati, 4 porsi sayur, dan 4 porsi buah. Contoh takaran per porsi:</p>
+            <ul className="list-none flex flex-col gap-2 mt-2.5">
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Makanan pokok:</span> 1 porsi = ¾ gelas nasi (100 g), atau 3 buah jagung ukuran sedang (125 g), atau 2 kentang ukuran sedang (210 g), atau 3 iris roti putih (70 g).
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Protein hewani:</span> 1 porsi = 1 potong sedang ikan (50 g) atau 1 butir telur ayam (55 g).
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Protein nabati:</span> 1 porsi = 1 potong sedang tempe (50 g) atau 2 potong sedang tahu (100 g).
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Sayur:</span> 1 porsi = 1 mangkuk sayur matang tanpa kuah (100 g).
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Buah:</span> 1 porsi = 1 potong sedang pisang (100 g) atau 1 potong besar pepaya (100–190 g).
+              </li>
+            </ul>
+            <p className="mt-3">Konsumsi asam folat dan zat besi harian Ibu di atas akan lebih optimal terserap bila dilengkapi porsi makan seimbang ini setiap hari.</p>
           </>
         ),
-        tip: 'Jangan lupa minum 1 Tablet Tambah Darah sebelum tidur malam ini!'
+        tip: 'Jangan lupa minum Tablet Tambah Darah dan konsumsi makanan gizi!'
       },
       {
         icon: <ClipboardCheck className="w-[23px] h-[23px]" />,
@@ -47,10 +66,10 @@ const EDU_DATA = [
             <p>Saat berkunjung ke Posyandu, Kader Kesehatan akan mengukur LILA (Lingkar Lengan Atas) dan kadar HB (Hemoglobin) Ibu. Mari pahami artinya:</p>
             <ul className="list-none flex flex-col gap-2 mt-2.5">
               <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
-                <span className="font-semibold text-[#0A487F]">LILA Normal (≥ 23,5 cm):</span> Menandakan energi Ibu cukup untuk mendukung pertumbuhan berat badan janin.
+                <span className="font-semibold text-[#0A487F]">LILA Normal (≥ 23,5 cm):</span> Menandakan energi Ibu cukup untuk mendukung pertumbuhan berat badan janin. Jika &lt; 23,5 cm, Ibu termasuk kategori Kurang Energi Kronis (KEK) dan berhak mendapatkan Makanan Tambahan (PMT) dari Puskesmas.
               </li>
               <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
-                <span className="font-semibold text-[#0A487F]">HB Normal (≥ 11 gr/dL):</span> Menandakan sel darah merah Ibu sehat.
+                <span className="font-semibold text-[#0A487F]">HB Normal (≥ 11 gr/dL):</span> Menandakan sel darah merah Ibu sehat. Jika &lt; 11 gr/dL, Ibu mengalami anemia dan membutuhkan pengawasan gizi lebih ketat agar janin tidak lahir dengan berat rendah (BBLR).
               </li>
             </ul>
           </>
@@ -66,7 +85,12 @@ const EDU_DATA = [
       {
         icon: <Droplets className="w-[23px] h-[23px]" />,
         title: 'Fase Nyaman dan Kebutuhan Energi Ekstra (+300 Kkal)',
-        body: 'Kabar baik, Ibu! Memasuki minggu ke-13, gejala mual biasanya mulai mereda dan nafsu makan Ibu kembali pulih. Ini adalah fase pertumbuhan cepat bagi janin. Janin mulai bisa bergerak, mendengar suara Ibu, dan ukurannya bertambah panjang dengan cepat. Karena janin tumbuh pesat, Ibu membutuhkan tambahan energi sebesar +300 Kkal setiap hari (setara dengan makan 1 porsi kecil nasi ditambah 1 potong ikan lokal atau telur rebus sebagai selingan). Penuhilah dengan protein hewani, bukan makanan ringan tinggi gula atau tepung kosong.',
+        body: (
+          <>
+            <p>Kabar baik, Ibu! Memasuki minggu ke-13, gejala mual biasanya mulai mereda dan nafsu makan Ibu kembali pulih. Ini adalah fase pertumbuhan cepat bagi janin. Janin mulai bisa bergerak, mendengar suara Ibu, dan ukurannya bertambah panjang dengan cepat. Karena janin tumbuh pesat, Ibu membutuhkan tambahan energi sebesar +300 Kkal setiap hari (setara dengan makan 1 porsi kecil nasi ditambah 1 potong ikan lokal atau telur rebus sebagai selingan). Penuhilah dengan protein hewani, bukan makanan ringan tinggi gula atau tepung kosong.</p>
+            <p className="mt-3">Memasuki trimester 2, porsi makanan pokok naik menjadi 6 porsi/hari (setara 6 × ¾ gelas nasi/100 g, atau dikombinasi dengan 3 buah jagung sedang/125 g, 2 kentang sedang/210 g, atau 3 iris roti putih/70 g), sementara protein hewani, protein nabati, sayur, dan buah tetap masing-masing 4 porsi/hari. Batasi konsumsi garam maksimal 1 sendok teh/hari dan cukupi minum air putih 8–12 gelas/hari.</p>
+          </>
+        ),
         tip: 'Manfaatkan pulihnya nafsu makan Ibu untuk mengonsumsi protein hewani berkualitas tinggi.'
       },
       {
@@ -90,7 +114,7 @@ const EDU_DATA = [
       {
         icon: <Heart className="w-[23px] h-[23px]" />,
         title: 'Menuju Hari Kelahiran: Puncak Pemenuhan Nutrisi Otak',
-        body: 'Ibu sudah berada di garis akhir! Pada trimester ketiga, berat badan janin akan meningkat hingga dua kali lipat, dan jaringan otaknya sedang mengalami pematangan akhir. Ibu membutuhkan tambahan energi hingga +400 Kkal per hari. Fokuskan makanan pada lemak sehat dan asam lemak esensial (seperti ikan bandeng, ikan cakalang, atau telur) untuk mendukung kecerdasan otak janin. Selain itu, mulailah menghitung gerakan janin secara mandiri. Janin yang sehat akan bergerak minimal 10 kali dalam waktu 12 jam.',
+        body: 'Ibu sudah berada di garis akhir! Pada trimester ketiga, berat badan janin akan meningkat hingga dua kali lipat, dan jaringan otaknya sedang mengalami pematangan akhir. Ibu membutuhkan tambahan energi hingga +400 Kkal per hari. Fokuskan makanan pada lemak sehat dan asam lemak esensial (seperti ikan bandeng, ikan cakalang, atau telur) untuk mendukung kecerdasan otak janin. Kebutuhan porsi harian pada trimester 3 sama dengan trimester 2, yaitu 6 porsi makanan pokok, 4 porsi protein hewani, 4 porsi protein nabati, 4 porsi sayur, dan 4 porsi buah per hari. Batasi konsumsi garam maksimal 1 sendok teh/hari dan cukupi minum air putih 8–12 gelas/hari untuk mencegah bengkak dan mendukung volume cairan ketuban. Selain itu, mulailah menghitung gerakan janin secara mandiri. Janin yang sehat akan bergerak minimal 10 kali dalam waktu 12 jam.',
         tip: 'Janin yang aktif bergerak menandakan pasokan oksigen dan gizi dari Ibu berjalan lancar.'
       },
       {
@@ -109,6 +133,9 @@ const EDU_DATA = [
               </li>
               <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:bg-[#ED5610] before:rotate-45">
                 Air ketuban merembes atau pecah sebelum waktunya.
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:bg-[#ED5610] before:rotate-45">
+                Gerakan bayi di dalam rahim berkurang drastis atau tidak terasa.
               </li>
             </ul>
           </>
