@@ -241,8 +241,16 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
             )}
 
             {tab === "alat" && sessionId && !hasilSelesai && (
-              <div className="rounded-xl bg-[#F7FBFF] px-4 py-3 text-[13px] text-muted-foreground text-center">
-                Menunggu alat menyelesaikan pengukuran…
+              <div className="flex items-center gap-3 rounded-xl bg-[#F7FBFF] px-4 py-3">
+                <span
+                  className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[#C9E4F7] border-t-[#1178D4]"
+                  role="status"
+                  aria-label="Memuat"
+                />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium text-[#173753]">Menunggu alat menyelesaikan pengukuran…</p>
+                  <p className="text-[11px] text-muted-foreground">Timbang pasien di alat, hasil akan muncul otomatis di sini.</p>
+                </div>
               </div>
             )}
 
