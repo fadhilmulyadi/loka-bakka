@@ -106,8 +106,8 @@ export async function POST(request: Request) {
     }
 
     await db.update(sesiPengukuran).set({
-      nilaiBerat: Number(bb),
-      nilaiTinggi: Number(tb),
+      nilaiBerat: Math.round(Number(bb) * 10) / 10,
+      nilaiTinggi: Math.round(Number(tb) * 10) / 10,
       jawaban: kategori === "ibu" ? (jawaban as JawabanKuesioner) : null,
       statusHasil: "selesai",
       kategoriHasil,

@@ -83,7 +83,7 @@ export function hitungRisikoIbu(input: {
 }
 
 export const edukasiIbu: Record<KategoriRisiko, string> = {
-  RENDAH: "Kondisi kehamilan Bunda baik. BB, Hb, dan LILA normal. Tetap minum tablet Fe, makan protein 3 kali sehari, dan rutin ke posyandu.",
-  SEDANG: "Ada kondisi (Hb, BB, atau LILA) yang belum ideal. Segera hubungi kader/bidan minggu ini, rutin minum tablet Fe, dan penuhi target kenaikan BB.",
-  TINGGI: "Beberapa faktor risiko muncul bersamaan. Bukan berarti janin pasti stunting, tapi perlu segera ditangani. Segera periksa ke puskesmas terdekat!",
+  RENDAH: "Kondisi kehamilan baik dan tumbuh kembang janin terpantau normal, tetap konsumsi tablet tambah darah, lauk protein, dan rutin ke posyandu/puskesmas agar kondisi ini terus terjaga.",
+  SEDANG: "Terdapat kondisi (Hb/berat badan/LILA) yang belum ideal, sehingga perlu segera ke kader/bidan minggu ini, rutin minum tablet tambah darah, dan makan bergizi agar janin tumbuh optimal.",
+  TINGGI: "Beberapa faktor risiko (Hb rendah, LILA kurang, berat badan tidak naik) muncul bersamaan dan berpotensi menghambat pertumbuhan janin jika tidak segera ditangani di posyandu/puskesmas terdekat.",
 }

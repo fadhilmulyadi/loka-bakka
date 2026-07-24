@@ -72,7 +72,7 @@ export const stuntingColor: Record<StuntingStatus, string> = {
 }
 
 export const stuntingEdukasi: Record<StuntingStatus, string> = {
-  normal: "Tinggi badan sesuai usia. Pertahankan gizi seimbang dan rutin timbang di posyandu tiap bulan.",
-  risiko_stunting: "Terindikasi stunting. Konsultasikan dengan bidan/petugas gizi dan pantau ketat tiap bulan.",
-  stunting: "Stunting berat. Segera rujuk ke puskesmas untuk pemeriksaan dan penanganan lanjutan.",
+  normal: "Tinggi badan anak sesuai standar (tumbuh normal), lanjutkan pola makan bergizi dan rutin timbang di posyandu.",
+  risiko_stunting: "Tinggi badan anak mulai di bawah standar (cenderung pendek), segera ke kader/bidan dan tambah asupan protein.",
+  stunting: "Anak terindikasi stunting (sangat pendek untuk usianya), segera periksakan ke posyandu atau puskesmas untuk penanganan lanjutan.",
 }
