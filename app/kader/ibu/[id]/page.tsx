@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils"
 import { getCached, setCached, KADER_STATS_KEY } from "@/lib/client-cache"
 import { getIbuById, getDashboardStats } from "@/lib/actions/kader"
 import { calculateGestationalAge, calculateHPL } from "@/lib/pregnancy-utils"
-import { imtCategoryLabel, type IMTCategory } from "@/lib/growth-standards/imt-calc"
+import { type IMTCategory } from "@/lib/growth-standards/imt-calc"
 import { BBChart } from "@/components/ibu/bb-chart"
 import { TrimesterPill } from "@/components/ibu/trimester-pill"
 import { hitungRisikoIbu, hitungSkorKuesioner, type JawabanKuesioner } from "@/lib/growth-standards/risiko-kehamilan-calc"
@@ -300,11 +300,6 @@ export default function IbuProfilePage() {
                       <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">
                         Kurva Kenaikan Berat Badan
                       </CardTitle>
-                      <p className="text-[11px] text-[#697079] mt-1">
-                        Zona hijau = target IMT {imtCategoryLabel[ibu.pregnancyProfile.imtCategory as IMTCategory]} sebelum hamil
-                        {" "}({ibu.pregnancyProfile.imtPrepregnancy.toFixed(1).replace(".", ",")} kg/m²)
-                        {ibu.pregnancyProfile.jumlahJanin >= 2 ? ", kehamilan ganda" : ""}.
-                      </p>
                     </CardHeader>
                     <CardContent className="px-5 pb-5">
                       <BBChart
