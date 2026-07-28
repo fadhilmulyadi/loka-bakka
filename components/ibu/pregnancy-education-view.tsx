@@ -88,7 +88,21 @@ const EDU_DATA = [
         body: (
           <>
             <p>Kabar baik, Ibu! Memasuki minggu ke-13, gejala mual biasanya mulai mereda dan nafsu makan Ibu kembali pulih. Ini adalah fase pertumbuhan cepat bagi janin. Janin mulai bisa bergerak, mendengar suara Ibu, dan ukurannya bertambah panjang dengan cepat. Karena janin tumbuh pesat, Ibu membutuhkan tambahan energi sebesar +300 Kkal setiap hari (setara dengan makan 1 porsi kecil nasi ditambah 1 potong ikan lokal atau telur rebus sebagai selingan). Penuhilah dengan protein hewani, bukan makanan ringan tinggi gula atau tepung kosong.</p>
-            <p className="mt-3">Memasuki trimester 2, porsi makanan pokok naik menjadi 6 porsi/hari (setara 6 × ¾ gelas nasi/100 g, atau dikombinasi dengan 3 buah jagung sedang/125 g, 2 kentang sedang/210 g, atau 3 iris roti putih/70 g), sementara protein hewani, protein nabati, sayur, dan buah tetap masing-masing 4 porsi/hari. Batasi konsumsi garam maksimal 1 sendok teh/hari dan cukupi minum air putih 8–12 gelas/hari.</p>
+            <p className="mt-3">Memasuki trimester 2, porsi makanan pokok naik menjadi 6 porsi/hari (setara 6 × ¾ gelas nasi/100 g, atau dikombinasi dengan 3 buah jagung sedang/125 g, 2 kentang sedang/210 g, atau 3 iris roti putih/70 g), sementara protein hewani, protein nabati, sayur, dan buah tetap masing-masing 4 porsi/hari. Contoh:</p>
+            <ul className="list-none flex flex-col gap-2 mt-2.5">
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Protein hewani:</span> 1 porsi = 1 potong sedang ikan (50 g) atau 1 butir telur ayam (55 g).
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Protein nabati:</span> 1 porsi = 1 potong sedang tempe (50 g) atau 2 potong sedang tahu (100 g).
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Buah:</span> 1 porsi = 1 potong sedang pisang (100 g) atau 1 potong besar pepaya (100–190 g), bisa divariasikan dengan jeruk ukuran sedang atau mangga sesuai ketersediaan pangan lokal.
+              </li>
+              <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-1.5 before:h-1.5 before:rounded-full before:bg-[#1E9E62]">
+                <span className="font-semibold text-[#0A487F]">Garam & air putih:</span> batasi konsumsi garam maksimal 1 sendok teh/hari dan cukupi minum air putih 8–12 gelas/hari.
+              </li>
+            </ul>
           </>
         ),
         tip: 'Manfaatkan pulihnya nafsu makan Ibu untuk mengonsumsi protein hewani berkualitas tinggi.'
