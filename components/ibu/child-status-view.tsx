@@ -3,10 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Activity, Check, AlertTriangle, Flame, RefreshCw } from 'lucide-react'
 import { getIbuAnakDetail } from '@/lib/actions/ibu'
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
-} from 'recharts'
+import GrowthChart from '@/components/ibu/growth-chart'
 
 type AnakDetail = NonNullable<Awaited<ReturnType<typeof getIbuAnakDetail>>>
 
@@ -179,10 +176,11 @@ export default function ChildStatusView({ childId }: { childId: string }) {
   const gaugeColor = { rendah: '#1E9E62', sedang: '#F2B705', tinggi: '#E0524E' }[level]
   const s = STATUS_INFO[level]
 
-  const chartData = [...anak.visits].reverse().map((v) => ({
-    label: `${v.usiaBulan}bln`,
-    bb: v.bb,
+  const chartData = anak.visits.map((v) => ({
+    usiaBulan: v.usiaBulan,
     tb: v.tb,
+    status: v.status,
+    tanggal: v.tanggal,
   }))
 
   return (
@@ -331,35 +329,8 @@ export default function ChildStatusView({ childId }: { childId: string }) {
               <h2 className="text-[14px] font-semibold text-[#1F2937]">Grafik Pertumbuhan</h2>
             </div>
             <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mb-4">
-              <p className="text-[11px] text-[#697079] mb-3">Berat badan per kunjungan posyandu</p>
-              <div className="h-[160px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="childBBGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1178D4" stopOpacity={0.18} />
-                        <stop offset="95%" stopColor="#1178D4" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f4f8" />
-                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#989DA3' }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: '#989DA3' }} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      formatter={(value) => [
-                        typeof value === 'number' ? `${value.toFixed(1)} kg` : value,
-                        'Berat Badan',
-                      ]}
-                      contentStyle={{ borderRadius: 12, border: '1px solid #E4EDE7', fontSize: 12 }}
-                    />
-                    <Area
-                      type="monotone" dataKey="bb" stroke="#1178D4" strokeWidth={2.5}
-                      fill="url(#childBBGrad)"
-                      dot={{ r: 4, fill: '#1178D4', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <p className="text-[11px] text-[#697079] mb-3">Tinggi badan per kunjungan posyandu</p>
+              <GrowthChart points={chartData} />
             </section>
           </>
         )}

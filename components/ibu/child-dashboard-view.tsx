@@ -289,10 +289,18 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
         {childData.pengukurans && childData.pengukurans.length > 0 && (
           <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mt-5">
             <h3 className="text-[14px] font-bold text-[#1F2937] mb-1">Grafik Pertumbuhan</h3>
-            <p className="text-[11px] text-[#697079] mb-3">Berat dan tinggi badan per kunjungan</p>
+            <p className="text-[11px] text-[#697079] mb-3">Tinggi badan per kunjungan posyandu</p>
             <GrowthChart
-              pengukurans={childData.pengukurans}
-              jenisKelamin={childData.jenisKelamin}
+              points={childData.pengukurans.map(p => {
+                const birth = new Date(childData.tanggalLahir)
+                const visit = new Date(p.tanggal)
+                return {
+                  usiaBulan: (visit.getFullYear() - birth.getFullYear()) * 12 + (visit.getMonth() - birth.getMonth()),
+                  tb: p.tinggiBadan,
+                  status: p.statusTBU,
+                  tanggal: visit.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                }
+              })}
             />
           </section>
         )}
