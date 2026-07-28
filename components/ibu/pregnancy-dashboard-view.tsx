@@ -24,21 +24,21 @@ const STATUS_MESSAGES: Record<RiskLevel, {
     bg: 'bg-[#E7F7EF]', border: 'border-[#C3E9D4]',
     iconBg: 'bg-[#1E9E62]', textColor: 'text-[#0E6B3E]',
     Icon: Check,
-    label: 'Normal',
+    label: 'Risiko Rendah',
     message: 'Saat ini, Bunda berada di Status Aman! Kondisi yang sangat ideal untuk tumbuh kembang janin. Pertahankan, ya!',
   },
   sedang: {
     bg: 'bg-[#FFF7E6]', border: 'border-[#F4E2BC]',
     iconBg: 'bg-[#D99100]', textColor: 'text-[#8A6100]',
     Icon: AlertTriangle,
-    label: 'Pra Stunting',
+    label: 'Risiko Sedang',
     message: 'Kenaikan BB Bunda perlu lebih diperhatikan. Waktunya fokus pada asupan nutrisi harian, jangan lupa makan ekstra protein hewani, ya Bunda.',
   },
   tinggi: {
     bg: 'bg-[#FEF1F1]', border: 'border-[#F6D2D2]',
     iconBg: 'bg-[#DC2626]', textColor: 'text-[#9F1C1C]',
     Icon: Flame,
-    label: 'Stunting',
+    label: 'Risiko Tinggi',
     message: 'Saat ini, Bunda berada di Status Risiko Tinggi. Jangan ditunda, mari jadwalkan periksa ke fasilitas kesehatan terdekat untuk penanganan yang tepat!',
   },
 }
@@ -46,8 +46,8 @@ const STATUS_MESSAGES: Record<RiskLevel, {
 // Taksonomi yang sama dengan STATUS_MESSAGES di atas, supaya badge riwayat dan
 // warna titik grafik ikut satu sumber warna di lib/status-styles.
 function visitStatus(v: Pick<PregnancyVisitData, 'lilaCm' | 'hbGdl' | 'isOnTrack'>): string {
-  if (v.lilaCm < 23.5 || v.hbGdl < 11) return 'Stunting'
-  return v.isOnTrack ? 'Normal' : 'Pra Stunting'
+  if (v.lilaCm < 23.5 || v.hbGdl < 11) return 'Risiko Tinggi'
+  return v.isOnTrack ? 'Risiko Rendah' : 'Risiko Sedang'
 }
 
 function formatDateShort(date: Date | string): string {
@@ -324,7 +324,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                 <GrowthChart
                   unit="kg"
                   valueLabel="Berat Badan"
-                  legend={['Normal', 'Pra Stunting', 'Stunting']}
+                  legend={['Risiko Rendah', 'Risiko Sedang', 'Risiko Tinggi']}
                   points={visits.map(v => {
                     const week = calculateGestationalAge(new Date(profile.hpht), new Date(v.visitDate))
                     return {
@@ -390,7 +390,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                   <s.Icon className="w-[20px] h-[20px] text-white" strokeWidth={2.2} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className={`text-[13px] font-bold ${s.textColor} leading-tight flex items-center gap-2`}>
+                  <div className={`text-[13px] font-semibold ${s.textColor} leading-tight flex items-center gap-2`}>
                     {s.label}
                     <span className={`text-[8px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white/70 ${s.textColor}`}>SAAT INI</span>
                   </div>

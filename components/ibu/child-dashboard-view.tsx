@@ -354,21 +354,19 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
 
         {/* STATUS NOTIF */}
         <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
-          <h2 className="text-[15px] font-semibold text-[#1F2937]">Pesan Harian</h2>
+          <h2 className="text-[15px] font-semibold text-[#1F2937]">Status Kesehatan Anak</h2>
         </div>
-        <div className="space-y-2.5">
-          <div className={`flex gap-3 items-start p-3 rounded-[14px] border ${s.border} ${s.bg}`}>
-            <div className={`shrink-0 w-[30px] h-[30px] rounded-[9px] ${s.iconBg} flex items-center justify-center`}>
-              <s.Icon className="w-[17px] h-[17px] text-white" strokeWidth={2.3} />
+        <div className={`flex gap-3 items-start p-4 rounded-[18px] border ${s.border} ${s.bg} shadow-[0_4px_14px_-8px_rgba(9,30,66,0.10)]`}>
+          <div className={`shrink-0 w-[38px] h-[38px] rounded-[12px] ${s.iconBg} flex items-center justify-center shadow-[0_4px_10px_-4px_rgba(9,30,66,0.25)]`}>
+            <s.Icon className="w-[20px] h-[20px] text-white" strokeWidth={2.2} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className={`text-[13px] font-semibold ${s.textColor} leading-tight flex items-center gap-2`}>
+              {s.label}
+              <span className={`text-[8px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white/70 ${s.textColor}`}>SAAT INI</span>
             </div>
-            <div className="min-w-0">
-              <div className={`text-[13px] font-semibold ${s.textColor} leading-tight flex items-center gap-2`}>
-                {s.label}
-                <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white opacity-80">SAAT INI</span>
-              </div>
-              <div className="text-[13px] font-normal text-[#4C545F] mt-1 leading-relaxed">
-                {s.message}
-              </div>
+            <div className="text-[12px] font-normal text-[#4C545F] mt-1.5 leading-[1.55] text-pretty">
+              {s.message}
             </div>
           </div>
         </div>
