@@ -738,6 +738,8 @@ export function TambahPasienModal({ open, onOpenChange, onSaved }: TambahPasienM
           nama: anakForm.nama,
           sex: anakForm.jenisKelamin,
           birth: anakForm.tanggalLahir,
+          beratLahirKg: anakForm.beratLahirKg || undefined,
+          panjangLahirCm: anakForm.panjangLahirCm || undefined,
         })
       }
 
