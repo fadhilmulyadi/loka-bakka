@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { device } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { device, sesiPengukuran } from "@/lib/db/schema";
+import { and, asc, eq } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
@@ -32,6 +32,35 @@ export async function POST(request: Request) {
         nama: "Alat ESP32", // Default name
         lastSeen: new Date(),
       });
+    }
+
+    // Struk hasil input manual dititipkan di sini oleh savePengukuran. Job baru
+    // dilepas kalau alat mengaku sedang diam di menu (siap_cetak), karena
+    // mencetak butuh mematikan WiFi dan tidak boleh memotong pengukuran yang
+    // sedang jalan. Dilepas sekali: statusnya langsung ditutup supaya heartbeat
+    // berikutnya tidak mencetak struk yang sama dua kali.
+    if (body.siap_cetak === true) {
+      const job = await db.query.sesiPengukuran.findFirst({
+        where: and(eq(sesiPengukuran.deviceId, id), eq(sesiPengukuran.statusHasil, "cetak")),
+        orderBy: [asc(sesiPengukuran.createdAt)],
+      });
+      if (job) {
+        await db.update(sesiPengukuran)
+          .set({ statusHasil: "selesai" })
+          .where(eq(sesiPengukuran.id, job.id));
+
+        return NextResponse.json({
+          success: true,
+          cetak: {
+            namaPasien: job.namaPasien,
+            tanggal: job.createdAt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+            bb: job.nilaiBerat,
+            tb: job.nilaiTinggi,
+            kategoriHasil: job.kategoriHasil,
+            teksEdukasi: job.teksEdukasi,
+          },
+        });
+      }
     }
 
     return NextResponse.json({ success: true });

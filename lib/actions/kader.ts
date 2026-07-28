@@ -2,13 +2,13 @@
 
 import { randomInt } from "crypto"
 import { db } from "@/lib/db/client"
-import { posyandu, ibu, anak, pengukuran, pregnancyProfile, pregnancyVisit, skriningShamil } from "@/lib/db/schema"
+import { posyandu, ibu, anak, pengukuran, pregnancyProfile, pregnancyVisit, skriningShamil, sesiPengukuran } from "@/lib/db/schema"
 import { eq, and, desc, asc, inArray, notInArray, gte, count } from "drizzle-orm"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
 import { calculateIMT, getIMTCategory, getIOMTargets } from "@/lib/growth-standards/imt-calc"
-import { calcHeightZScore, statusAnak, stuntingLabel, type StatusAnak } from "@/lib/growth-standards/stunting-calc"
+import { calcHeightZScore, statusAnak, stuntingLabel, stuntingEdukasi, type StatusAnak } from "@/lib/growth-standards/stunting-calc"
 import {
   hitungRisikoIbu, hitungSkorKuesioner,
   type ImtCategory, type JawabanKuesioner, type KategoriRisiko,
@@ -857,6 +857,9 @@ export async function savePengukuran(data: {
   anakId: string
   beratBadan: number
   tinggiBadan: number
+  /** Hanya untuk input manual. Jalur alat sudah mencetak struknya sendiri di
+   *  LAYAR_HASIL, jadi mengantre lagi di sini akan menghasilkan struk dobel. */
+  cetakStruk?: boolean
 }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
@@ -913,6 +916,23 @@ export async function savePengukuran(data: {
       ageMonths,
       statusGizi: statusGizi !== "Normal" ? statusGizi : "berat badan turun",
       bbTurunBerturut,
+    })
+  }
+
+  // Struk hanya bisa keluar dari printer ESP32, dan alat tidak punya jalur
+  // apa pun untuk menerima angka yang diketik di web. Jadi hasilnya dititipkan
+  // sebagai antrian; heartbeat alat (tiap 8 detik) yang menjemputnya.
+  if (data.cetakStruk) {
+    await db.insert(sesiPengukuran).values({
+      deviceId: "esp32-01", // satu alat; sama dengan default di /api/pengukuran/mulai
+      kategori: "anak",
+      anakId: data.anakId,
+      nilaiBerat: data.beratBadan,
+      nilaiTinggi: data.tinggiBadan,
+      statusHasil: "cetak",
+      kategoriHasil: statusGizi.toUpperCase(), // "Pra Stunting" -> "PRA STUNTING"
+      teksEdukasi: stuntingEdukasi[zTBU.status],
+      namaPasien: anakRow.nama,
     })
   }
 
