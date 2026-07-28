@@ -20,27 +20,126 @@ const STATUS_INFO = {
   rendah: {
     label: 'Normal',
     bg: 'bg-[#E7F7EF]', border: 'border-[#C3E9D4]',
-    iconBg: 'bg-[#1E9E62]', textColor: 'text-[#0E6B3E]',
+    iconBg: 'bg-[#1E9E62]', textColor: 'text-[#0E6B3E]', dot: '#1E9E62',
     Icon: Check,
   },
   sedang: {
     label: 'Pra Stunting',
     bg: 'bg-[#FFF7E6]', border: 'border-[#F4E2BC]',
-    iconBg: 'bg-[#D99100]', textColor: 'text-[#8A6100]',
+    iconBg: 'bg-[#D99100]', textColor: 'text-[#8A6100]', dot: '#D99100',
     Icon: AlertTriangle,
   },
   tinggi: {
     label: 'Stunting',
     bg: 'bg-[#FEF1F1]', border: 'border-[#F6D2D2]',
-    iconBg: 'bg-[#DC2626]', textColor: 'text-[#9F1C1C]',
+    iconBg: 'bg-[#DC2626]', textColor: 'text-[#9F1C1C]', dot: '#DC2626',
     Icon: Flame,
   },
 }
 
-const STATUS_MESSAGES: Record<string, (nama: string) => string> = {
-  rendah: (nama) => `Tinggi badan ${nama} sesuai dengan usianya (Normal). Pertumbuhan si kecil terpantau baik. Pertahankan pola makan bergizi dan rutin ke posyandu, ya Bunda!`,
-  sedang: (nama) => `Pertumbuhan ${nama} masuk kategori perlu perhatian (gizi kurang / risiko stunting). Tingkatkan asupan protein hewani dan pantau kenaikan berat tiap bulan, ya Bunda.`,
-  tinggi: (nama) => `Tinggi badan ${nama} jauh di bawah standar usianya (stunting / gizi buruk). Jangan ditunda, segera konsultasi ke puskesmas untuk penanganan dan program makanan tambahan (PMT).`,
+type EduSection = {
+  heading: string
+  body?: string
+  items?: { lead?: string; text: string }[]
+}
+
+const STATUS_EDU: Record<string, {
+  intro: (nama: string) => string
+  sections: EduSection[]
+  closing: string
+}> = {
+  rendah: {
+    intro: (nama) => `Kabar baik! Hasil pemeriksaan hari ini menunjukkan tinggi badan ${nama} sesuai dengan usianya. Tumbuh kembangnya berjalan dengan baik dan tidak ada tanda gangguan pertumbuhan untuk saat ini. Tapi ingat, kondisi ini perlu terus dijaga karena tumbuh kembang anak berubah setiap bulannya.`,
+    sections: [
+      {
+        heading: 'Apa itu kategori normal?',
+        body: 'Sederhananya, tinggi badan anak masuk dalam rentang yang sehat untuk usianya berdasarkan standar WHO. Ini tanda bahwa asupan gizi dan pola pengasuhannya selama ini sudah berjalan dengan baik.',
+      },
+      {
+        heading: 'Hal yang perlu dijaga',
+        items: [
+          { text: 'Lanjutkan ASI eksklusif hingga 6 bulan, lalu mulai MPASI yang bervariasi dan bergizi seperti buah dan sayur.' },
+          { text: 'Ajak anak bermain aktif setiap hari untuk mendukung tumbuh kembang motorik dan otaknya.' },
+          { text: 'Tetap rutin ke posyandu setiap bulan meskipun anak terlihat sehat-sehat saja.' },
+        ],
+      },
+      {
+        heading: 'Hal yang perlu diwaspadai',
+        body: 'Kondisi baik sekarang bukan jaminan seterusnya aman. Perhatikan jika nafsu makan anak tiba-tiba turun drastis dalam waktu lama, sering sakit berulang, atau tinggi badannya tidak bertambah selama 2 bulan berturut-turut.',
+      },
+    ],
+    closing: 'Normal bukan berarti bisa santai sepenuhnya. Justru ini saatnya mempertahankan hal baik dan tetap pantau setiap bulan!',
+  },
+  sedang: {
+    intro: (nama) => `Hasil pemeriksaan menunjukkan tinggi badan ${nama} sedikit di bawah ideal untuk usianya. Belum masuk stunting, tapi perlu segera diperhatikan sebelum kondisinya semakin jauh dari angka normal.`,
+    sections: [
+      {
+        heading: 'Apa itu pra-stunting?',
+        body: 'Artinya pertumbuhan anak mulai melambat dari yang seharusnya. Biasanya hal ini terjadi karena faktor yang sudah berlangsung beberapa waktu, seperti asupan gizi yang kurang mencukupi, sering sakit, atau pola makan yang kurang bervariasi.',
+      },
+      {
+        heading: 'Hal yang sering jadi penyebab',
+        items: [
+          {
+            lead: 'Pemberian ASI dan MPASI yang tidak tepat.',
+            text: 'ASI tidak eksklusif pada 0–6 bulan membuat anak kehilangan zat gizi penting dan lebih rentan infeksi. MPASI yang terlalu dini atau terlambat, serta hanya terdiri dari karbohidrat tanpa protein hewani (telur, ayam, ikan, hati), membuat anak kenyang tapi tetap kekurangan zat gizi untuk membangun jaringan tubuh. Frekuensi dan tekstur MPASI yang tidak sesuai usia juga membuat asupan kalori dan protein kurang.',
+          },
+          {
+            lead: 'Sakit berulang.',
+            text: 'ISPA dan diare yang sering membuat seluruh energi dan zat gizi difokuskan untuk penyembuhan, bukan untuk pertumbuhan fisik. Cegah dengan menjaga kebersihan tangan serta lingkungan sekitar, imunisasi lengkap, dan segera ke puskesmas jika sakit tidak membaik dalam 2–3 hari.',
+          },
+          {
+            lead: 'Susah makan atau porsi terlalu sedikit.',
+            text: 'Anak yang kurang makan dalam waktu lama tidak mendapat cukup energi dan zat gizi untuk tumbuh. Coba variasikan tampilan makanan agar menarik, dan hindari memaksa anak makan karena justru dapat membuatnya semakin menolak.',
+          },
+        ],
+      },
+      {
+        heading: 'Hal yang perlu dilakukan sekarang',
+        items: [
+          { text: 'Hubungi kader posyandu minggu ini untuk mendapat panduan makanan tambahan (PMT) yang sesuai usia anak.' },
+          { text: 'Catat pola makan anak selama seminggu dan konsultasikan ke bidan atau petugas gizi.' },
+          { text: 'Fokus perbaiki satu faktor yang paling terlihat bermasalah dulu, lakukan secara konsisten.' },
+        ],
+      },
+    ],
+    closing: 'Pra-stunting masih bisa kembali ke normal kalau ditangani dari sekarang. Jangan tunda dan jangan lupa melakukan tugas harian!',
+  },
+  tinggi: {
+    intro: (nama) => `Hasil pemeriksaan menunjukkan tinggi badan ${nama} jauh di bawah standar untuk usianya. Ini artinya pertumbuhannya sudah terhambat cukup lama dan butuh penanganan yang tidak bisa ditunda.`,
+    sections: [
+      {
+        heading: 'Apa itu stunting?',
+        body: 'Stunting bukan sekadar soal tubuh yang pendek. Ini tanda bahwa anak sudah kekurangan gizi dalam waktu yang cukup panjang, yang berdampak tidak hanya pada tinggi badannya tapi juga pada perkembangan otak, daya tahan tubuh, dan potensinya ke depan.',
+      },
+      {
+        heading: 'Kenapa tidak boleh ditunda?',
+        body: 'Pertumbuhan anak punya jendela waktu yang terbatas. Setiap bulan yang terlewat tanpa penanganan berarti ada potensi tumbuh kembang yang tidak bisa dikembalikan. Anak yang mengalami stunting memang berisiko menghadapi tantangan lebih besar ke depannya, tapi dengan intervensi yang tepat dan konsisten mulai sekarang, dampaknya masih dapat diminimalkan.',
+      },
+      {
+        heading: '3 langkah dalam 3 hari ke depan',
+        items: [
+          {
+            lead: 'Pertama, bawa anak ke posyandu.',
+            text: 'Kondisi ini perlu dievaluasi langsung oleh tenaga kesehatan. Tunjukkan hasil pemeriksaan ini ke dokter atau ahli gizi untuk menentukan apakah anak perlu program makanan tambahan (PMT) atau pemeriksaan lanjutan.',
+          },
+          {
+            lead: 'Kedua, perbaiki asupan gizi.',
+            text: 'Berikan protein hewani setiap hari seperti telur, hati ayam, ikan, daging, dan susu. Pastikan anak makan 3 kali sehari plus 1–2 kali camilan bergizi. Jika disarankan dokter, berikan suplemen vitamin A atau multivitamin sesuai anjuran.',
+          },
+          {
+            lead: 'Ketiga, perbaiki pola asuh dan lingkungan.',
+            text: 'Pastikan sanitasi dan air bersih, cuci tangan pakai sabun, lengkapi imunisasi anak, serta ajak anak bermain, berbicara, dan berinteraksi.',
+          },
+        ],
+      },
+      {
+        heading: 'Segera ke fasilitas kesehatan jika anak mengalami',
+        body: 'Berat badan turun drastis dalam waktu singkat, tidak mau makan atau minum sama sekali lebih dari 24 jam, terlihat sangat lemas dan tidak responsif, kaki atau perut bengkak, atau diare dan muntah yang tidak berhenti.',
+      },
+    ],
+    closing: 'Stunting bukan akhir segalanya. Anak yang stunting tetap punya kesempatan tumbuh lebih baik dengan gizi yang tepat dan konsisten. Yang paling penting sekarang: jangan diam dan jangan tunda.',
+  },
 }
 
 export default function ChildStatusView({ childId }: { childId: string }) {
@@ -173,18 +272,52 @@ export default function ChildStatusView({ childId }: { childId: string }) {
               <span className="flex-none w-5 h-5 rounded-full bg-[#1178D4] text-white text-[11px] font-bold flex items-center justify-center font-mono">2</span>
               <h2 className="text-[14px] font-semibold text-[#1F2937]">Status Kondisi Anak</h2>
             </div>
-            <div className={`flex gap-3 items-start p-4 rounded-[18px] border ${s.border} ${s.bg} shadow-[0_4px_14px_-8px_rgba(9,30,66,0.10)] mb-4`}>
-              <div className={`shrink-0 w-[38px] h-[38px] rounded-[12px] ${s.iconBg} flex items-center justify-center`}>
-                <s.Icon className="w-[20px] h-[20px] text-white" strokeWidth={2.2} />
+            <div className={`p-4 rounded-[18px] border ${s.border} ${s.bg} shadow-[0_4px_14px_-8px_rgba(9,30,66,0.10)] mb-4`}>
+              <div className="flex gap-3 items-start">
+                <div className={`shrink-0 w-[38px] h-[38px] rounded-[12px] ${s.iconBg} flex items-center justify-center`}>
+                  <s.Icon className="w-[20px] h-[20px] text-white" strokeWidth={2.2} />
+                </div>
+                <div className="min-w-0">
+                  <div className={`text-[13px] font-bold ${s.textColor} leading-tight flex items-center gap-2`}>
+                    {s.label}
+                    <span className="text-[8px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white/70 opacity-80">SAAT INI</span>
+                  </div>
+                  <div className="text-[12px] font-normal text-[#4C545F] mt-1 leading-[1.55]">
+                    {STATUS_EDU[level].intro(anak.nama)}
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <div className={`text-[13px] font-bold ${s.textColor} leading-tight flex items-center gap-2`}>
-                  {s.label}
-                  <span className="text-[8px] font-bold tracking-widest px-2 py-0.5 rounded-full bg-white/70 opacity-80">SAAT INI</span>
-                </div>
-                <div className="text-[12px] font-normal text-[#4C545F] mt-1 leading-[1.55]">
-                  {STATUS_MESSAGES[level](anak.nama)}
-                </div>
+
+              <div className="mt-4 flex flex-col gap-3.5">
+                {STATUS_EDU[level].sections.map((sec) => (
+                  <div key={sec.heading}>
+                    <div className={`text-[12px] font-bold ${s.textColor} leading-tight`}>{sec.heading}</div>
+                    {sec.body && (
+                      <p className="text-[12px] text-[#4C545F] mt-1 leading-[1.55]">{sec.body}</p>
+                    )}
+                    {sec.items && (
+                      <ul className="mt-1.5 flex flex-col gap-1.5">
+                        {sec.items.map((item, i) => (
+                          <li key={i} className="relative pl-[16px] text-[12px] text-[#4C545F] leading-[1.55]">
+                            <span
+                              className="absolute left-0 top-[7px] w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: s.dot }}
+                            />
+                            {item.lead && <span className={`font-semibold ${s.textColor}`}>{item.lead} </span>}
+                            {item.text}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className={`mt-4 rounded-[13px] border ${s.border} bg-white/70 px-3 py-2.5`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${s.textColor}`}>Ingat ya</span>
+                <p className="text-[12px] font-medium text-[#4C545F] mt-0.5 leading-[1.55]">
+                  {STATUS_EDU[level].closing}
+                </p>
               </div>
             </div>
           </>
