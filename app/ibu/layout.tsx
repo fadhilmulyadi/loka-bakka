@@ -1,5 +1,8 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
+import { eq } from "drizzle-orm"
+import { db } from "@/lib/db/client"
+import { ibu } from "@/lib/db/schema"
 import { IbuNavWrapper } from "@/components/ibu-nav-wrapper"
 
 export default async function IbuLayout({
@@ -8,8 +11,19 @@ export default async function IbuLayout({
   children: React.ReactNode
 }) {
   const session = await auth()
-  
+
   if (!session || session.user.role !== "ibu") {
+    redirect("/login")
+  }
+
+  // Sesi ibu adalah JWT tanpa state, jadi cookie tetap sah walau baris Ibu-nya
+  // sudah hilang (mis. setelah seed ulang). Tanpa cek ini setiap halaman ibu
+  // jatuh ke kartu "Data tidak tersedia" dan tidak pernah pulih sendiri.
+  const account = await db.query.ibu.findFirst({
+    where: eq(ibu.id, session.user.id),
+    columns: { id: true },
+  })
+  if (!account) {
     redirect("/login")
   }
 
