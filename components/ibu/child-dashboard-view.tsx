@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import GrowthChart from '@/components/ibu/growth-chart'
+import { getStatusStyle } from '@/lib/status-styles'
 import { IbuNotificationBell, type IbuNotifItem } from '@/components/ibu/notification-bell'
 import type { getIbuNotifications } from '@/lib/actions/notifikasi'
 
@@ -287,60 +288,68 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
 
         {/* Growth Chart section */}
         {childData.pengukurans && childData.pengukurans.length > 0 && (
-          <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mt-5">
-            <h3 className="text-[14px] font-bold text-[#1F2937] mb-1">Grafik Pertumbuhan</h3>
-            <p className="text-[11px] text-[#697079] mb-3">Tinggi badan per kunjungan posyandu</p>
-            <GrowthChart
-              points={childData.pengukurans.map(p => {
-                const birth = new Date(childData.tanggalLahir)
-                const visit = new Date(p.tanggal)
-                return {
-                  usiaBulan: (visit.getFullYear() - birth.getFullYear()) * 12 + (visit.getMonth() - birth.getMonth()),
-                  tb: p.tinggiBadan,
-                  status: p.statusTBU,
-                  tanggal: visit.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-                }
-              })}
-            />
-          </section>
+          <>
+            <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
+              <h2 className="text-[15px] font-semibold text-[#1F2937]">Grafik Tinggi Badan</h2>
+            </div>
+            <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
+              <GrowthChart
+                unit="cm"
+                valueLabel="Tinggi Badan"
+                legend={['Normal', 'Pra Stunting', 'Stunting']}
+                points={childData.pengukurans.map(p => {
+                  const birth = new Date(childData.tanggalLahir)
+                  const visit = new Date(p.tanggal)
+                  const usiaBulan =
+                    (visit.getFullYear() - birth.getFullYear()) * 12 + (visit.getMonth() - birth.getMonth())
+                  return {
+                    order: usiaBulan,
+                    label: `${usiaBulan} bln`,
+                    value: p.tinggiBadan,
+                    status: p.statusTBU,
+                    caption: visit.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  }
+                })}
+              />
+            </section>
+          </>
         )}
 
         {/* VISIT HISTORY */}
         {childData.pengukurans && childData.pengukurans.length > 0 && (
-          <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mt-5">
-            <h3 className="text-[14px] font-bold text-[#1F2937] mb-3">Riwayat Kunjungan</h3>
-            <div className="flex flex-col gap-2">
-              {[...childData.pengukurans]
-                .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
-                .slice(0, 5)
-                .map((p, i) => {
-                  const statusColor =
-                    p.statusTBU === 'Normal'
-                      ? { bg: '#E7F7EF', text: '#1E9E62' }
-                      : p.statusTBU === 'Pra Stunting'
-                      ? { bg: '#FFF7E6', text: '#8A6100' }
-                      : { bg: '#FEF1F1', text: '#9F1C1C' }
-                  return (
-                    <div key={i} className="flex items-center justify-between p-3 bg-[#F8FBFE] border border-[#E4EDE7] rounded-[13px]">
-                      <div>
-                        <div className="text-[12px] font-semibold text-[#1F2937]">
-                          {new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </div>
-                        <div className="text-[11px] text-[#697079] mt-0.5">
-                          {p.beratBadan.toFixed(1)} kg &bull; {p.tinggiBadan.toFixed(1)} cm &bull; Z-Score: {p.zScoreTBU.toFixed(1)}
-                        </div>
-                      </div>
-                      <span
-                        className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold"
-                        style={{ backgroundColor: statusColor.bg, color: statusColor.text }}
-                      >
-                        {p.statusTBU}
-                      </span>
-                    </div>
-                  )
-                })}
+          <>
+            <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
+              <h2 className="text-[15px] font-semibold text-[#1F2937]">Riwayat Kunjungan</h2>
             </div>
-          </section>
+            <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
+              <div className="flex flex-col gap-2">
+                {[...childData.pengukurans]
+                  .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+                  .slice(0, 5)
+                  .map((p, i) => {
+                    const style = getStatusStyle(p.statusTBU)
+                    return (
+                      <div key={i} className="flex items-center justify-between p-3 bg-[#F8FBFE] border border-[#E4EDE7] rounded-[13px]">
+                        <div>
+                          <div className="text-[12px] font-semibold text-[#1F2937]">
+                            {new Date(p.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </div>
+                          <div className="text-[11px] text-[#697079] mt-0.5">
+                            {p.beratBadan.toFixed(1)} kg &bull; {p.tinggiBadan.toFixed(1)} cm &bull; Z-Score: {p.zScoreTBU.toFixed(1)}
+                          </div>
+                        </div>
+                        <span
+                          className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold"
+                          style={{ backgroundColor: style.bg, color: style.text }}
+                        >
+                          {p.statusTBU}
+                        </span>
+                      </div>
+                    )
+                  })}
+              </div>
+            </section>
+          </>
         )}
 
         {/* STATUS NOTIF */}

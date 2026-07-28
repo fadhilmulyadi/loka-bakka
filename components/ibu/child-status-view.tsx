@@ -177,10 +177,11 @@ export default function ChildStatusView({ childId }: { childId: string }) {
   const s = STATUS_INFO[level]
 
   const chartData = anak.visits.map((v) => ({
-    usiaBulan: v.usiaBulan,
-    tb: v.tb,
+    order: v.usiaBulan,
+    label: `${v.usiaBulan} bln`,
+    value: v.tb,
     status: v.status,
-    tanggal: v.tanggal,
+    caption: v.tanggal,
   }))
 
   return (
@@ -326,11 +327,15 @@ export default function ChildStatusView({ childId }: { childId: string }) {
           <>
             <div className="flex items-center gap-2 mx-0.5 mb-3">
               <span className="flex-none w-5 h-5 rounded-full bg-[#1178D4] text-white text-[11px] font-bold flex items-center justify-center font-mono">3</span>
-              <h2 className="text-[14px] font-semibold text-[#1F2937]">Grafik Pertumbuhan</h2>
+              <h2 className="text-[14px] font-semibold text-[#1F2937]">Grafik Tinggi Badan</h2>
             </div>
             <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)] mb-4">
-              <p className="text-[11px] text-[#697079] mb-3">Tinggi badan per kunjungan posyandu</p>
-              <GrowthChart points={chartData} />
+              <GrowthChart
+                points={chartData}
+                unit="cm"
+                valueLabel="Tinggi Badan"
+                legend={['Normal', 'Pra Stunting', 'Stunting']}
+              />
             </section>
           </>
         )}

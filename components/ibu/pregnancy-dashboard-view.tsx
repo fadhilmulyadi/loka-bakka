@@ -7,10 +7,12 @@ import {
   CheckSquare, User, RefreshCw, TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
-import { BBChart } from '@/components/ibu/bb-chart'
+import GrowthChart from '@/components/ibu/growth-chart'
 import { IbuNotificationBell, type IbuNotifItem } from '@/components/ibu/notification-bell'
 import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 import type { getIbuNotifications } from '@/lib/actions/notifikasi'
+import { getStatusStyle } from '@/lib/status-styles'
+import { calculateGestationalAge } from '@/lib/pregnancy-utils'
 
 import { hitungRisikoIbu, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 
@@ -39,6 +41,13 @@ const STATUS_MESSAGES: Record<RiskLevel, {
     label: 'Stunting',
     message: 'Saat ini, Bunda berada di Status Risiko Tinggi. Jangan ditunda, mari jadwalkan periksa ke fasilitas kesehatan terdekat untuk penanganan yang tepat!',
   },
+}
+
+// Taksonomi yang sama dengan STATUS_MESSAGES di atas, supaya badge riwayat dan
+// warna titik grafik ikut satu sumber warna di lib/status-styles.
+function visitStatus(v: Pick<PregnancyVisitData, 'lilaCm' | 'hbGdl' | 'isOnTrack'>): string {
+  if (v.lilaCm < 23.5 || v.hbGdl < 11) return 'Stunting'
+  return v.isOnTrack ? 'Normal' : 'Pra Stunting'
 }
 
 function formatDateShort(date: Date | string): string {
@@ -315,7 +324,21 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                 </span>
               </div>
               <div className="w-full">
-                <BBChart profile={profile} visits={visits} nama="BB Anda" />
+                <GrowthChart
+                  unit="kg"
+                  valueLabel="Berat Badan"
+                  legend={['Normal', 'Pra Stunting', 'Stunting']}
+                  points={visits.map(v => {
+                    const week = calculateGestationalAge(new Date(profile.hpht), new Date(v.visitDate))
+                    return {
+                      order: week,
+                      label: `${week} mg`,
+                      value: v.currentWeightKg,
+                      status: visitStatus(v),
+                      caption: new Date(v.visitDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    }
+                  })}
+                />
               </div>
               <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#E4EDE7] text-[10.5px] text-[#697079] font-medium leading-[1.4] text-pretty">
                 <Check className="w-[14px] h-[14px] shrink-0 text-[#1E9E62]" />
@@ -331,36 +354,31 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
               <h2 className="text-[15px] font-semibold text-[#1F2937]">Riwayat Kunjungan</h2>
             </div>
-            <section className="bg-white border border-[#E4EDE7] rounded-[18px] px-4 py-1 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
-              {visits.map((v, i) => {
-                const isBad = v.lilaCm < 23.5 || v.hbGdl < 11;
-                const badgeLabel = isBad ? 'Stunting' : (v.isOnTrack ? 'Sesuai Target' : 'Perlu Perhatian');
-                const badgeClass = isBad 
-                  ? 'bg-[#FEF1F1] text-[#9F1C1C]' 
-                  : (v.isOnTrack ? 'bg-[#E7F7EF] text-[#1E9E62]' : 'bg-[#FFF7E6] text-[#A77400]');
-
-                const vDate = new Date(v.visitDate);
-                const day = vDate.getDate().toString().padStart(2, '0');
-                const month = vDate.toLocaleDateString('id-ID', { month: 'short' });
-
-                return (
-                  <div key={v.id} className="flex items-center gap-3 py-3 border-b border-[#E4EDE7] last:border-b-0">
-                    <div className="shrink-0 w-10 text-center">
-                      <div className="text-[16px] font-bold text-[#1F2937] leading-none">{day}</div>
-                      <div className="text-[9px] font-semibold text-[#697079] uppercase mt-0.5">{month}</div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-semibold text-[#1F2937]">{v.currentWeightKg} kg</div>
-                      <div className="text-[10.5px] font-medium text-[#697079] mt-0.5">
-                        +{v.weightGainKg} kg dari awal
+            <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
+              <div className="flex flex-col gap-2">
+                {visits.slice(0, 5).map((v) => {
+                  const status = visitStatus(v)
+                  const style = getStatusStyle(status)
+                  return (
+                    <div key={v.id} className="flex items-center justify-between p-3 bg-[#F8FBFE] border border-[#E4EDE7] rounded-[13px]">
+                      <div>
+                        <div className="text-[12px] font-semibold text-[#1F2937]">
+                          {new Date(v.visitDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </div>
+                        <div className="text-[11px] text-[#697079] mt-0.5">
+                          {v.currentWeightKg.toFixed(1)} kg &bull; {v.weightGainKg >= 0 ? '+' : '−'}{Math.abs(v.weightGainKg).toFixed(1)} kg dari sebelum hamil
+                        </div>
                       </div>
+                      <span
+                        className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold"
+                        style={{ backgroundColor: style.bg, color: style.text }}
+                      >
+                        {status}
+                      </span>
                     </div>
-                    <span className={`shrink-0 text-[9px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${badgeClass}`}>
-                      {badgeLabel}
-                    </span>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </section>
           </>
         )}

@@ -7,15 +7,22 @@ import {
 import { getStatusStyle } from '@/lib/status-styles'
 
 export interface GrowthPoint {
-  usiaBulan: number
-  tb: number
+  /** dipakai untuk mengurutkan titik, bukan untuk ditampilkan */
+  order: number
+  label: string
+  value: number
   status: string
-  tanggal: string
+  caption: string
 }
 
-// ponytail: tinggi badan saja, sama seperti grafik kader. Berat badan tidak
-// dipakai untuk menilai stunting, jadi tidak ada toggle metrik di sini.
-export default function GrowthChart({ points }: { points: GrowthPoint[] }) {
+// ponytail: satu grafik untuk anak (tinggi badan) dan ibu (berat badan).
+// Berat badan anak tidak dipakai menilai stunting, jadi tidak ada toggle metrik.
+export default function GrowthChart({ points, unit, valueLabel, legend }: {
+  points: GrowthPoint[]
+  unit: string
+  valueLabel: string
+  legend: string[]
+}) {
   if (points.length < 2) {
     return (
       <div className="flex flex-col items-center justify-center h-[160px] text-center gap-2">
@@ -25,9 +32,7 @@ export default function GrowthChart({ points }: { points: GrowthPoint[] }) {
     )
   }
 
-  const data = [...points]
-    .sort((a, b) => a.usiaBulan - b.usiaBulan)
-    .map(p => ({ ...p, label: `${p.usiaBulan} bln` }))
+  const data = [...points].sort((a, b) => a.order - b.order)
 
   return (
     <div>
@@ -35,23 +40,23 @@ export default function GrowthChart({ points }: { points: GrowthPoint[] }) {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
             <defs>
-              <linearGradient id="childTBGrad" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#1178D4" stopOpacity={0.18} />
                 <stop offset="95%" stopColor="#1178D4" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f4f8" />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#989DA3' }} tickLine={false} axisLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#989DA3' }} tickLine={false} axisLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: '#989DA3' }} tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
             <Tooltip
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null
-                const d = payload[0].payload as typeof data[number]
+                const d = payload[0].payload as GrowthPoint
                 return (
                   <div style={{ fontSize: 11, borderRadius: 12, border: '1px solid #E4EDE7', background: 'white', padding: '8px 10px' }}>
-                    <div style={{ fontWeight: 600, color: '#1F2937', marginBottom: 4 }}>{d.tanggal}</div>
+                    <div style={{ fontWeight: 600, color: '#1F2937', marginBottom: 4 }}>{d.caption}</div>
                     <div style={{ color: '#697079' }}>
-                      Tinggi Badan: <span style={{ fontWeight: 700, color: '#1F2937' }}>{d.tb.toFixed(1)} cm</span>
+                      {valueLabel}: <span style={{ fontWeight: 700, color: '#1F2937' }}>{d.value.toFixed(1)} {unit}</span>
                     </div>
                     <div style={{ color: '#697079', marginTop: 2 }}>
                       Status: <span style={{ fontWeight: 600, color: getStatusStyle(d.status).text }}>{d.status}</span>
@@ -62,10 +67,10 @@ export default function GrowthChart({ points }: { points: GrowthPoint[] }) {
             />
             <Area
               type="monotone"
-              dataKey="tb"
+              dataKey="value"
               stroke="#1178D4"
               strokeWidth={2.5}
-              fill="url(#childTBGrad)"
+              fill="url(#growthGrad)"
               dot={(props) => {
                 const { cx, cy, index } = props as { cx: number; cy: number; index: number }
                 return (
@@ -87,7 +92,7 @@ export default function GrowthChart({ points }: { points: GrowthPoint[] }) {
       </div>
 
       <div className="flex items-center gap-3 mt-2 justify-center flex-wrap">
-        {['Normal', 'Pra Stunting', 'Stunting'].map(s => (
+        {legend.map(s => (
           <span key={s} className="flex items-center gap-1.5 text-[10px] text-[#697079]">
             <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: getStatusStyle(s).dot }} />
             {s}
