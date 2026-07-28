@@ -340,10 +340,6 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                   })}
                 />
               </div>
-              <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-[#E4EDE7] text-[10.5px] text-[#697079] font-medium leading-[1.4] text-pretty">
-                <Check className="w-[14px] h-[14px] shrink-0 text-[#1E9E62]" />
-                Pantau terus kenaikan BB Anda setiap kunjungan ke Posyandu.
-              </div>
             </section>
           </>
         )}
