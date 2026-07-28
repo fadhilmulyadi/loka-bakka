@@ -43,6 +43,24 @@ const CHILD_EDU_DATA = [
           </ul>
         ),
         tip: 'Susui kapan pun bayi mau, siang dan malam. Sering menyusu membuat ASI makin banyak.'
+      },
+      {
+        icon: <ShieldCheck className="w-[23px] h-[23px]" />,
+        title: 'Kebersihan Menyusui & Lingkungan Bayi',
+        body: (
+          <ul className="list-none flex flex-col gap-2.5 mt-2.5">
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Tangan bersih:</span> pastikan tangan Bunda dicuci dengan sabun sebelum menyusui atau menyiapkan MPASI dini.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Alat makan bayi:</span> cuci botol dan dot secara rutin agar tetap higienis.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Hindari asap rokok:</span> jauhkan bayi dari asap rokok dan udara kotor di rumah, karena ISPA pada bayi dapat mengganggu pertumbuhan sejak dini.
+            </li>
+          </ul>
+        ),
+        tip: 'Bayi belum punya daya tahan kuat, kebersihan orang di sekitarnya adalah perlindungan utamanya.'
       }
     ]
   },
@@ -88,6 +106,24 @@ const CHILD_EDU_DATA = [
           </ul>
         ),
         tip: 'Tetapkan jadwal makan yang teratur agar si kecil belajar mengenal rasa lapar dan kenyang.'
+      },
+      {
+        icon: <ShieldCheck className="w-[23px] h-[23px]" />,
+        title: 'Sanitasi MPASI & Mulai Kenal Kebersihan Diri',
+        body: (
+          <ul className="list-none flex flex-col gap-2.5 mt-2.5">
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Cuci tangan:</span> selalu cuci tangan sebelum menyiapkan dan memberikan MPASI, karena makanan yang terkontaminasi adalah salah satu penyebab diare pada fase ini.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Air matang & layak:</span> pastikan air minum dan air untuk mengolah makanan berasal dari sumber yang matang dan layak.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Area bermain bersih:</span> bersihkan lantai dan mainan dari benda yang berpotensi kotor, karena bayi mulai bereksplorasi dengan tangan dan mulut.
+            </li>
+          </ul>
+        ),
+        tip: 'Diare berulang menguras gizi si kecil. Mencegahnya sama pentingnya dengan memberi MPASI bergizi.'
       },
       {
         icon: <Utensils className="w-[23px] h-[23px]" />,
@@ -136,6 +172,24 @@ const CHILD_EDU_DATA = [
           </ul>
         ),
         tip: 'Pastikan piring si kecil tetap bergizi seimbang dengan protein hewani.'
+      },
+      {
+        icon: <ShieldCheck className="w-[23px] h-[23px]" />,
+        title: 'Memutus Rantai Infeksi Berulang (Sanitasi Lingkungan)',
+        body: (
+          <ul className="list-none flex flex-col gap-2.5 mt-2.5">
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Cegah diare & ISPA:</span> infeksi yang berulang dapat menghentikan pertumbuhan fisik, karena energi tubuh dialihkan hanya untuk melawan penyakit, bukan untuk tumbuh.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Mulai budaya cuci tangan:</span> meski masih dibantu orang tua, biasakan anak mencuci tangan pakai sabun di air mengalir sebelum makan dan setelah bermain di luar rumah.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Jaga area bermain:</span> terutama saat anak mulai berjalan dan menjelajah area yang lebih luas seperti halaman atau gang sekitar rumah.
+            </li>
+          </ul>
+        ),
+        tip: 'Anak yang jarang sakit punya lebih banyak energi untuk tumbuh tinggi.'
       },
       {
         icon: <Heart className="w-[23px] h-[23px]" />,
@@ -200,6 +254,27 @@ const CHILD_EDU_DATA = [
           </ul>
         ),
         tip: 'Isi piringku membantu Bunda memastikan semua gizi anak terpenuhi.'
+      },
+      {
+        icon: <ShieldCheck className="w-[23px] h-[23px]" />,
+        title: 'Kemandirian Sanitasi & Kebiasaan Higienis',
+        body: (
+          <ul className="list-none flex flex-col gap-2.5 mt-2.5">
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Cuci tangan mandiri:</span> latih anak mencuci tangan sendiri pakai sabun di air mengalir sebelum makan, setelah bermain di luar rumah, dan setelah dari kamar mandi.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Cegah ISPA:</span> hindarkan anak dari asap rokok, asap dapur, dan udara berdebu, serta pastikan ventilasi rumah memadai. ISPA berulang di usia ini tetap mengalihkan energi tubuh dari pertumbuhan ke perlawanan infeksi.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Kenalkan konsep kuman:</span> jelaskan bahwa ada kuman yang tidak terlihat, agar anak paham alasan mencuci tangan, bukan sekadar rutinitas.
+            </li>
+            <li className="relative pl-[18px] text-[12.5px] text-[#4C545F] leading-relaxed before:content-[''] before:absolute before:left-0.5 before:top-2 before:w-[7px] before:h-[7px] before:rounded-full before:bg-[#0F6CBF]">
+              <span className="font-semibold text-[#0A487F]">Pakai alas kaki:</span> biasakan anak beralas kaki saat bermain di luar rumah untuk mencegah infeksi cacing atau parasit melalui tanah.
+            </li>
+          </ul>
+        ),
+        tip: 'Anak yang paham alasannya akan menjaga kebersihan sendiri, bahkan saat tidak diawasi.'
       },
       {
         icon: <Frown className="w-[23px] h-[23px]" />,
