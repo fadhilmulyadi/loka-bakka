@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
 import { sesiPengukuran, anak, ibu } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gt } from "drizzle-orm";
 import { calcHeightZScore, stuntingLabel, stuntingEdukasi } from "@/lib/growth-standards/stunting-calc";
 import {
   hitungSkorKuesioner,
@@ -38,8 +38,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
+    // Alat tidak tahu pasiennya siapa — ia hanya menempel ke sesi menunggu
+    // terbaru milik device ini. Tanpa batas umur, sesi yang ditinggal kader
+    // (modal ditutup, browser mati) tetap jadi sasaran berjam-jam kemudian dan
+    // hasil timbangan bisa masuk ke anak yang salah.
+    const BATAS_SESI_MS = 15 * 60_000;
     const sesi = await db.query.sesiPengukuran.findFirst({
-      where: and(eq(sesiPengukuran.deviceId, device_id), eq(sesiPengukuran.statusHasil, "menunggu")),
+      where: and(
+        eq(sesiPengukuran.deviceId, device_id),
+        eq(sesiPengukuran.statusHasil, "menunggu"),
+        gt(sesiPengukuran.createdAt, new Date(Date.now() - BATAS_SESI_MS)),
+      ),
       orderBy: [desc(sesiPengukuran.createdAt)],
     });
 
