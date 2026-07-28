@@ -298,7 +298,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
               Data diperbarui setiap kunjungan rutin.
             </span>
             <Link href="/ibu/status" className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[13px] bg-gradient-to-br from-[#2B93E6] to-[#1178D4] text-white text-[14px] font-semibold shadow-[0_10px_20px_-8px_rgba(17,120,212,0.7)] active:scale-95 transition-all">
-              Lihat Perkembangan BB <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
+              Lihat Status <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
             </Link>
           </div>
         </section>
@@ -308,9 +308,6 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
           <>
             <div className="flex items-center justify-between mt-5 mb-2.5 px-0.5">
               <h2 className="text-[15px] font-semibold text-[#1F2937]">Grafik Berat Badan</h2>
-              <Link href="/ibu/status" className="text-[12px] font-semibold text-[#1178D4] flex items-center gap-0.5">
-                Lihat Status <ChevronRight className="w-[13px] h-[13px]" strokeWidth={2.4} />
-              </Link>
             </div>
             <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
               <div className="flex items-end justify-between gap-2.5 mb-2.5">

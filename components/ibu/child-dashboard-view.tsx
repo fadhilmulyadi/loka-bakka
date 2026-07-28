@@ -278,10 +278,10 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
           <div className="flex items-center justify-between gap-2.5 mt-4">
             <span className="flex items-center gap-1.5 text-[11px] text-[#989DA3] font-normal leading-tight max-w-[135px]">
               <RefreshCw className="w-3 h-3 shrink-0" />
-              Data diperbarui tiap kunjungan.
+              Data diperbarui setiap kunjungan rutin.
             </span>
             <Link href={`/ibu/status?child=${childData.id}`} className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[13px] bg-gradient-to-br from-[#2B93E6] to-[#1178D4] text-white text-[14px] font-semibold shadow-[0_10px_20px_-8px_rgba(17,120,212,0.7)] active:scale-95 transition-all">
-              Cek Status <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
+              Lihat Status <ChevronRight className="w-4 h-4" strokeWidth={2.2} />
             </Link>
           </div>
         </section>
