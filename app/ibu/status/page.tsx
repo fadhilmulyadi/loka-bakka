@@ -60,17 +60,25 @@ function StatusContent() {
     </div>
   )
 
-  if (!ibuData.isPregnant) return (
-    <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white">
-      <div className="w-16 h-16 rounded-full bg-[#F1F7FE] flex items-center justify-center mb-4">
-        <span className="text-3xl">👶</span>
+  // Ibu yang tidak hamil langsung melihat status anak pertamanya, mengikuti
+  // pola dashboard (app/ibu/dashboard/page.tsx) yang juga jatuh ke tampilan
+  // anak. Tanpa ini tab Status jadi jalan buntu, karena bottom nav di URL
+  // tanpa ?child= adalah IbuBottomNav yang menaut ke /ibu/status polos.
+  if (!ibuData.isPregnant) {
+    if (ibuData.childData) return <ChildStatusView childId={ibuData.childData.id} />
+
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-white">
+        <div className="w-16 h-16 rounded-full bg-[#F1F7FE] flex items-center justify-center mb-4">
+          <span className="text-3xl">👶</span>
+        </div>
+        <h2 className="text-[16px] font-semibold text-[#1F2937]">Belum ada data</h2>
+        <p className="text-[13px] text-[#697079] mt-2 max-w-60 leading-relaxed">
+          Halaman status tersedia saat Ibu sedang hamil atau sudah punya anak yang terdaftar di posyandu.
+        </p>
       </div>
-      <h2 className="text-[16px] font-semibold text-[#1F2937]">Halaman tidak tersedia</h2>
-      <p className="text-[13px] text-[#697079] mt-2 max-w-60 leading-relaxed">
-        Halaman status kehamilan hanya tersedia untuk ibu hamil.
-      </p>
-    </div>
-  )
+    )
+  }
 
   return <PregnancyStatusView profile={profile} latestVisit={latestVisit} />
 }
