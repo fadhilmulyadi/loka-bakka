@@ -82,17 +82,34 @@ export function hitungRisikoIbu(input: {
   return { skor, kategori, level: kategoriToLevel[kategori] }
 }
 
+export type StatusLabel = "Normal" | "Pra Stunting" | "Stunting"
+
+export const levelToStatusLabel: Record<RiskLevel, StatusLabel> = {
+  rendah: "Normal",
+  sedang: "Pra Stunting",
+  tinggi: "Stunting",
+}
+
 /**
- * Status satu kunjungan untuk badge riwayat dan titik grafik. Dipakai dashboard
- * maupun halaman status supaya taksonominya tidak beda per halaman.
- * ponytail: ambang Hb di sini (<11) sengaja lebih ketat dari ambang skoring
- * gabungan (<10) karena ini penanda per-kunjungan, bukan poin risiko.
+ * Status satu kunjungan untuk badge riwayat dan titik grafik. Memakai skor
+ * gabungan yang sama dengan vonis di kartu status, supaya badge kunjungan
+ * terakhir tidak pernah berbeda dari status yang tertulis di atasnya.
+ * ponytail: kenaikan BB tidak ikut karena skor gabungan memang tidak
+ * menghitungnya; tren BB sudah terlihat di grafiknya sendiri.
  */
-export function statusKunjunganIbu(
-  v: { lilaCm: number; hbGdl: number; isOnTrack: boolean }
-): "Normal" | "Pra Stunting" | "Stunting" {
-  if (v.lilaCm < 23.5 || v.hbGdl < 11) return "Stunting"
-  return v.isOnTrack ? "Normal" : "Pra Stunting"
+export function statusKunjunganIbu(input: {
+  imtCategory?: ImtCategory | null
+  lilaCm: number
+  hbGdl: number
+  kuesionerBand?: KategoriRisiko | null
+}): StatusLabel {
+  const { level } = hitungRisikoIbu({
+    imtCategory: input.imtCategory ?? "normal",
+    lilaCm: input.lilaCm,
+    hbGdl: input.hbGdl,
+    kuesionerBand: input.kuesionerBand,
+  })
+  return levelToStatusLabel[level]
 }
 
 export const edukasiIbu: Record<KategoriRisiko, string> = {

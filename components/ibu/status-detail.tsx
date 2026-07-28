@@ -3,7 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { Check, AlertTriangle, Flame, Lightbulb, Heart, Siren, MapPin, ClipboardList } from 'lucide-react'
-import type { RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
+import { levelToStatusLabel, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 
 // Satu-satunya sumber warna & label untuk halaman status ibu maupun anak.
 // Sebelumnya hex-nya diulang lewat ternary inline di tiap view, dan bullet di
@@ -16,9 +16,9 @@ export const LEVEL_STYLE: Record<RiskLevel, {
   border: string
   Icon: React.ElementType
 }> = {
-  rendah: { label: 'Normal',       solid: '#1E9E62', text: '#0E6B3E', tint: '#E7F7EF', border: '#C3E9D4', Icon: Check },
-  sedang: { label: 'Pra Stunting', solid: '#D99100', text: '#8A6100', tint: '#FFF7E6', border: '#F4E2BC', Icon: AlertTriangle },
-  tinggi: { label: 'Stunting',     solid: '#DC2626', text: '#9F1C1C', tint: '#FEF1F1', border: '#F6D2D2', Icon: Flame },
+  rendah: { label: levelToStatusLabel.rendah, solid: '#1E9E62', text: '#0E6B3E', tint: '#E7F7EF', border: '#C3E9D4', Icon: Check },
+  sedang: { label: levelToStatusLabel.sedang, solid: '#D99100', text: '#8A6100', tint: '#FFF7E6', border: '#F4E2BC', Icon: AlertTriangle },
+  tinggi: { label: levelToStatusLabel.tinggi, solid: '#DC2626', text: '#9F1C1C', tint: '#FEF1F1', border: '#F6D2D2', Icon: Flame },
 }
 
 export interface EduItem { lead?: string; text: string }

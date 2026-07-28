@@ -256,7 +256,7 @@ export default function PregnancyStatusView({ profile, visits }: Props) {
                     order: week,
                     label: `${week} mg`,
                     value: v.currentWeightKg,
-                    status: statusKunjunganIbu(v),
+                    status: statusKunjunganIbu({ ...v, imtCategory: profile.imtCategory, kuesionerBand: profile.kuesionerBand }),
                     caption: formatVisitDate(v.visitDate),
                   }
                 })}
@@ -272,7 +272,7 @@ export default function PregnancyStatusView({ profile, visits }: Props) {
             <Card>
               <div className="flex flex-col gap-2">
                 {visits.map((v) => {
-                  const status = statusKunjunganIbu(v)
+                  const status = statusKunjunganIbu({ ...v, imtCategory: profile?.imtCategory, kuesionerBand: profile?.kuesionerBand })
                   return (
                     <VisitRow
                       key={v.id}

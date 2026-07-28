@@ -324,7 +324,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                       order: week,
                       label: `${week} mg`,
                       value: v.currentWeightKg,
-                      status: statusKunjunganIbu(v),
+                      status: statusKunjunganIbu({ ...v, imtCategory: profile.imtCategory, kuesionerBand: profile.kuesionerBand }),
                       caption: new Date(v.visitDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                     }
                   })}
@@ -343,7 +343,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
               <div className="flex flex-col gap-2">
                 {visits.slice(0, 5).map((v) => {
-                  const status = statusKunjunganIbu(v)
+                  const status = statusKunjunganIbu({ ...v, imtCategory: profile?.imtCategory, kuesionerBand: profile?.kuesionerBand })
                   const style = getStatusStyle(status)
                   return (
                     <div key={v.id} className="flex items-center justify-between p-3 bg-[#F8FBFE] border border-[#E4EDE7] rounded-[13px]">
