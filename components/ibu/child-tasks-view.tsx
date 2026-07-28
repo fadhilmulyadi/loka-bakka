@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useTransition } from 'react'
 import { getDailyTasks, toggleDailyTask } from '@/lib/actions/tasks'
+import { getIbuData, getIbuAnakForDashboard } from '@/lib/actions/ibu'
 import { CHILD_TASKS as TASKS } from '@/lib/daily-tasks'
 
 const R = 48
@@ -52,9 +53,10 @@ function TaskIcon({ icon }: { icon: string }) {
   }
 }
 
-export default function ChildTasksView() {
+export default function ChildTasksView({ childId }: { childId?: string }) {
   const [checked, setChecked] = useState<Record<number, boolean>>({})
   const [mounted, setMounted] = useState(false)
+  const [nama, setNama] = useState('si Kecil')
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
@@ -67,6 +69,13 @@ export default function ChildTasksView() {
       setChecked(state)
     })
   }, [])
+
+  useEffect(() => {
+    const p = childId
+      ? getIbuAnakForDashboard(childId).then(d => d?.childData ?? null)
+      : getIbuData().then(d => d?.childData ?? null)
+    p.then(anak => { if (anak?.nama) setNama(anak.nama) })
+  }, [childId])
 
   function toggle(id: number) {
     if (isPending) return
@@ -98,11 +107,11 @@ export default function ChildTasksView() {
           <svg className="w-[13px] h-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
             <path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
           </svg>
-          Aktivitas Harian Aira
+          Aktivitas Harian {nama}
         </span>
         <h1 className="text-[24px] font-semibold text-[#1F2937] leading-[1.1] tracking-[-0.01em]">Tugas Harian Anak</h1>
         <p className="mt-1.5 text-[12px] font-normal text-[#697079] leading-[1.45] max-w-[300px]">
-          Yuk lengkapi tugas si kecil hari ini! Setiap centang menambah skor sehat Aira.
+          Yuk lengkapi tugas si kecil hari ini! Setiap centang menambah skor sehat {nama}.
         </p>
       </header>
 
@@ -167,7 +176,7 @@ export default function ChildTasksView() {
               <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
               </svg>
-              <span className="text-[12px] font-semibold leading-[1.35]">Hebat, Bunda! Semua tugas Aira hari ini selesai. Pertahankan, ya!</span>
+              <span className="text-[12px] font-semibold leading-[1.35]">Hebat, Bunda! Semua tugas {nama} hari ini selesai. Pertahankan, ya!</span>
             </div>
           )}
         </section>

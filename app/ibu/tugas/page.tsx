@@ -35,7 +35,7 @@ function TugasContent() {
 
   if (loading) return <LoadingSpinner />
 
-  if (childId) return <ChildTasksView />
+  if (childId) return <ChildTasksView childId={childId} />
 
   if (ibuData?.isPregnant) return <PregnancyTasksView />
 
