@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
-import { Activity, RefreshCw } from 'lucide-react'
+import { Activity } from 'lucide-react'
 import { getIbuAnakDetail } from '@/lib/actions/ibu'
 import { getStatusStyle } from '@/lib/status-styles'
 import type { RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 import GrowthChart from '@/components/ibu/growth-chart'
 import {
-  SectionHeading, Card, MetricTile, RiskGauge, StatusVerdictCard, StatusEduCard, VisitRow,
+  SectionHeading, Card, RiskIndicatorCard, StatusVerdictCard, StatusEduCard, VisitRow,
   LEVEL_STYLE, type StatusEdu,
 } from '@/components/ibu/status-detail'
 
@@ -175,42 +175,26 @@ export default function ChildStatusView({ childId }: { childId: string }) {
       <main className="flex-1 overflow-y-auto overflow-x-hidden px-5 pt-4 pb-[108px]">
 
         {/* ── Section 1: Indikator risiko ── */}
-        <SectionHeading n="1">Indikator Risiko Stunting</SectionHeading>
-        <Card className="mb-4">
-          {anak.latest ? (
-            <>
-              <RiskGauge level={level} />
-
-              <div className="flex gap-2.5 mt-4">
-                <MetricTile label="Berat Badan" value={anak.latest.bb.toFixed(1)} unit="kg" />
-                <MetricTile label="Tinggi Badan" value={anak.latest.tb.toFixed(1)} unit="cm" />
-                <MetricTile
-                  label="Z-Score TB/U"
-                  value={String(anak.latest.zScore)}
-                  unit="SD"
-                  note={
-                    <span
-                      className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold"
-                      style={{ backgroundColor: LEVEL_STYLE[level].tint, color: LEVEL_STYLE[level].text }}
-                    >
-                      {anak.latest.status}
-                    </span>
-                  }
-                />
-              </div>
-
-              <div className="flex items-start gap-1.5 mt-3 pt-3 border-t border-[#E4EDE7] text-[11px] text-[#989DA3] leading-[1.4]">
-                <RefreshCw className="w-3 h-3 flex-none text-[#1178D4] mt-0.5" />
-                Data diperbarui setiap kunjungan posyandu.
-              </div>
-            </>
-          ) : (
-            <div className="py-6 text-center">
-              <p className="text-[13px] text-[#697079]">Belum ada data pengukuran.</p>
-              <p className="text-[11.5px] text-[#989DA3] mt-1">Data akan muncul setelah kunjungan pertama ke posyandu.</p>
-            </div>
-          )}
-        </Card>
+        <RiskIndicatorCard
+          level={level}
+          metrics={anak.latest ? [
+            { label: 'Berat Badan', value: anak.latest.bb.toFixed(1), unit: 'kg' },
+            { label: 'Tinggi Badan', value: anak.latest.tb.toFixed(1), unit: 'cm' },
+            {
+              label: 'Z-Score TB/U',
+              value: String(anak.latest.zScore),
+              unit: 'SD',
+              note: (
+                <span
+                  className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold"
+                  style={{ backgroundColor: LEVEL_STYLE[level].tint, color: LEVEL_STYLE[level].text }}
+                >
+                  {anak.latest.status}
+                </span>
+              ),
+            },
+          ] : []}
+        />
 
         {/* ── Section 2: Status kondisi ── */}
         {anak.latest && (

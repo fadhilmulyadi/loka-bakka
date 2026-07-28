@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Check, AlertTriangle, Flame, Lightbulb, Heart, Siren, MapPin, ClipboardList } from 'lucide-react'
+import { Check, AlertTriangle, Flame, Lightbulb, Heart, Siren, MapPin, ClipboardList, RefreshCw } from 'lucide-react'
 import { levelToStatusLabel, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 
 // Satu-satunya sumber warna & label untuk halaman status ibu maupun anak.
@@ -73,9 +73,9 @@ export function MetricTile({ label, value, unit, note }: {
   )
 }
 
-/* ── Gauge risiko ── */
+/* ── Kartu indikator risiko ── */
 
-export function RiskGauge({ level }: { level: RiskLevel }) {
+function RiskGauge({ level }: { level: RiskLevel }) {
   const pos = { rendah: '17%', sedang: '50%', tinggi: '83%' }[level]
   return (
     <div>
@@ -98,6 +98,47 @@ export function RiskGauge({ level }: { level: RiskLevel }) {
         ))}
       </div>
     </div>
+  )
+}
+
+/**
+ * Seksi 1 di halaman status ibu maupun anak. Judul, garis pemisah, kalimat
+ * penutup, dan empty-state-nya ada di sini supaya tidak bisa berbeda per
+ * halaman; halaman hanya menyuplai angka yang memang beda.
+ */
+export function RiskIndicatorCard({ level, meta, metrics }: {
+  level: RiskLevel
+  /** Baris tambahan di atas tile, mis. tanggal kunjungan. Anak tidak memakainya. */
+  meta?: React.ReactNode
+  metrics: React.ComponentProps<typeof MetricTile>[]
+}) {
+  return (
+    <>
+      <SectionHeading n="1">Indikator Risiko Stunting</SectionHeading>
+      <Card className="mb-4">
+        {metrics.length === 0 ? (
+          <div className="py-6 text-center">
+            <p className="text-[13px] text-[#697079]">Belum ada data pengukuran.</p>
+            <p className="text-[11.5px] text-[#989DA3] mt-1">Data akan muncul setelah kunjungan pertama ke posyandu.</p>
+          </div>
+        ) : (
+          <>
+            <RiskGauge level={level} />
+
+            {meta && <div className="flex items-center justify-between gap-2.5 mt-4 mb-2.5">{meta}</div>}
+
+            <div className={`flex gap-2.5 ${meta ? '' : 'mt-4'}`}>
+              {metrics.map((m) => <MetricTile key={m.label} {...m} />)}
+            </div>
+
+            <div className="flex items-start gap-1.5 mt-3 pt-3 border-t border-[#E4EDE7] text-[11px] text-[#989DA3] leading-[1.4]">
+              <RefreshCw className="w-3 h-3 flex-none text-[#1178D4] mt-0.5" />
+              Data diperbarui setiap kunjungan posyandu.
+            </div>
+          </>
+        )}
+      </Card>
+    </>
   )
 }
 

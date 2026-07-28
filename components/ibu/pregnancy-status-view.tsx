@@ -1,14 +1,14 @@
 "use client"
 
 import React from 'react'
-import { Activity, Calendar, MapPin, Check } from 'lucide-react'
+import { Activity, Calendar, MapPin } from 'lucide-react'
 import type { PregnancyProfileData, PregnancyVisitData } from '@/lib/growth-standards/imt-calc'
 import { hitungRisikoIbu, statusKunjunganIbu, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 import { getStatusStyle } from '@/lib/status-styles'
 import { calculateGestationalAge } from '@/lib/pregnancy-utils'
 import GrowthChart from '@/components/ibu/growth-chart'
 import {
-  SectionHeading, Card, MetricTile, RiskGauge, StatusVerdictCard, StatusEduCard, VisitRow,
+  SectionHeading, Card, MetricTile, RiskIndicatorCard, StatusVerdictCard, StatusEduCard, VisitRow,
   type StatusEdu,
 } from '@/components/ibu/status-detail'
 
@@ -191,46 +191,31 @@ export default function PregnancyStatusView({ profile, visits }: Props) {
         </Card>
 
         {/* ── Section 1: Indikator risiko ── */}
-        <SectionHeading n="1">Indikator Risiko Stunting</SectionHeading>
-        <Card className="mb-4">
-          {latestVisit ? (
+        <RiskIndicatorCard
+          level={level}
+          meta={latestVisit && (
             <>
-              <RiskGauge level={level} />
-
-              <div className="flex items-center justify-between gap-2.5 mt-4 mb-2.5">
-                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1F2937]">
-                  <Calendar className="w-[15px] h-[15px] text-[#1178D4] flex-none" />
-                  {formatVisitDate(latestVisit.visitDate)}
-                </span>
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1178D4] bg-[#E7F2FB] border border-[#C4DDF5] px-2 py-0.5 rounded-full">
-                  <MapPin className="w-[11px] h-[11px]" />
-                  Kunjungan Posyandu
-                </span>
-              </div>
-
-              <div className="flex gap-2.5">
-                <MetricTile
-                  label="BB Sekarang"
-                  value={latestVisit.currentWeightKg.toFixed(1)}
-                  unit="kg"
-                  note={`+${latestVisit.weightGainKg.toFixed(1)} kg dari awal`}
-                />
-                <MetricTile label="LILA" value={latestVisit.lilaCm.toFixed(1)} unit="cm" />
-                <MetricTile label="Hb" value={latestVisit.hbGdl.toFixed(1)} unit="g/dL" />
-              </div>
-
-              <div className="flex items-start gap-1.5 mt-3 pt-3 border-t border-[#E4EDE7] text-[11px] text-[#989DA3] leading-[1.4]">
-                <Check className="w-3 h-3 flex-none text-[#1178D4] mt-0.5" />
-                Data diukur oleh kader setiap kunjungan posyandu.
-              </div>
+              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1F2937]">
+                <Calendar className="w-[15px] h-[15px] text-[#1178D4] flex-none" />
+                {formatVisitDate(latestVisit.visitDate)}
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#1178D4] bg-[#E7F2FB] border border-[#C4DDF5] px-2 py-0.5 rounded-full">
+                <MapPin className="w-[11px] h-[11px]" />
+                Kunjungan Posyandu
+              </span>
             </>
-          ) : (
-            <div className="py-6 text-center">
-              <p className="text-[13px] text-[#697079]">Belum ada data pengukuran.</p>
-              <p className="text-[11.5px] text-[#989DA3] mt-1">Data akan muncul setelah kunjungan pertama ke posyandu.</p>
-            </div>
           )}
-        </Card>
+          metrics={latestVisit ? [
+            {
+              label: 'BB Sekarang',
+              value: latestVisit.currentWeightKg.toFixed(1),
+              unit: 'kg',
+              note: `+${latestVisit.weightGainKg.toFixed(1)} kg dari awal`,
+            },
+            { label: 'LILA', value: latestVisit.lilaCm.toFixed(1), unit: 'cm' },
+            { label: 'Hb', value: latestVisit.hbGdl.toFixed(1), unit: 'g/dL' },
+          ] : []}
+        />
 
         {/* ── Section 2: Status kondisi ── */}
         {latestVisit && (
