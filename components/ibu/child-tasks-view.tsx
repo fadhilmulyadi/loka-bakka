@@ -2,63 +2,14 @@
 
 import React, { useState, useEffect, useTransition } from 'react'
 import { getDailyTasks, toggleDailyTask } from '@/lib/actions/tasks'
+import { CHILD_TASKS as TASKS } from '@/lib/daily-tasks'
 
 const R = 48
 const C = 2 * Math.PI * R
 
-const TASKS = [
-  {
-    id: 0,
-    icon: 'asi',
-    name: 'Beri ASI / lanjutkan menyusui',
-    note: 'ASI tetap penting hingga usia 2 tahun, melengkapi gizi MPASI dan memperkuat daya tahan tubuh si kecil.',
-    pts: 20,
-  },
-  {
-    id: 1,
-    icon: 'protein',
-    name: 'Makan dengan protein hewani',
-    note: 'Pastikan setiap kali makan ada telur, ikan, ayam, atau hati, kunci utama mencegah stunting.',
-    pts: 20,
-  },
-  {
-    id: 2,
-    icon: 'sayur',
-    name: 'Beri sayur, buah & makan 3x sehari',
-    note: 'Lengkapi piring si kecil dengan sayur dan buah, makan 3x sehari ditambah camilan sehat bergizi.',
-    pts: 20,
-  },
-  {
-    id: 3,
-    icon: 'vitamin',
-    name: 'Vitamin A / taburia sesuai anjuran',
-    note: 'Berikan suplemen mikronutrien (vitamin A / taburia) sesuai jadwal dan anjuran kader posyandu.',
-    pts: 20,
-  },
-  {
-    id: 4,
-    icon: 'main',
-    name: 'Ajak bermain & stimulasi',
-    note: 'Ajak anak bermain, mengobrol, dan bernyanyi untuk merangsang otak dan kemampuan bicaranya.',
-    pts: 20,
-  },
-]
-
 function TaskIcon({ icon }: { icon: string }) {
   switch (icon) {
-    case 'asi':
-      return (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C7 11.1 6 13 6 15a7 7 0 0 0 7 7Z" />
-        </svg>
-      )
-    case 'protein':
-      return (
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22c4.2 0 7-3.13 7-7 0-3.87-2.8-9-7-9s-7 5.13-7 9c0 3.87 2.8 7 7 7Z" />
-        </svg>
-      )
-    case 'sayur':
+    case 'gizi':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 11h18a8 8 0 0 1-8 8H11a8 8 0 0 1-8-8Z" />
@@ -67,19 +18,33 @@ function TaskIcon({ icon }: { icon: string }) {
           <path d="M16 5l-1 1" />
         </svg>
       )
-    case 'vitamin':
+    case 'suplemen':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="m10.5 20.5 10-10a3.5 3.5 0 0 0-5-5l-10 10a3.5 3.5 0 0 0 5 5Z" />
           <path d="m8.5 8.5 7 7" />
         </svg>
       )
-    case 'main':
+    case 'kebersihan':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 22h10a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2Z" />
+          <path d="M8 11V6a4 4 0 0 1 8 0" />
+          <path d="M9 16h6" />
+        </svg>
+      )
+    case 'stimulasi':
       return (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 5a3 3 0 1 0-5.997.142 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
           <path d="M12 5a3 3 0 1 1 5.997.142 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
           <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
+        </svg>
+      )
+    case 'tidur':
+      return (
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
         </svg>
       )
     default:
@@ -179,7 +144,7 @@ export default function ChildTasksView() {
             <div className="flex-1 min-w-0">
               <div className="text-[11px] font-medium opacity-85">Skor Aktif Harian</div>
               <div className="text-[17px] font-semibold mt-0.5 leading-[1.25]">
-                <b className="font-bold">{doneCount}</b> dari 5 tugas selesai
+                <b className="font-bold">{doneCount}</b> dari {TASKS.length} tugas selesai
               </div>
               <div className="mt-2.5 h-[7px] rounded-full bg-white/20 overflow-hidden">
                 <div

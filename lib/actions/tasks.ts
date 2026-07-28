@@ -5,6 +5,7 @@ import { dailyTask, ibu } from "@/lib/db/schema"
 import { and, eq, gte, lte } from "drizzle-orm"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
+import { PREGNANCY_TASKS, CHILD_TASKS, sumTaskPoints } from "@/lib/daily-tasks"
 
 function getTodayRange() {
   const now = new Date()
@@ -79,26 +80,18 @@ export async function getDailyTaskStats() {
     ),
   })
 
+  const defs = ibuRow?.isHamil ? PREGNANCY_TASKS : CHILD_TASKS
+
   let score = 0
   let doneCount = 0
 
-  if (ibuRow?.isHamil) {
-    const PREGNANCY_PTS = [20, 20, 20, 20, 10, 10]
-    tasks.forEach(t => {
-      if (t.taskId >= 0 && t.taskId < PREGNANCY_PTS.length) {
-        score += PREGNANCY_PTS[t.taskId]
-        doneCount++
-      }
-    })
-  } else {
-    const CHILD_PTS = [20, 20, 20, 20, 20]
-    tasks.forEach(t => {
-      if (t.taskId >= 0 && t.taskId < CHILD_PTS.length) {
-        score += CHILD_PTS[t.taskId]
-        doneCount++
-      }
-    })
-  }
+  tasks.forEach(t => {
+    const pts = sumTaskPoints(defs, t.taskId)
+    if (pts > 0) {
+      score += pts
+      doneCount++
+    }
+  })
 
   return { score, doneCount }
 }

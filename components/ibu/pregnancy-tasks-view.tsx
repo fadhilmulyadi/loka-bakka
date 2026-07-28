@@ -2,47 +2,10 @@
 
 import React, { useState, useEffect, useTransition } from 'react'
 import { getDailyTasks, toggleDailyTask } from '@/lib/actions/tasks'
+import { PREGNANCY_TASKS as TASKS } from '@/lib/daily-tasks'
 
 const R = 48
 const C = 2 * Math.PI * R
-
-const TASKS = [
-  {
-    id: 0,
-    icon: 'makan',
-    name: 'Makan sesuai gizi seimbang',
-    note: 'Semua unsur terpenuhi: makanan pokok, protein hewani, protein nabati, sayur, dan buah — termasuk makanan tambahan / porsi ekstra bagi ibu KEK.',
-    pts: 40,
-  },
-  {
-    id: 1,
-    icon: 'fe',
-    name: 'Minum Tablet Tambah Darah (TTD)',
-    note: '1 tablet diminum sesuai jadwal hari itu. TTD umumnya sudah kombinasi zat besi + asam folat, jadi satu tablet memenuhi kebutuhan keduanya.',
-    pts: 25,
-  },
-  {
-    id: 2,
-    icon: 'air',
-    name: 'Minum air putih cukup',
-    note: 'Tercapai 8–12 gelas (2–3 liter) dalam sehari.',
-    pts: 15,
-  },
-  {
-    id: 3,
-    icon: 'aktivitas',
-    name: 'Menjaga aktivitas & istirahat',
-    note: 'Beraktivitas ringan (jalan kaki, senam hamil) dilengkapi istirahat yang cukup.',
-    pts: 15,
-  },
-  {
-    id: 4,
-    icon: 'kebersihan',
-    name: 'Menjaga kebersihan diri',
-    note: 'Mandi dan gosok gigi minimal 2x sehari.',
-    pts: 5,
-  },
-]
 
 function TaskIcon({ icon }: { icon: string }) {
   switch (icon) {
