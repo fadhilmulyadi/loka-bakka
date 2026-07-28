@@ -304,6 +304,7 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
             <div className="flex flex-col gap-2">
               {[...childData.pengukurans]
                 .sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime())
+                .slice(0, 5)
                 .map((p, i) => {
                   const statusColor =
                     p.statusTBU === 'Normal'
