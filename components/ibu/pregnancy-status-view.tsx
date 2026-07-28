@@ -251,11 +251,11 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
               {activeTab === 'rendah' && (
                 <>
                   <h3 className="text-[13.5px] font-semibold text-[#0E6B3E] mt-4 leading-snug">Apa itu risiko rendah?</h3>
-                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Risiko rendah artinya data kesehatanmu seperti berat badan, kadar darah (Hb), lingkar lengan atas, dan kebiasaan minum tablet Fe semuanya dalam kondisi yang bagus untuk mendukung pertumbuhan si kecil.</p>
+                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Risiko rendah artinya data kesehatanmu seperti berat badan, kadar darah (Hb), lingkar lengan atas, dan kebiasaan minum tablet tambah darah semuanya dalam kondisi yang bagus untuk mendukung pertumbuhan si kecil.</p>
                   <h3 className="text-[13.5px] font-semibold text-[#0E6B3E] mt-4 leading-snug">Hal yang perlu terus kamu jaga:</h3>
                   <ul className="flex flex-col gap-2.5 mt-2.5 list-none">
                     {[
-                      'Minum tablet Fe setiap hari tanpa skip, tetapi sesuai dengan anjuran/perintah dokter ya!',
+                      'Minum tablet tambah darah setiap hari tanpa skip, tetapi sesuai dengan anjuran/perintah dokter ya!',
                       'Makan 3 kali sehari, usahakan selalu makan lauk protein seperti telur, ikan, ayam, atau daging.',
                       'Tetap gerak ringan minimal 30 menit sehari, misalnya jalan pagi atau senam hamil.',
                       'Jangan lupa datang ke posyandu atau puskesmas sesuai jadwal untuk memantau kondisi si kecil, meskipun merasa sehat-sehat saja.',
@@ -267,7 +267,7 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
                     ))}
                   </ul>
                   <h3 className="text-[13.5px] font-semibold text-[#0E6B3E] mt-4 leading-snug">Hal yang perlu diwaspadai:</h3>
-                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Walaupun kondisimu bagus sekarang, ada beberapa hal yang bisa mengubah kategorimu jika tidak dijaga, yaitu berat badan tidak naik dalam 4 minggu ke depan, tablet Fe sering terlewat, atau mual parah yang bikin susah makan.</p>
+                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Walaupun kondisimu bagus sekarang, ada beberapa hal yang bisa mengubah kategorimu jika tidak dijaga, yaitu berat badan tidak naik dalam 4 minggu ke depan, tablet tambah darah sering terlewat, atau mual parah yang bikin susah makan.</p>
                 </>
               )}
 
@@ -275,13 +275,13 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
               {activeTab === 'sedang' && (
                 <>
                   <h3 className="text-[13.5px] font-semibold text-[#8A6100] mt-4 leading-snug">Apa itu risiko sedang?</h3>
-                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Risiko sedang artinya ada salah satu data kesehatanmu yang belum ideal. Seperti kadar darahmu mendekati batas anemia, berat badan kurang dari target ideal, lingkar lengan atas mendekati batas kekurangan gizi, atau tablet Fe-mu belum rutin diminum. Satu faktor saja sudah bisa pelan-pelan mempengaruhi asupan gizi ke janin.</p>
+                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Risiko sedang artinya ada salah satu data kesehatanmu yang belum ideal. Seperti kadar darahmu mendekati batas anemia, berat badan kurang dari target ideal, lingkar lengan atas mendekati batas kekurangan gizi, atau tablet tambah darahmu belum rutin diminum. Satu faktor saja sudah bisa pelan-pelan mempengaruhi asupan gizi ke janin.</p>
                   <h3 className="text-[13.5px] font-semibold text-[#8A6100] mt-4 leading-snug">Faktor risiko yang paling sering jadi penyebab:</h3>
                   <ul className="flex flex-col gap-2.5 mt-2.5 list-none">
                     {[
-                      { lead: 'Anemia ringan (Hb 10–11 g/dL):', text: 'Darahmu membawa lebih sedikit oksigen dari yang dibutuhkan si kecil. Kalau ini dibiarkan, pertumbuhan si kecil bisa melambat. Solusinya: minum tablet Fe setiap malam sebelum tidur, barengan dengan vitamin C atau jus jeruk supaya lebih cepat diserap, tetapi ingat sesuai dengan anjuran rekomendasi dari dokter ya!' },
+                      { lead: 'Anemia ringan (Hb 10–11 g/dL):', text: 'Darahmu membawa lebih sedikit oksigen dari yang dibutuhkan si kecil. Kalau ini dibiarkan, pertumbuhan si kecil bisa melambat. Solusinya: minum tablet tambah darah setiap malam sebelum tidur, barengan dengan vitamin C atau jus jeruk supaya lebih cepat diserap, tetapi ingat sesuai dengan anjuran rekomendasi dari dokter ya!' },
                       { lead: 'Berat badan naik terlalu lambat:', text: 'Tiap trimester punya target kenaikan BB yang berbeda-beda. Kalau BB-mu kurang naik, bisa jadi si kecil tidak mendapat cadangan energi yang cukup. Solusinya: tambahkan camilan bergizi di antara makan utama seperti pisang, kacang tanah, atau segelas susu sudah sangat membantu!' },
-                      { lead: 'Tablet Fe sering terlewat:', text: 'Zat besi tidak bisa disimpan dalam sekejap. Melewatkan beberapa hari saja artinya pasokan zat besi ke si kecil sempat terputus. Solusinya: aktifkan reminder pada tugas harian dan minta bantuan suami atau keluarga untuk mengingatkan.' },
+                      { lead: 'Tablet tambah darah sering terlewat:', text: 'Zat besi tidak bisa disimpan dalam sekejap. Melewatkan beberapa hari saja artinya pasokan zat besi ke si kecil sempat terputus. Solusinya: aktifkan reminder pada tugas harian dan minta bantuan suami atau keluarga untuk mengingatkan.' },
                     ].map(({ lead, text }, i) => (
                       <li key={i} className="flex items-baseline gap-2.5 text-[12.5px] text-[#4C545F] leading-[1.6]">
                         <span className="flex-none w-1.5 h-1.5 rounded-full bg-[#1E9E62] translate-y-[-2px]" />
@@ -312,7 +312,7 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
               {activeTab === 'tinggi' && (
                 <>
                   <h3 className="text-[13.5px] font-semibold text-[#9F1C1C] mt-4 leading-snug">Apa itu risiko tinggi?</h3>
-                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Risiko tinggi bukan berarti si kecil pasti akan stunting. Tapi ini artinya ada beberapa faktor yang muncul bersamaan dan perlu segera ditangani, misalnya kadar darah rendah, kekurangan gizi, berat badan kurang naik, ditambah tablet Fe yang belum rutin. Kalau dibiarkan, ini bisa mempengaruhi tumbuh kembang janin secara perlahan.</p>
+                  <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Risiko tinggi bukan berarti si kecil pasti akan stunting. Tapi ini artinya ada beberapa faktor yang muncul bersamaan dan perlu segera ditangani, misalnya kadar darah rendah, kekurangan gizi, berat badan kurang naik, ditambah tablet tambah darah yang belum rutin. Kalau dibiarkan, ini bisa mempengaruhi tumbuh kembang janin secara perlahan.</p>
                   <h3 className="text-[13.5px] font-semibold text-[#9F1C1C] mt-4 leading-snug">Kenapa ini perlu ditangani cepat?</h3>
                   <p className="text-[12.5px] text-[#4C545F] leading-[1.62] mt-1.5">Saat tubuh ibu kekurangan gizi dan zat besi sekaligus, tubuh ibu akan &quot;mendahulukan dirinya sendiri&quot; untuk bertahan hidup. Artinya si kecil mendapat bukan yang terbaik. Pada jangka pendek pertumbuhan janin bisa melambat, dan dalam jangka panjang sel otak serta organ vitalnya yang sedang berkembang bisa tidak terbentuk sempurna. Sayangnya apabila tidak ditangani segera, jendela emas ini tidak bisa diulang.</p>
                   <h3 className="text-[13.5px] font-semibold text-[#9F1C1C] mt-4 leading-snug">3 hal yang harus dilakukan dalam 3 hari ke depan:</h3>
@@ -320,7 +320,7 @@ export default function PregnancyStatusView({ profile, latestVisit }: Props) {
                     {[
                       { lead: 'Pertama: Pergi ke puskesmas atau bidan.', text: 'Kondisi ini perlu diperiksa langsung oleh tenaga kesehatan, bukan hanya dipantau lewat aplikasi. Tunjukkan hasil pemeriksaan ini ke bidan atau dokter, untuk menentukan apakah kamu perlu suplemen tambahan, penanganan anemia khusus, atau program makanan tambahan (PMT) dari puskesmas.' },
                       { lead: 'Kedua: Perbaiki makan mulai hari ini.', text: 'Pastikan setiap makan ada protein hewani. Tidak harus mahal, kamu bisa makan telur rebus, ikan, atau tempe yang membantu sebagai langkah awal. Makan minimal 3 kali sehari dan tambahkan camilan sehat.' },
-                      { lead: 'Ketiga: Minum tablet Fe malam ini juga.', text: 'Apapun yang terjadi hari ini, jangan sampai tablet Fe-mu terlewat malam ini. Minum dengan air putih atau jus jeruk, jauh dari teh atau kopi.' },
+                      { lead: 'Ketiga: Minum tablet tambah darah malam ini juga.', text: 'Apapun yang terjadi hari ini, jangan sampai tablet tambah darahmu terlewat malam ini. Minum dengan air putih atau jus jeruk, jauh dari teh atau kopi.' },
                     ].map(({ lead, text }, i) => (
                       <li key={i} className="flex items-baseline gap-2.5 text-[12.5px] text-[#4C545F] leading-[1.6]">
                         <span className="flex-none w-1.5 h-1.5 rounded-full bg-[#1E9E62] translate-y-[-2px]" />
