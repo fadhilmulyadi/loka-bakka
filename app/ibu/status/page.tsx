@@ -22,7 +22,7 @@ function StatusContent() {
 
   const [ibuData, setIbuData] = useState<Awaited<ReturnType<typeof getIbuData>>>(null)
   const [profile, setProfile] = useState<PregnancyProfileData | null>(null)
-  const [latestVisit, setLatestVisit] = useState<PregnancyVisitData | null>(null)
+  const [visits, setVisits] = useState<PregnancyVisitData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -33,11 +33,11 @@ function StatusContent() {
     }
     let mounted = true
     Promise.all([getIbuData(), getPregnancyProfile(), getPregnancyVisits()])
-      .then(([data, p, visits]) => {
+      .then(([data, p, v]) => {
         if (!mounted) return
         setIbuData(data)
         setProfile(p)
-        setLatestVisit(visits[0] ?? null)
+        setVisits(v)
         setLoading(false)
       })
       .catch(() => { if (mounted) { setError(true); setLoading(false) } })
@@ -80,7 +80,7 @@ function StatusContent() {
     )
   }
 
-  return <PregnancyStatusView profile={profile} latestVisit={latestVisit} />
+  return <PregnancyStatusView profile={profile} visits={visits} />
 }
 
 export default function IbuStatusPage() {
