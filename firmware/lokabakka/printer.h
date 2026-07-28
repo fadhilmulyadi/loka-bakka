@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include "config.h"
 
 // Printer dimatikan lewat relay saat idle (hemat daya + tidak panas). Selama
@@ -13,11 +14,33 @@ void prnInit() {
 }
 
 void prnPowerOn() {
+  // Lepas dulu semua beban ESP32 yang bisa dilepas, SEBELUM relay printer nyala.
+  // Adaptor 9V 2A tidak punya sisa saat head printer memanas (printer sendirian
+  // sudah ±2A), jadi tiap mA yang tidak ditarik ESP32 jadi margin sebelum rel
+  // 5V jatuh dan memicu brownout-reset. Ini mitigasi yang sudah tertulis di
+  // wiring §17 ("firmware tidak kirim WiFi saat mencetak") tapi belum terpasang.
+  WiFi.mode(WIFI_OFF);    // radio mati: ±100mA rata-rata, ±250mA puncak
+  setCpuFrequencyMhz(80); // 240→80MHz: ±30mA. JANGAN di bawah 80 — APB ikut
+                          // turun dan baud Serial2 ke printer jadi kacau.
+
   digitalWrite(PIN_PRN_RELAY, PRN_RELAY_ON);
   delay(2000); // printer butuh waktu boot sebelum menerima data
   Serial2.begin(9600, SERIAL_8N1, PIN_PRN_RX, PIN_PRN_TX);
   delay(50);
   Serial2.write(0x1B); Serial2.write(0x40); // ESC @ - reset printer
+
+  // ESC 7 - parameter panas head. Sekarang di nilai default: brownout sudah
+  // ditangani di sisi hardware (elco 2200uF dipindah ke rel yang sama dengan
+  // printer), jadi tidak perlu lagi memperlambat cetak. Sempat dipakai n1=2 /
+  // n2=160 dan itu bikin cetak 3-4x lebih lambat sampai relay keburu putus di
+  // prnPowerOff sebelum struk habis tercetak.
+  // ponytail: knob kalibrasi. Restart balik saat cetak → turunkan n1 (7→4→2),
+  // cetakan jadi pudar → tebus dengan menaikkan n2.
+  Serial2.write(0x1B); Serial2.write(0x37);
+  Serial2.write(7);  // n1: dot maks serentak (unit 8 dot), default 7
+  Serial2.write(80); // n2: lama panas (unit 10us), default 80
+  Serial2.write(2);  // n3: jeda antar panas (unit 10us), default 2
+  delay(20);
 }
 
 void prnPowerOff() {
@@ -27,6 +50,13 @@ void prnPowerOff() {
   pinMode(PIN_PRN_TX, OUTPUT);
   digitalWrite(PIN_PRN_TX, LOW);
   digitalWrite(PIN_PRN_RELAY, PRN_RELAY_OFF);
+
+  // Printer sudah lepas dari rel — aman menyalakan lagi radio & CPU penuh.
+  // WiFi.begin() tidak diblokir: heartbeat di loop() sudah menjaga diri dengan
+  // cek WiFi.status(), jadi sambungan pulih sendiri dalam beberapa detik.
+  setCpuFrequencyMhz(240);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(); // tanpa argumen: pakai kredensial tersimpan di NVS
 }
 
 void prnAlign(uint8_t n) { // 0 = kiri, 1 = tengah, 2 = kanan

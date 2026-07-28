@@ -1,9 +1,24 @@
 #pragma once
 
 // ==== WiFi ====
-// ponytail: ganti dengan kredensial WiFi posyandu sebelum flashing.
-#define WIFI_SSID     "Padil"
-#define WIFI_PASSWORD "anjay0987"
+// Kredensial TIDAK lagi ditulis di sini. Disimpan di NVS lewat halaman setup,
+// jadi ganti WiFi tidak perlu flash ulang — dan repo ini publik.
+//
+// Dua jalan masuk, tanpa tombol sama sekali:
+// 1. WiFi masih hidup → buka IP alat (tampil di layar Pilih Kategori) atau
+//    http://lokabakka.local lewat browser HP.
+// 2. WiFi mati / belum pernah disetel → alat membuka hotspot di bawah sendiri.
+#define SETUP_AP_SSID        "LokaBakka-Setup"
+#define SETUP_AP_PASS        "lokabakka"  // minimal 8 karakter (syarat WPA2)
+#define MDNS_NAME            "lokabakka"  // → http://lokabakka.local
+
+// Berapa lama mencoba WiFi tersimpan sebelum menyerah dan membuka hotspot.
+#define WIFI_CONNECT_TIMEOUT 10  // detik
+
+// Timeout hotspot. Aman dibuat pendek: hitungannya berhenti selama ada HP yang
+// tersambung ke hotspot (setAPClientCheck), jadi kader yang sedang mengetik
+// sandi tidak diburu, tapi boot saat WiFi mati tetap cepat.
+#define SETUP_PORTAL_TIMEOUT 45  // detik
 
 // ==== Backend API ====
 // ponytail: ganti dengan domain deployment web (mis. Vercel) dan API key
@@ -51,7 +66,7 @@
 #define RELAY_OFF  HIGH  // GPIO HIGH → relay OFF → lampu mati
 
 // ==== Pin Sensor (wiring §16) ====
-#define PIN_HX_DT    35   // HX711 DT  ← TB-D 2A (input-only)
+#define PIN_HX_DT    35   // HX711 DT ← TB-D 2A (input-only; aman karena library sudah diganti GPIO langsung)
 #define PIN_HX_SCK   32   // HX711 SCK → TB-D 3A
 #define PIN_TRIG     26   // HC-SR04 TRIG → TB-B 3A
 #define PIN_ECHO     34   // HC-SR04 ECHO ← TB-C 2A (input-only, 3,3V via divider)
@@ -67,7 +82,12 @@
 
 // 1 = lampu status aktif normal. 0 = lampu dimatikan total (relay tak pernah ON)
 // — dipakai saat sesi debugging biar tidak berisik klik relay. Balik ke 1 nanti.
-#define LAMP_ENABLED 0
+#define LAMP_ENABLED 1
+
+// 1 = mode stream kalibrasi HX711: boot berhenti di sensorsInit() dan mencetak
+// raw terus-menerus, jadi bisa menekan platform sambil melihat angka bergerak.
+// WAJIB kembali ke 0 untuk operasi normal (kalau 1, alat tak pernah lanjut).
+#define HX_DEBUG_STREAM 0
 
 // ==== Kalibrasi Sensor (§15) — WAJIB disetel per unit alat ====
 //
@@ -75,11 +95,11 @@
 // apapun, buka Serial Monitor, taruh beban acuan yang sudah ditimbang (mis.
 // galon 19 L), baca angka "[HX711] mentah" lalu bagi dengan berat aslinya.
 // Tanda MINUS bila angka mengecil saat dibebani (arah load cell terbalik).
-#define HX_SCALE     -7050.0f
+#define HX_SCALE     -6110.0f
 //
 // H_SENSOR: tinggi persis muka HC-SR04 dari lantai, dalam cm (§7).
 // Tinggi badan = H_SENSOR − jarak terukur. Ukur pakai meteran pita.
-#define H_SENSOR     199.5f
+#define H_SENSOR     202.2f
 
 // ==== Ukuran layar ====
 #define SCR_W 480

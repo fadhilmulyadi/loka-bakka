@@ -1,6 +1,7 @@
 #pragma once
 
 #include <TFT_eSPI.h>
+#include <WiFi.h>
 #include "config.h"
 // FreeFont GFXFF (FreeSans*) sudah di-include otomatis oleh TFT_eSPI.h karena
 // LOAD_GFXFF aktif di User_Setup.h — jangan include manual, header-nya tidak
@@ -93,10 +94,74 @@ void layarBoot() {
   tft.setTextDatum(TL_DATUM);
 }
 
+// ---- Layar setup WiFi (portal aktif) ----
+// Alat tidak punya keyboard, jadi SSID/sandi diketik dari HP. Layar ini satu-
+// satunya petunjuk yang dilihat kader saat portal terbuka.
+void layarSetupWifi(const String& apSsid, const String& apPass) {
+  drawHeader("Setup WiFi");
+  clearContent();
+
+  tft.setTextDatum(TL_DATUM);
+  setFont(FONT_S);
+  tft.setTextColor(COL_TEXT_2, COL_BG);
+  tft.drawString("1.  Buka pengaturan WiFi di HP", 26, 56);
+  tft.drawString("2.  Sambungkan ke jaringan ini:", 26, 82);
+
+  tft.fillRoundRect(46, 106, SCR_W - 92, 76, 12, COL_PANEL_ON);
+  tft.setTextDatum(MC_DATUM);
+  setFont(FONT_L);
+  tft.setTextColor(COL_TEXT, COL_PANEL_ON);
+  tft.drawString(apSsid, SCR_W / 2, 133);
+  setFont(FONT_S);
+  tft.setTextColor(COL_TEXT_DIM, COL_PANEL_ON);
+  tft.drawString("sandi:  " + apPass, SCR_W / 2, 163);
+
+  tft.setTextDatum(TL_DATUM);
+  setFont(FONT_S);
+  tft.setTextColor(COL_TEXT_2, COL_BG);
+  tft.drawString("3.  Halaman setup terbuka sendiri.", 26, 200);
+  tft.drawString("     Pilih WiFi posyandu, isi sandinya.", 26, 222);
+  tft.setTextColor(COL_TEXT_DIM, COL_BG);
+  tft.drawString("Kalau tidak terbuka, buka 192.168.4.1 di browser.", 26, 250);
+
+  drawFooter("", COL_INACTIVE, "", COL_INACTIVE);
+}
+
 // ---- Layar 1b/1c: Pilih Kategori (sorotan: 0 = Anak, 1 = Ibu Hamil) ----
+// Indikator WiFi. Digambar ulang berkala dari loop(), bukan sekali saat layar
+// dibuat — kalau tidak, WiFi yang putus di tengah kegiatan tetap terlihat
+// tersambung sampai kader kebetulan pindah layar.
+// Hanya menyentuh dua pita sempit (header kanan + bawah kartu), jadi aman
+// dipanggil berulang tanpa menggambar ulang seluruh layar.
+//
+// Sengaja TIDAK menampilkan alamat IP: WiFi posyandu memakai AP isolation,
+// jadi alamat itu tidak pernah bisa dibuka dari HP. Memajangnya cuma memancing
+// kader mencoba sesuatu yang mustahil.
+void gambarStatusWifi() {
+  bool ok = WiFi.status() == WL_CONNECTED;
+
+  tft.fillRect(SCR_W - 210, 4, 194, 28, COL_BG);
+  tft.fillCircle(SCR_W - 22, 18, 6, ok ? COL_GREEN : COL_RED);
+  setFont(FONT_S);
+  tft.setTextDatum(MR_DATUM);
+  tft.setTextColor(ok ? COL_TEXT_DIM : COL_RED, COL_BG);
+  tft.drawString(ok ? "Terhubung" : "Tidak terhubung", SCR_W - 38, 18);
+
+  // Saat putus, beri satu tindakan yang jelas. "Tidak terhubung" saja membuat
+  // kader menunggu sesuatu yang tidak akan pulih sendiri.
+  tft.fillRect(0, 246, SCR_W, 26, COL_BG);
+  if (!ok) {
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(COL_TEXT_DIM, COL_BG);
+    tft.drawString("Nyalakan ulang alat untuk memilih WiFi", SCR_W / 2, 258);
+  }
+  tft.setTextDatum(TL_DATUM);
+}
+
 void layarPilihKategori(int sorotan) {
   drawHeader("Pilih Kategori");
   clearContent();
+  gambarStatusWifi();
 
   int cardW = 210, cardH = 170;
   int gap = 16;
@@ -147,6 +212,48 @@ void layarUkur(float bb, float tb) {
 
   tft.setTextDatum(TL_DATUM);
   drawFooter("ULANGI", COL_RED, "LANJUT", COL_GREEN);
+}
+
+// ---- Layar loading: sedang membaca sensor ----
+// Pembacaan sensor memblokir (berat sampai 12 detik menunggu angka stabil),
+// jadi tanpa layar ini kader lihat layar kategori membeku dan mengira alat hang.
+static unsigned long ukurTikTerakhir = 0;
+static int ukurTikIndex = 0;
+
+void layarMengukur(const String& langkah, const String& petunjuk) {
+  drawHeader("Sedang Mengukur");
+  clearContent();
+
+  tft.setTextDatum(MC_DATUM);
+  setFont(FONT_M);
+  tft.setTextColor(COL_TEXT, COL_BG);
+  tft.drawString(langkah, SCR_W / 2, 78);
+
+  setFont(FONT_S);
+  tft.setTextColor(COL_TEXT_DIM, COL_BG);
+  tft.drawString(petunjuk, SCR_W / 2, 240);
+  tft.setTextDatum(TL_DATUM);
+
+  ukurTikTerakhir = 0; // paksa titik pertama langsung tergambar
+  ukurTikIndex = 0;
+  drawFooter("", COL_INACTIVE, "", COL_INACTIVE);
+}
+
+// Titik berjalan, dipanggil dari dalam loop sensor lewat callback. Sengaja
+// tidak menampilkan angka mentah: nilai yang belum stabil terlihat seperti
+// hasil akhir dan bisa dicatat kader, padahal masih goyang.
+void layarMengukurTik() {
+  // ponytail: throttle 200ms. Loop sensor memanggil ini jauh lebih cepat dari
+  // yang perlu digambar. Turunkan kalau animasinya terasa lambat.
+  if (millis() - ukurTikTerakhir < 200) return;
+  ukurTikTerakhir = millis();
+
+  const int n = 5, jarak = 32, r = 8, cy = 150;
+  int x0 = SCR_W / 2 - (n - 1) * jarak / 2;
+  for (int i = 0; i < n; i++) {
+    tft.fillCircle(x0 + i * jarak, cy, r, i == ukurTikIndex ? COL_ACCENT : COL_LINE);
+  }
+  ukurTikIndex = (ukurTikIndex + 1) % n;
 }
 
 // ---- Layar 1l/1m: Kuesioner (nomor 1-5 dari 5) ----

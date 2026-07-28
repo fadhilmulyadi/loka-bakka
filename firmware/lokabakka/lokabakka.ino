@@ -42,6 +42,9 @@ unsigned long lastBtnSatu = 0;
 unsigned long lastBtnDua = 0;
 unsigned long lastHeartbeat = 0;
 unsigned long selesaiSejak = 0;
+unsigned long lastStatusWifi = 0;
+// Melebar sendiri saat server tak menjawab — lihat komentar di sendHeartbeat().
+unsigned long jedaHeartbeat = 8000;
 
 bool tombolDitekan(int pin, unsigned long &lastPress) {
   if (digitalRead(pin) == LOW && millis() - lastPress > 250) {
@@ -49,6 +52,19 @@ bool tombolDitekan(int pin, unsigned long &lastPress) {
     return true;
   }
   return false;
+}
+
+// Dua tahap terpisah supaya kader tahu sedang menunggu apa: berat dulu (bisa
+// sampai 12 detik menunggu angka stabil), baru tinggi.
+void ukurSekarang() {
+  layarMengukur("Menimbang berat badan", "Berdiri tegak di atas timbangan, jangan bergerak");
+  bbUkur = readWeightKg(layarMengukurTik);
+
+  layarMengukur("Mengukur tinggi badan", "Tetap berdiri tegak, pandangan lurus ke depan");
+  tbUkur = readHeightCm(layarMengukurTik);
+
+  layarAktif = LAYAR_UKUR;
+  layarUkur(bbUkur, tbUkur);
 }
 
 void mulaiKirim() {
@@ -123,9 +139,31 @@ void setup() {
 }
 
 void loop() {
-  if (millis() - lastHeartbeat > 8000) {
-    sendHeartbeat();
+  wifiLoop(); // layani halaman setup WiFi dari browser HP
+
+  if (millis() - lastHeartbeat > jedaHeartbeat) {
+    // Hanya minta job cetak saat diam di menu: mencetak mematikan WiFi dan
+    // memblokir ±10 detik, tidak boleh menyela pengukuran atau kuesioner.
+    TugasCetak tugas;
+    bool idle = (layarAktif == LAYAR_PILIH_KATEGORI);
+    jedaHeartbeat = sendHeartbeat(idle, &tugas) ? 8000 : 60000;
     lastHeartbeat = millis();
+
+    if (tugas.ada) {
+      layarCetak();
+      lampMati(); // lepas beban koil relay dari rel 5V sebelum printer nyala
+      cetakStruk(tugas.namaPasien, tugas.tanggal, tugas.bb, tugas.tb,
+                 tugas.kategoriHasil, tugas.teksEdukasi);
+      kembaliKeMenu();
+      lastHeartbeat = millis(); // cetak makan waktu; jangan langsung heartbeat lagi
+    }
+  }
+
+  // Hanya di layar menu: layar lain bersifat sementara dan header-nya dipakai
+  // untuk hal lain, jadi tidak perlu diganggu.
+  if (layarAktif == LAYAR_PILIH_KATEGORI && millis() - lastStatusWifi > 3000) {
+    lastStatusWifi = millis();
+    gambarStatusWifi();
   }
 
   if (layarAktif == LAYAR_SELESAI && millis() - selesaiSejak > 5000) {
@@ -143,18 +181,13 @@ void loop() {
         layarPilihKategori(sorotanKategori);
       } else if (dua) {
         kategoriDipilih = sorotanKategori == 0 ? "anak" : "ibu";
-        bbUkur = readWeightKg();
-        tbUkur = readHeightCm();
-        layarAktif = LAYAR_UKUR;
-        layarUkur(bbUkur, tbUkur);
+        ukurSekarang();
       }
       break;
 
     case LAYAR_UKUR:
       if (satu) {
-        bbUkur = readWeightKg();
-        tbUkur = readHeightCm();
-        layarUkur(bbUkur, tbUkur);
+        ukurSekarang(); // ULANGI — lewat layar loading yang sama
       } else if (dua) {
         if (strcmp(kategoriDipilih, "ibu") == 0) {
           kuesionerIndex = 0;
@@ -193,6 +226,7 @@ void loop() {
         layarSelesai();
       } else if (dua) {
         layarCetak();
+        lampMati(); // lepas beban koil relay dari rel 5V sebelum printer nyala
         cetakStruk(hasilTerakhir.namaPasien, hasilTerakhir.tanggal, hasilTerakhir.bb, hasilTerakhir.tb,
                    hasilTerakhir.kategoriHasil, hasilTerakhir.teksEdukasi);
         layarAktif = LAYAR_SELESAI;
