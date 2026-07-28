@@ -14,7 +14,7 @@ import type { getIbuNotifications } from '@/lib/actions/notifikasi'
 import { getStatusStyle } from '@/lib/status-styles'
 import { calculateGestationalAge } from '@/lib/pregnancy-utils'
 
-import { hitungRisikoIbu, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
+import { hitungRisikoIbu, statusKunjunganIbu, type RiskLevel } from '@/lib/growth-standards/risiko-kehamilan-calc'
 
 const STATUS_MESSAGES: Record<RiskLevel, {
   bg: string; border: string; iconBg: string; textColor: string;
@@ -41,13 +41,6 @@ const STATUS_MESSAGES: Record<RiskLevel, {
     label: 'Stunting',
     message: 'Saat ini, Bunda berada di Status Risiko Tinggi. Jangan ditunda, mari jadwalkan periksa ke fasilitas kesehatan terdekat untuk penanganan yang tepat!',
   },
-}
-
-// Taksonomi yang sama dengan STATUS_MESSAGES di atas, supaya badge riwayat dan
-// warna titik grafik ikut satu sumber warna di lib/status-styles.
-function visitStatus(v: Pick<PregnancyVisitData, 'lilaCm' | 'hbGdl' | 'isOnTrack'>): string {
-  if (v.lilaCm < 23.5 || v.hbGdl < 11) return 'Stunting'
-  return v.isOnTrack ? 'Normal' : 'Pra Stunting'
 }
 
 function formatDateShort(date: Date | string): string {
@@ -331,7 +324,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                       order: week,
                       label: `${week} mg`,
                       value: v.currentWeightKg,
-                      status: visitStatus(v),
+                      status: statusKunjunganIbu(v),
                       caption: new Date(v.visitDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                     }
                   })}
@@ -350,7 +343,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             <section className="bg-white border border-[#E4EDE7] rounded-[18px] p-4 shadow-[0_4px_14px_-8px_rgba(9,30,66,0.12)]">
               <div className="flex flex-col gap-2">
                 {visits.slice(0, 5).map((v) => {
-                  const status = visitStatus(v)
+                  const status = statusKunjunganIbu(v)
                   const style = getStatusStyle(status)
                   return (
                     <div key={v.id} className="flex items-center justify-between p-3 bg-[#F8FBFE] border border-[#E4EDE7] rounded-[13px]">

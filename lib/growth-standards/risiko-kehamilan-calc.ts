@@ -82,6 +82,19 @@ export function hitungRisikoIbu(input: {
   return { skor, kategori, level: kategoriToLevel[kategori] }
 }
 
+/**
+ * Status satu kunjungan untuk badge riwayat dan titik grafik. Dipakai dashboard
+ * maupun halaman status supaya taksonominya tidak beda per halaman.
+ * ponytail: ambang Hb di sini (<11) sengaja lebih ketat dari ambang skoring
+ * gabungan (<10) karena ini penanda per-kunjungan, bukan poin risiko.
+ */
+export function statusKunjunganIbu(
+  v: { lilaCm: number; hbGdl: number; isOnTrack: boolean }
+): "Normal" | "Pra Stunting" | "Stunting" {
+  if (v.lilaCm < 23.5 || v.hbGdl < 11) return "Stunting"
+  return v.isOnTrack ? "Normal" : "Pra Stunting"
+}
+
 export const edukasiIbu: Record<KategoriRisiko, string> = {
   RENDAH: "Kondisi kehamilan baik dan tumbuh kembang janin terpantau normal, tetap konsumsi tablet tambah darah, lauk protein, dan rutin ke posyandu/puskesmas agar kondisi ini terus terjaga.",
   SEDANG: "Terdapat kondisi (Hb/berat badan/LILA) yang belum ideal, sehingga perlu segera ke kader/bidan minggu ini, rutin minum tablet tambah darah, dan makan bergizi agar janin tumbuh optimal.",
