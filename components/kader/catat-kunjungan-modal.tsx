@@ -36,13 +36,15 @@ function MetricCard({
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{label}</p>
       {editable ? (
         <div className="flex items-baseline gap-1 mt-1.5">
+          {/* type="text", bukan "number": input number menolak koma, jadi kader
+              yang mengetik "7,8" dapat string kosong dan tombol Simpan tidak
+              pernah menyala. Koma dibereskan di angka() saat parsing. */}
           <input
-            type="number"
-            step="0.1"
+            type="text"
             inputMode="decimal"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="0.0"
+            onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, ""))}
+            placeholder="0,0"
             className="w-full text-[20px] font-bold text-[#173753] outline-none bg-transparent tabular-nums"
           />
           <span className="text-[12px] text-muted-foreground flex-shrink-0">{unit}</span>
@@ -80,7 +82,15 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
   const [kategoriHasil, setKategoriHasil] = useState("")
   const [teksEdukasi, setTeksEdukasi] = useState("")
 
+  // Melepas sesi yang ditinggal supaya alat tidak menempelkan hasil timbangan
+  // berikutnya ke pasien ini. Sengaja fire-and-forget: kegagalannya tidak boleh
+  // menahan penutupan modal, dan batas umur sesi di server jadi jaringnya.
+  const batalkanSesi = (id: string | null) => {
+    if (id) fetch(`/api/pengukuran/${id}/batal`, { method: "POST" }).catch(() => {})
+  }
+
   const startSession = async () => {
+    batalkanSesi(sessionId) // "Ulangi": sesi lama dilepas sebelum yang baru dibuat
     setBb("")
     setTb("")
     setHasilSelesai(false)
@@ -147,6 +157,7 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
 
   useEffect(() => {
     if (!open) {
+      if (!hasilSelesai) batalkanSesi(sessionId)
       setTab("alat")
       setBb("")
       setTb("")
@@ -155,11 +166,18 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
       setKategoriHasil("")
       setTeksEdukasi("")
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const sex = child.gender === "Laki-laki" ? "L" : "P"
-  const bbNum = bb ? parseFloat(bb) : null
-  const tbNum = tb ? parseFloat(tb) : null
+  // Koma = pemisah desimal di sini. Kosong dan sisa ketikan yang belum jadi
+  // angka ("", ",") sama-sama jadi null, jadi tombol Simpan tetap mati.
+  const angka = (v: string) => {
+    const n = parseFloat(v.replace(",", "."))
+    return isNaN(n) ? null : n
+  }
+  const bbNum = angka(bb)
+  const tbNum = angka(tb)
 
   const ready = tab === "manual"
     ? bbNum != null && tbNum != null
@@ -171,7 +189,12 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
     if (!ready || bbNum == null || tbNum == null) return
     setSaving(true)
     try {
-      await savePengukuran({ anakId: child.id, beratBadan: bbNum, tinggiBadan: tbNum })
+      await savePengukuran({
+        anakId: child.id,
+        beratBadan: bbNum,
+        tinggiBadan: tbNum,
+        cetakStruk: tab === "manual", // jalur alat sudah cetak sendiri
+      })
       onSaved()
       onOpenChange(false)
     } catch (err) {
@@ -206,7 +229,12 @@ export function CatatKunjunganModal({ open, onOpenChange, child, onSaved }: Cata
               <button
                 key={t}
                 type="button"
-                onClick={() => setTab(t)}
+                onClick={() => {
+                  // Pindah ke Manual = alat tidak jadi dipakai. Lepas sesinya,
+                  // kalau tidak alat terus menunggu orang naik ke timbangan.
+                  if (t === "manual" && !hasilSelesai) { batalkanSesi(sessionId); setSessionId(null) }
+                  setTab(t)
+                }}
                 className={cn(
                   "flex-1 py-[9px] rounded-[9px] text-[12px] font-semibold transition-colors",
                   tab === t ? "bg-white text-[#173753] shadow-sm" : "text-muted-foreground hover:text-[#173753]"
