@@ -1054,58 +1054,59 @@ export async function createIbu(data: {
 
   const hashed = await bcrypt.hash(data.password, 10)
 
-  return await db.transaction(async (tx) => {
-    const [ibuRow] = await tx.insert(ibu).values({
-      nama: data.nama,
-      username: data.username,
-      password: hashed,
-      noHp: data.noHp ?? null,
-      tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
-      alamat: data.alamat ?? null,
-      kelurahan: data.kelurahan,
-      isHamil: data.isHamil ?? false,
-      posyanduId: posyanduId,
-    }).returning({ id: ibu.id, nama: ibu.nama, username: ibu.username })
+  // ponytail: sequential, not transactional — neon-http has no transaction support
+  // (drizzle throws "No transactions support in neon-http driver").
+  // Switch lib/db/client.ts to neon-serverless (WebSocket) if atomicity ever matters here.
+  const [ibuRow] = await db.insert(ibu).values({
+    nama: data.nama,
+    username: data.username,
+    password: hashed,
+    noHp: data.noHp ?? null,
+    tanggalLahir: data.tanggalLahir ? new Date(data.tanggalLahir) : null,
+    alamat: data.alamat ?? null,
+    kelurahan: data.kelurahan,
+    isHamil: data.isHamil ?? false,
+    posyanduId: posyanduId,
+  }).returning({ id: ibu.id, nama: ibu.nama, username: ibu.username })
 
-    if (data.isHamil && data.hpht && data.bbPrepregnancyKg && data.heightCm) {
-      const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
-      const category = getIMTCategory(imt)
-      const jumlahJanin = data.jumlahJanin ?? 1
-      const targets = getIOMTargets(category, jumlahJanin)
+  if (data.isHamil && data.hpht && data.bbPrepregnancyKg && data.heightCm) {
+    const imt = calculateIMT(data.bbPrepregnancyKg, data.heightCm)
+    const category = getIMTCategory(imt)
+    const jumlahJanin = data.jumlahJanin ?? 1
+    const targets = getIOMTargets(category, jumlahJanin)
 
-      await tx.insert(pregnancyProfile).values({
-        jumlahJanin,
+    await db.insert(pregnancyProfile).values({
+      jumlahJanin,
+      ibuId: ibuRow.id,
+      hpht: new Date(data.hpht),
+      bbPrepregnancyKg: data.bbPrepregnancyKg,
+      heightCm: data.heightCm,
+      imtPrepregnancy: imt,
+      imtCategory: category,
+      targetGainMinKg: targets.totalGainMinKg,
+      targetGainMaxKg: targets.totalGainMaxKg,
+      weeklyGainMinKg: targets.weeklyGainMinKg,
+      weeklyGainMaxKg: targets.weeklyGainMaxKg,
+    })
+
+    if (data.currentWeightKg) {
+      const weightGainKg = data.currentWeightKg - data.bbPrepregnancyKg
+      await db.insert(pregnancyVisit).values({
         ibuId: ibuRow.id,
-        hpht: new Date(data.hpht),
-        bbPrepregnancyKg: data.bbPrepregnancyKg,
-        heightCm: data.heightCm,
-        imtPrepregnancy: imt,
-        imtCategory: category,
-        targetGainMinKg: targets.totalGainMinKg,
-        targetGainMaxKg: targets.totalGainMaxKg,
-        weeklyGainMinKg: targets.weeklyGainMinKg,
-        weeklyGainMaxKg: targets.weeklyGainMaxKg,
+        visitDate: new Date(),
+        currentWeightKg: data.currentWeightKg,
+        weightGainKg: weightGainKg,
+        lilaCm: 0,
+        hbGdl: 0,
+        isOnTrack: true,
       })
-
-      if (data.currentWeightKg) {
-        const weightGainKg = data.currentWeightKg - data.bbPrepregnancyKg
-        await tx.insert(pregnancyVisit).values({
-          ibuId: ibuRow.id,
-          visitDate: new Date(),
-          currentWeightKg: data.currentWeightKg,
-          weightGainKg: weightGainKg,
-          lilaCm: 0,
-          hbGdl: 0,
-          isOnTrack: true,
-        })
-      }
     }
+  }
 
-    revalidatePath("/kader/rekap")
-    revalidatePath("/kader/dashboard")
+  revalidatePath("/kader/rekap")
+  revalidatePath("/kader/dashboard")
 
-    return ibuRow
-  })
+  return ibuRow
 }
 
 export async function updateIbu(data: {
