@@ -64,14 +64,14 @@ export const CHILD_TASKS: DailyTaskDef[] = [
     icon: 'kebersihan',
     name: 'Jaga kebersihan anak dan lingkungannya',
     note: 'Cuci tangan sebelum menyuapi, jaga kebersihan peralatan makan, dan rawat sanitasi lingkungan rumah.',
-    pts: 10,
+    pts: 20,
   },
   {
     id: 3,
     icon: 'stimulasi',
     name: 'Ajak anak bergerak aktif dan stimulasi sesuai usianya',
     note: 'Tummy time untuk bayi, bermain motorik untuk batita, dan aktivitas fisik ringan untuk anak.',
-    pts: 20,
+    pts: 10,
   },
   {
     id: 4,
