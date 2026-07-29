@@ -143,7 +143,9 @@ export async function savePregnancyVisit(data: {
   const profile = ibuRow.pregnancyProfile
   if (!profile) throw new Error("Kehamilan belum dicatat. Catat kehamilan terlebih dahulu.")
 
-  const weightGainKg = data.currentWeightKg - profile.bbPrepregnancyKg
+  // Bulatkan ke 0,1 kg supaya sisa floating point (56,4 − 55,3 = 1,1000000000000014)
+  // tidak ikut tersimpan ke database.
+  const weightGainKg = Math.round((data.currentWeightKg - profile.bbPrepregnancyKg) * 10) / 10
   const weeks = calculateGestationalAge(new Date(profile.hpht))
   const targets = getIOMTargets(profile.imtCategory as PregnancyProfileData["imtCategory"], profile.jumlahJanin)
   const gainStatus = getWeightGainStatus(weightGainKg, weeks, targets)

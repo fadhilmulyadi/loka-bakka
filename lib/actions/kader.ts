@@ -1110,7 +1110,7 @@ export async function createIbu(data: {
     })
 
     if (data.currentWeightKg) {
-      const weightGainKg = data.currentWeightKg - data.bbPrepregnancyKg
+      const weightGainKg = Math.round((data.currentWeightKg - data.bbPrepregnancyKg) * 10) / 10
       await db.insert(pregnancyVisit).values({
         ibuId: ibuRow.id,
         visitDate: new Date(),

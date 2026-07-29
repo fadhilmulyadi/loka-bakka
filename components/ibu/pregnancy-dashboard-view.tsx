@@ -269,7 +269,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
             <div className="flex-1 bg-[#F1F7FE] border border-[#E4EDE7] rounded-[13px] p-2.5 text-center">
               <div className="text-[11px] font-medium text-[#697079]">Kenaikan BB</div>
               <div className="text-[17px] font-bold text-[#1F2937] mt-1 tracking-tight leading-none">
-                +{pregnancyData.bbGain}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> kg</small>
+                +{pregnancyData.bbGain.toFixed(1)}<small className="text-[10px] font-medium text-[#697079] ml-0.5"> kg</small>
               </div>
               {pregnancyData.targetGainMin != null && (
                 <div className="text-[10px] text-[#697079] mt-0.5 leading-tight">
@@ -310,7 +310,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
                 </div>
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1E9E62] bg-[#E7F7EF] border border-[#C3E9D4] px-2.5 py-1 rounded-full">
                   <TrendingUp className="w-3 h-3" />
-                  +{visits[0].weightGainKg} kg dari awal
+                  +{visits[0].weightGainKg.toFixed(1)} kg dari awal
                 </span>
               </div>
               <div className="w-full">
