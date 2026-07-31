@@ -1,5 +1,6 @@
 #include <TFT_eSPI.h>
 #include <ArduinoJson.h>
+#include <ArduinoOTA.h>
 #include "config.h"
 #include "sensors.h"
 #include "api.h"
@@ -132,6 +133,11 @@ void setup() {
   if (wifiOk) {
     sendHeartbeat();
     lastHeartbeat = millis();
+
+    // Flash lewat WiFi: muncul di Arduino IDE > Tools > Port selagi alat menyala.
+    ArduinoOTA.setHostname(MDNS_NAME);
+    ArduinoOTA.setPassword(OTA_PASSWORD);
+    ArduinoOTA.begin();
   }
   Serial.println(wifiOk ? "WiFi terhubung" : "WiFi gagal terhubung, lanjut ke kategori");
 
@@ -140,6 +146,7 @@ void setup() {
 
 void loop() {
   wifiLoop(); // layani halaman setup WiFi dari browser HP
+  if (wifiOk) ArduinoOTA.handle(); // layani flash firmware lewat WiFi
 
   if (millis() - lastHeartbeat > jedaHeartbeat) {
     // Hanya minta job cetak saat diam di menu: mencetak mematikan WiFi dan

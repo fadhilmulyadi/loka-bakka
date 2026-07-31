@@ -12,6 +12,12 @@
 #define SETUP_AP_PASS        "lokabakka"  // minimal 8 karakter (syarat WPA2)
 #define MDNS_NAME            "lokabakka"  // → http://lokabakka.local
 
+// ==== OTA (flash firmware lewat WiFi, tanpa USB) ====
+// Muncul sebagai "Network Port" di Arduino IDE (Tools > Port) selama alat
+// tersambung ke WiFi yang sama. Password wajib — repo ini publik, siapapun di
+// jaringan yang sama bisa lihat source, jangan sampai bisa timpa firmware juga.
+#define OTA_PASSWORD  "lokabakka-ota"
+
 // Berapa lama mencoba WiFi tersimpan sebelum menyerah dan membuka hotspot.
 #define WIFI_CONNECT_TIMEOUT 10  // detik
 
