@@ -9,6 +9,7 @@
 void sensorsInit() {
   Serial.println("[SENSOR] MODE DUMMY — HX711 & HC-SR04 tidak dibaca.");
 }
+void sensorTareIfEmpty() {}
 float readWeightKg(void (*tick)() = nullptr) {
   for (int i = 0; i < 10; i++) { delay(300); if (tick) tick(); } // meniru jeda ukur
   return DUMMY_BB;
@@ -79,16 +80,64 @@ static long hx711_read() {
 
 static bool hx711_ready() { return !digitalRead(PIN_HX_DT); }
 
-// ---- Rata-rata n sampel ----
-static long hx711_average(int n) {
-  long sum = 0;
+// ---- Median n sampel ----
+// Median, bukan rata-rata: satu spike listrik menggeser rata-rata tapi tidak
+// menggeser median. Sampel bernilai 0 dibuang — itu penanda timeout dari
+// hx711_read(), bukan bacaan asli (raw asli selalu ribuan count).
+static long hx711_median(int n) {
+  long buf[32];
+  if (n > 32) n = 32;
   int  got = 0;
   unsigned long t = millis();
   while (got < n) {
     if (millis() - t > 5000) break; // guard jangan macet
-    if (hx711_ready()) { sum += hx711_read(); got++; delay(5); }
+    if (hx711_ready()) {
+      long v = hx711_read();
+      if (v != 0) buf[got++] = v;
+      delay(5);
+    }
   }
-  return got ? sum / got : 0;
+  if (got == 0) return 0;
+
+  for (int i = 1; i < got; i++) { // insertion sort, got <= 32
+    long v = buf[i];
+    int  k = i - 1;
+    while (k >= 0 && buf[k] > v) { buf[k + 1] = buf[k]; k--; }
+    buf[k + 1] = v;
+  }
+  return buf[got / 2];
+}
+
+// ---- Median n sampel bertipe float, merusak isi d (dipakai di readWeightKg) ----
+static float medianf(float* d, int n) {
+  for (int i = 1; i < n; i++) {
+    float v = d[i];
+    int   k = i - 1;
+    while (k >= 0 && d[k] > v) { d[k + 1] = d[k]; k--; }
+    d[k + 1] = v;
+  }
+  return d[n / 2];
+}
+
+// ---- Konversi satu pembacaan ke kg ----
+static float beratSekali() {
+  return ((float)(hx711_median(10) - hx_offset)) / HX_SCALE;
+}
+
+// ---- Nol ulang, tapi hanya kalau platform memang kosong ----
+// Load cell merayap karena suhu & creep; alat menyala berjam-jam, jadi tare
+// sekali saat boot tidak cukup — anak yang sama bisa beda ratusan gram antara
+// pagi dan siang. Guard 2 kg: drift ukurannya gram, jadi kalau bacaan sudah
+// lebih dari 2 kg berarti ada yang masih berdiri di atasnya — nol lama dipakai.
+void sensorTareIfEmpty() {
+  long  r  = hx711_median(10);
+  float kg = ((float)(r - hx_offset)) / HX_SCALE;
+  if (fabs(kg) > 2.0f) {
+    Serial.printf("[HX711] Tare dilewati, platform terbeban %.2f kg\n", kg);
+    return;
+  }
+  hx_offset = r;
+  Serial.printf("[HX711] Tare ulang (geser %.3f kg). offset=%ld\n", kg, hx_offset);
 }
 
 // ---- Inisialisasi — panggil di setup(), platform HARUS kosong ----
@@ -136,8 +185,8 @@ void sensorsInit() {
   }
 #endif
 
-  // Tare: ambil rata-rata 20 sampel saat platform kosong
-  hx_offset = hx711_average(20);
+  // Tare: median 20 sampel saat platform kosong
+  hx_offset = hx711_median(20);
   Serial.printf("[HX711] Tare selesai. offset=%ld\n", hx_offset);
 
   pinMode(PIN_TRIG, OUTPUT);
@@ -145,29 +194,53 @@ void sensorsInit() {
   pinMode(PIN_ECHO, INPUT);
 }
 
-// ---- Berat (kg) — rata-rata 10 sampel, tunggu stabil ----
+// ---- Berat (kg) — median 10 sampel per bacaan, tunggu stabil ----
 // tick (opsional) dipanggil tiap kali ada angka baru. Fungsi ini memblokir
 // sampai 12 detik, jadi tanpa tick layar TFT diam total dan terlihat hang.
+//
+// Semua bacaan disimpan, bukan cuma yang terakhir. Balita jarang bisa diam
+// 2 detik penuh dalam toleransi 50 g, jadi jalur timeout itu jalur normal —
+// dan mengembalikan bacaan terakhir berarti mengembalikan justru bacaan yang
+// masih bergoyang. Median seluruh sampel jauh lebih dekat ke berat asli.
 float readWeightKg(void (*tick)() = nullptr) {
-  unsigned long mulai      = millis();
+  float buf[16];
+  int   n = 0;
+
+  unsigned long mulai       = millis();
   unsigned long stabilSejak = millis();
-  float terakhir = ((float)(hx711_average(10) - hx_offset)) / HX_SCALE;
+  float terakhir = beratSekali();
+  buf[n++] = terakhir;
   if (tick) tick();
 
-  while (millis() - stabilSejak < BERAT_STABIL_MS) {
-    float kini = ((float)(hx711_average(10) - hx_offset)) / HX_SCALE;
+  bool stabil = false;
+  while (true) {
+    float kini = beratSekali();
     if (tick) tick();
+    if (n < 16) buf[n++] = kini;
     if (fabs(kini - terakhir) > BERAT_TOLERANSI_KG) stabilSejak = millis();
     terakhir = kini;
+
+    if (millis() - stabilSejak >= BERAT_STABIL_MS) { stabil = true; break; }
     if (millis() - mulai > BERAT_TIMEOUT_MS) {
       Serial.println("[HX711] Timeout, berat tidak kunjung stabil.");
       break;
     }
   }
 
-  long mentah = hx711_average(10) - hx_offset;
-  Serial.printf("[HX711] mentah=%ld berat=%.2f kg\n", mentah, terakhir);
-  return terakhir < 0 ? 0 : terakhir;
+  float hasil;
+  if (stabil && n >= 3) {
+    float akhir[3] = { buf[n - 3], buf[n - 2], buf[n - 1] }; // jendela yang stabil
+    hasil = medianf(akhir, 3);
+  } else {
+    hasil = medianf(buf, n); // merusak urutan buf, tidak dipakai lagi setelah ini
+  }
+
+  // mentah dihitung balik dari hasil, bukan dari pembacaan baru: dulu baris ini
+  // membaca ulang HX711 sehingga angka mentah di log tidak pernah cocok dengan
+  // kg yang dikirim — padahal kalibrasi §9 memakainya. mentah/berat = HX_SCALE.
+  Serial.printf("[HX711] mentah=%ld berat=%.2f kg (%d sampel, %s)\n",
+                (long)(hasil * HX_SCALE), hasil, n, stabil ? "stabil" : "timeout");
+  return hasil < 0 ? 0 : hasil;
 }
 
 // ---- Satu ping HC-SR04, kembalikan jarak cm (-1 bila gagal) ----

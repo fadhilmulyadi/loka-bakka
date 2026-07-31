@@ -106,6 +106,10 @@ void kembaliKeMenu() {
   sorotanKategori = 0;
   layarAktif = LAYAR_PILIH_KATEGORI;
   layarPilihKategori(sorotanKategori);
+  // Nol ulang timbangan selagi diam di menu — satu-satunya saat platform pasti
+  // kosong. Melawan drift suhu selama alat menyala berjam-jam. Menu digambar
+  // dulu supaya jeda ~1 detiknya tidak terlihat sebagai layar macet.
+  sensorTareIfEmpty();
 }
 
 void setup() {
