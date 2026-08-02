@@ -5,14 +5,7 @@ import { dailyTask, ibu } from "@/lib/db/schema"
 import { and, eq, gte, lte } from "drizzle-orm"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
-import { PREGNANCY_TASKS, CHILD_TASKS, sumTaskPoints } from "@/lib/daily-tasks"
-
-function getTodayRange() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-  return { start, end }
-}
+import { PREGNANCY_TASKS, CHILD_TASKS, sumTaskPoints, getTodayRange } from "@/lib/daily-tasks"
 
 export async function getDailyTasks() {
   const session = await auth()

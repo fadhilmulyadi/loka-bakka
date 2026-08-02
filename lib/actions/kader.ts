@@ -15,6 +15,7 @@ import {
 } from "@/lib/growth-standards/risiko-kehamilan-calc"
 import { notifyChildRisk } from "@/lib/actions/notifikasi"
 import { KELURAHAN_LIST, KELURAHAN_NAMES } from "@/lib/constants/kelurahan"
+import { getTodayRange } from "@/lib/daily-tasks"
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
 
@@ -707,6 +708,9 @@ export async function getIbuById(id: string) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
+  const { start: todayStart, end: todayEnd } = getTodayRange()
+  const weekStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() - 6)
+
   const ibuRow = await db.query.ibu.findFirst({
     where: eq(ibu.id, id),
     with: {
@@ -721,6 +725,11 @@ export async function getIbuById(id: string) {
         with: { kader: { columns: { nama: true } } }
       },
       skrinings: { orderBy: (s, { desc }) => desc(s.tanggal) },
+      // tugas 7 hari terakhir — ikut di query yang sama, tidak menambah round trip
+      dailyTasks: {
+        where: (dt, { and, gte, lte }) => and(gte(dt.date, weekStart), lte(dt.date, todayEnd)),
+        columns: { taskId: true, completed: true, date: true },
+      },
     },
   })
 

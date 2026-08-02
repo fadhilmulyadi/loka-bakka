@@ -122,7 +122,7 @@ export const notifikasi = pgTable("Notifikasi", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   posyanduId: text("posyanduId").notNull().references(() => posyandu.id),
   ibuId: text("ibuId").references(() => ibu.id, { onDelete: "cascade" }), // set = targeted at one ibu (e.g. a kader reminder), null = posyandu-wide (kader dashboard)
-  templateCode: text("templateCode").notNull(), // "T1" | "T2" | "T3" | "T5" | "R1" | "R2"
+  templateCode: text("templateCode").notNull(), // "T1" | "T2" | "T3" | "T5" | "R1" | "R2" | "R3"
   level: text("level").notNull(), // "merah" | "kuning"
   judul: text("judul").notNull(),
   pesan: text("pesan").notNull(),

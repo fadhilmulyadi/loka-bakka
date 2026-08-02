@@ -231,6 +231,26 @@ export async function sendPengingatKehamilan({ ibuId, judul, pesan }: { ibuId: s
   return { success: true }
 }
 
+export async function sendPengingatTugas({ ibuId, judul, pesan }: { ibuId: string, judul: string, pesan: string }) {
+  const session = await auth()
+  if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
+
+  await db.insert(notifikasi).values({
+    posyanduId: session.user.posyanduId!,
+    ibuId,
+    templateCode: "R3",
+    level: "info",
+    judul,
+    pesan,
+    actionLabel: "Buka Tugas",
+    actionUrl: "/ibu/tugas",
+    groupKey: crypto.randomUUID(),
+    isRead: false,
+  })
+
+  return { success: true }
+}
+
 export async function sendPengingatBulk({ targets }: { targets: { anakId: string, judul: string, pesan: string }[] }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")

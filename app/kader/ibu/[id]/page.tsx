@@ -42,6 +42,7 @@ import { AkhiriKehamilanModal } from "@/components/kader/akhiri-kehamilan-modal"
 import { IngatkanIbuKehamilanModal } from "@/components/kader/ingatkan-ibu-kehamilan-modal"
 import { EditDataIbuModal } from "@/components/kader/edit-data-ibu-modal"
 import { ResetPasswordModal } from "@/components/kader/reset-password-modal"
+import { TugasHarianCard } from "@/components/kader/tugas-harian-card"
 
 const MONTHS_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"]
 
@@ -449,7 +450,7 @@ export default function IbuProfilePage() {
                 </Card>
               </div>
 
-              <div>
+              <div className="space-y-4">
                 <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
                   <CardHeader className="px-5 pt-[18px]">
                     <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">Akun Aplikasi Ibu</CardTitle>
@@ -468,6 +469,8 @@ export default function IbuProfilePage() {
                     </button>
                   </CardContent>
                 </Card>
+
+                <TugasHarianCard ibu={ibu} />
               </div>
             </div>
           </>
@@ -623,6 +626,8 @@ export default function IbuProfilePage() {
                     </button>
                   </CardContent>
                 </Card>
+
+                <TugasHarianCard ibu={ibu} />
               </div>
             </div>
           </>
