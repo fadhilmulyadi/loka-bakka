@@ -470,7 +470,7 @@ export default function IbuProfilePage() {
                   </CardContent>
                 </Card>
 
-                <TugasHarianCard ibu={ibu} />
+                <TugasHarianCard ibu={ibu} onSent={loadIbu} />
               </div>
             </div>
           </>
@@ -627,7 +627,7 @@ export default function IbuProfilePage() {
                   </CardContent>
                 </Card>
 
-                <TugasHarianCard ibu={ibu} />
+                <TugasHarianCard ibu={ibu} onSent={loadIbu} />
               </div>
             </div>
           </>
@@ -689,7 +689,8 @@ export default function IbuProfilePage() {
         open={ingatkanKehamilanOpen}
         onOpenChange={setIngatkanKehamilanOpen}
         onSent={loadIbu}
-        ibu={{ id: ibu.id, nama: ibu.nama, noHp: ibu.noHp, posyanduName: ibu.posyandu }}
+        ibu={{ id: ibu.id, nama: ibu.nama, noHp: ibu.noHp, posyanduName: ibu.posyandu, isHamil: ibu.isHamil }}
+        sudahDikirim={{ kehamilan: ibu.notifikasis.some(n => n.templateCode === "R2") }}
       />
 
       <EditDataIbuModal

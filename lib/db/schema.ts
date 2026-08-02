@@ -176,6 +176,7 @@ export const posyanduRelations = relations(posyandu, ({ many }) => ({
 
 export const notifikasiRelations = relations(notifikasi, ({ one }) => ({
   posyandu: one(posyandu, { fields: [notifikasi.posyanduId], references: [posyandu.id] }),
+  ibu: one(ibu, { fields: [notifikasi.ibuId], references: [ibu.id] }),
 }))
 
 export const kaderRelations = relations(kader, ({ one, many }) => ({
@@ -192,6 +193,7 @@ export const ibuRelations = relations(ibu, ({ one, many }) => ({
   pregnancyProfile: one(pregnancyProfile, { fields: [ibu.id], references: [pregnancyProfile.ibuId] }),
   pregnancyVisits: many(pregnancyVisit),
   dailyTasks: many(dailyTask),
+  notifikasis: many(notifikasi),
 }))
 
 export const dailyTaskRelations = relations(dailyTask, ({ one }) => ({

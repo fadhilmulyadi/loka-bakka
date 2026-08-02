@@ -5,7 +5,7 @@ import { Check, Bell, CheckCircle2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { PREGNANCY_TASKS, CHILD_TASKS } from "@/lib/daily-tasks"
-import { sendPengingatTugas } from "@/lib/actions/notifikasi"
+import { IngatkanIbuKehamilanModal } from "@/components/kader/ingatkan-ibu-kehamilan-modal"
 
 // ponytail: DailyTask menyimpan taskId 0–4 tanpa penanda set, jadi satu ibu hanya
 // punya satu set tugas aktif per hari — ikut isHamil, sama seperti getDailyTaskStats().
@@ -15,12 +15,21 @@ const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 
 export function TugasHarianCard({
   ibu,
+  onSent,
 }: {
-  ibu: { id: string; nama: string; isHamil: boolean; dailyTasks: { taskId: number; completed: boolean; date: Date }[] }
+  ibu: {
+    id: string
+    nama: string
+    noHp: string | null
+    isHamil: boolean
+    dailyTasks: { taskId: number; completed: boolean; date: Date }[]
+    notifikasis: { templateCode: string; createdAt: Date }[]
+  }
+  onSent: () => void
 }) {
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
+  const pengingatTugas = ibu.notifikasis.find(n => n.templateCode === "R3")
   const tasks = ibu.isHamil ? PREGNANCY_TASKS : CHILD_TASKS
   const scoreOf = (ids: Iterable<number>) => {
     const set = new Set(ids)
@@ -41,26 +50,8 @@ export function TugasHarianCard({
     return { d, score: scoreOf(selesai.filter(t => dayKey(t.date) === key).map(t => t.taskId)) }
   })
 
-  const handleIngatkan = async () => {
-    setSending(true)
-    try {
-      const res = await sendPengingatTugas({
-        ibuId: ibu.id,
-        judul: "Tugas Harian Belum Selesai",
-        pesan: `Masih ada ${belum.length} tugas hari ini yang belum dicentang: ${belum.map(t => t.name).join(", ")}. Yuk diselesaikan, Bu.`,
-      })
-      if (res.success) {
-        setSent(true)
-        setTimeout(() => setSent(false), 3000)
-      }
-    } catch {
-      alert("Gagal mengirim pengingat")
-    } finally {
-      setSending(false)
-    }
-  }
-
   return (
+    <>
     <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
       <CardHeader className="px-5 pt-[18px] pb-3 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">
@@ -128,26 +119,38 @@ export function TugasHarianCard({
 
         <button
           type="button"
-          disabled={sending || sent || belum.length === 0}
-          onClick={handleIngatkan}
+          disabled={belum.length === 0 || !!pengingatTugas}
+          onClick={() => setModalOpen(true)}
           className={cn(
             "w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-[13px] font-medium transition-colors",
-            belum.length === 0
+            belum.length === 0 || pengingatTugas
               ? "border-[#15803D]/20 bg-[#15803D]/5 text-[#15803D] cursor-default"
-              : sent
-                ? "border-[#15803D]/20 bg-[#15803D]/5 text-[#15803D] cursor-default"
-                : "border-gray-200 text-[#173753] hover:bg-gray-50 disabled:opacity-50"
+              : "border-gray-200 text-[#173753] hover:bg-gray-50"
           )}
         >
           {belum.length === 0 ? (
             <><CheckCircle2 className="w-3.5 h-3.5" /> Semua tugas selesai</>
-          ) : sent ? (
-            <><CheckCircle2 className="w-3.5 h-3.5" /> Terkirim ke notifikasi Ibu</>
+          ) : pengingatTugas ? (
+            <>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Sudah diingatkan {new Date(pengingatTugas.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+            </>
           ) : (
-            <><Bell className="w-3.5 h-3.5" /> {sending ? "Mengirim..." : `Ingatkan ${belum.length} Tugas`}</>
+            <><Bell className="w-3.5 h-3.5" /> Ingatkan {belum.length} Tugas</>
           )}
         </button>
       </CardContent>
     </Card>
+
+    <IngatkanIbuKehamilanModal
+      open={modalOpen}
+      onOpenChange={setModalOpen}
+      onSent={onSent}
+      ibu={{ id: ibu.id, nama: ibu.nama, noHp: ibu.noHp, isHamil: ibu.isHamil }}
+      tugasBelum={belum.map(t => t.name)}
+      initialAlasan="tugas"
+      sudahDikirim={{ tugas: !!pengingatTugas }}
+    />
+    </>
   )
 }

@@ -103,6 +103,7 @@ export default function ChildDashboardView({ data, score, doneCount, notificatio
     message: n.pesan,
     actionLabel: n.actionLabel,
     actionUrl: n.actionUrl,
+    isRead: n.isRead,
   }))
   if (level !== 'rendah') {
     notifItems.push({

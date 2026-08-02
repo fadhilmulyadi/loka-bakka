@@ -112,6 +112,7 @@ export function IngatkanSemuaModal({ open, onOpenChange, posyanduName, childrenL
       const res = await sendPengingatBulk({ targets })
 
       if (res.success) {
+        if (res.skipped > 0) alert(`${res.count} pengingat terkirim. ${res.skipped} dilewati karena sudah diingatkan hari ini.`)
         setSent(true)
         setTimeout(() => {
           onSent()

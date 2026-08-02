@@ -89,6 +89,7 @@ export default function PregnancyDashboardView({ data, score, doneCount, profile
     message: n.pesan,
     actionLabel: n.actionLabel,
     actionUrl: n.actionUrl,
+    isRead: n.isRead,
   }))
   const currentRiskLevel: RiskLevel = profile
     ? hitungRisikoIbu({

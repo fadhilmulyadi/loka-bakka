@@ -730,6 +730,12 @@ export async function getIbuById(id: string) {
         where: (dt, { and, gte, lte }) => and(gte(dt.date, weekStart), lte(dt.date, todayEnd)),
         columns: { taskId: true, completed: true, date: true },
       },
+      // pengingat yang sudah dikirim hari ini, supaya tombolnya tetap "sudah
+      // diingatkan" walau halaman di-refresh
+      notifikasis: {
+        where: (n, { and, gte, inArray }) => and(gte(n.createdAt, todayStart), inArray(n.templateCode, ["R2", "R3"])),
+        columns: { templateCode: true, createdAt: true },
+      },
     },
   })
 

@@ -5,6 +5,7 @@ import { notifikasi, posyandu, ibu, anak, pengukuran, pregnancyVisit } from "@/l
 import { eq, and, inArray, notInArray, isNull, gte, count, desc } from "drizzle-orm"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
+import { getTodayRange } from "@/lib/daily-tasks"
 
 type RiskTemplateCode = "T1" | "T2"
 
@@ -182,6 +183,41 @@ export async function markAllNotificationsRead() {
 
 // ── Pengingat: kader -> notifikasi ibu (in-app) ──
 
+const PENGINGAT_TEMPLATE = {
+  R1: { actionLabel: "Lihat Detail", actionUrl: "/ibu/anak" },
+  R2: { actionLabel: "Lihat Detail", actionUrl: "/ibu/status" },
+  R3: { actionLabel: "Buka Tugas", actionUrl: "/ibu/tugas" },
+} as const
+
+// Satu pengingat per penerima per hari. Remnya constraint unique di groupKey —
+// bukan pengecekan di UI, yang bisa dilewati cukup dengan refresh halaman.
+// Mengembalikan false kalau hari ini sudah pernah dikirim.
+async function insertPengingat(opts: {
+  posyanduId: string
+  ibuId: string
+  scopeId: string // anakId untuk R1, ibuId untuk R2/R3
+  templateCode: keyof typeof PENGINGAT_TEMPLATE
+  judul: string
+  pesan: string
+}) {
+  const { start } = getTodayRange()
+  const day = `${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}`
+
+  const inserted = await db.insert(notifikasi).values({
+    posyanduId: opts.posyanduId,
+    ibuId: opts.ibuId,
+    templateCode: opts.templateCode,
+    level: "info",
+    judul: opts.judul,
+    pesan: opts.pesan,
+    ...PENGINGAT_TEMPLATE[opts.templateCode],
+    groupKey: `${opts.templateCode}-${opts.scopeId}-${day}`,
+    isRead: false,
+  }).onConflictDoNothing({ target: notifikasi.groupKey }).returning({ id: notifikasi.id })
+
+  return inserted.length > 0
+}
+
 export async function sendPengingatAnak({ anakId, judul, pesan }: { anakId: string, judul: string, pesan: string }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
@@ -189,18 +225,16 @@ export async function sendPengingatAnak({ anakId, judul, pesan }: { anakId: stri
   const anakRow = await db.query.anak.findFirst({ where: eq(anak.id, anakId) })
   if (!anakRow) return { success: false, error: "Anak tidak ditemukan" }
 
-  await db.insert(notifikasi).values({
+  const terkirim = await insertPengingat({
     posyanduId: session.user.posyanduId!,
     ibuId: anakRow.ibuId,
+    scopeId: anakId,
     templateCode: "R1",
-    level: "info",
     judul,
     pesan,
-    actionLabel: "Lihat Detail",
-    actionUrl: "/ibu/anak",
-    groupKey: crypto.randomUUID(),
-    isRead: false,
   })
+  if (!terkirim) return { success: false, alreadySentToday: true }
+
   await db.update(anak).set({ terakhirDiingatkan: new Date() }).where(eq(anak.id, anakId))
 
   revalidatePath("/kader/rekap")
@@ -212,18 +246,16 @@ export async function sendPengingatKehamilan({ ibuId, judul, pesan }: { ibuId: s
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
-  await db.insert(notifikasi).values({
+  const terkirim = await insertPengingat({
     posyanduId: session.user.posyanduId!,
     ibuId,
+    scopeId: ibuId,
     templateCode: "R2",
-    level: "info",
     judul,
     pesan,
-    actionLabel: "Lihat Detail",
-    actionUrl: "/ibu/status",
-    groupKey: crypto.randomUUID(),
-    isRead: false,
   })
+  if (!terkirim) return { success: false, alreadySentToday: true }
+
   await db.update(ibu).set({ terakhirDiingatkanKehamilan: new Date() }).where(eq(ibu.id, ibuId))
 
   revalidatePath("/kader/rekap")
@@ -231,24 +263,22 @@ export async function sendPengingatKehamilan({ ibuId, judul, pesan }: { ibuId: s
   return { success: true }
 }
 
+// Tidak menyentuh terakhirDiingatkanKehamilan: itu jejak pengingat posyandu,
+// bukan pengingat tugas harian.
 export async function sendPengingatTugas({ ibuId, judul, pesan }: { ibuId: string, judul: string, pesan: string }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
-  await db.insert(notifikasi).values({
+  const terkirim = await insertPengingat({
     posyanduId: session.user.posyanduId!,
     ibuId,
+    scopeId: ibuId,
     templateCode: "R3",
-    level: "info",
     judul,
     pesan,
-    actionLabel: "Buka Tugas",
-    actionUrl: "/ibu/tugas",
-    groupKey: crypto.randomUUID(),
-    isRead: false,
   })
 
-  return { success: true }
+  return terkirim ? { success: true } : { success: false, alreadySentToday: true }
 }
 
 export async function sendPengingatBulk({ targets }: { targets: { anakId: string, judul: string, pesan: string }[] }) {
@@ -256,29 +286,28 @@ export async function sendPengingatBulk({ targets }: { targets: { anakId: string
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
   let sentCount = 0
+  let skippedCount = 0
   for (const t of targets) {
     const anakRow = await db.query.anak.findFirst({ where: eq(anak.id, t.anakId) })
     if (!anakRow) continue
 
-    await db.insert(notifikasi).values({
+    const terkirim = await insertPengingat({
       posyanduId: session.user.posyanduId!,
       ibuId: anakRow.ibuId,
+      scopeId: t.anakId,
       templateCode: "R1",
-      level: "info",
       judul: t.judul,
       pesan: t.pesan,
-      actionLabel: "Lihat Detail",
-      actionUrl: "/ibu/anak",
-      groupKey: crypto.randomUUID(),
-      isRead: false,
     })
+    if (!terkirim) { skippedCount++; continue }
+
     await db.update(anak).set({ terakhirDiingatkan: new Date() }).where(eq(anak.id, t.anakId))
     sentCount++
   }
 
   revalidatePath("/kader/rekap")
   revalidatePath("/kader/dashboard")
-  return { success: true, count: sentCount }
+  return { success: true, count: sentCount, skipped: skippedCount }
 }
 
 export async function sendPengingatBulkKehamilan({ targets }: { targets: { ibuId: string, judul: string, pesan: string }[] }) {
@@ -286,35 +315,47 @@ export async function sendPengingatBulkKehamilan({ targets }: { targets: { ibuId
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
   let sentCount = 0
+  let skippedCount = 0
   for (const t of targets) {
-    await db.insert(notifikasi).values({
+    const terkirim = await insertPengingat({
       posyanduId: session.user.posyanduId!,
       ibuId: t.ibuId,
+      scopeId: t.ibuId,
       templateCode: "R2",
-      level: "info",
       judul: t.judul,
       pesan: t.pesan,
-      actionLabel: "Lihat Detail",
-      actionUrl: "/ibu/status",
-      groupKey: crypto.randomUUID(),
-      isRead: false,
     })
+    if (!terkirim) { skippedCount++; continue }
+
     await db.update(ibu).set({ terakhirDiingatkanKehamilan: new Date() }).where(eq(ibu.id, t.ibuId))
     sentCount++
   }
 
   revalidatePath("/kader/rekap")
   revalidatePath("/kader/dashboard")
-  return { success: true, count: sentCount }
+  return { success: true, count: sentCount, skipped: skippedCount }
 }
 
 export async function getIbuNotifications() {
   const session = await auth()
   if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
 
+  // 30 hari terakhir — notifikasi lama lewat sendiri, jadi tidak perlu tombol hapus
+  // yang bisa membuang jejak pengingat kader (atau peringatan merah) tanpa sengaja.
+  const sebulanLalu = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
   return db.query.notifikasi.findMany({
-    where: eq(notifikasi.ibuId, session.user.id),
+    where: and(eq(notifikasi.ibuId, session.user.id), gte(notifikasi.createdAt, sebulanLalu)),
     orderBy: desc(notifikasi.createdAt),
     limit: 20,
   })
+}
+
+export async function markIbuNotificationsRead() {
+  const session = await auth()
+  if (!session || session.user.role !== "ibu") throw new Error("Unauthorized")
+
+  await db.update(notifikasi)
+    .set({ isRead: true })
+    .where(and(eq(notifikasi.ibuId, session.user.id), eq(notifikasi.isRead, false)))
 }

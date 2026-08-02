@@ -64,6 +64,10 @@ export function IngatkanIbuModal({ open, onOpenChange, child, onSent }: Ingatkan
           setSent(false)
           setAlasan("belum-diperiksa")
         }, 2000)
+      } else if ("alreadySentToday" in res && res.alreadySentToday) {
+        alert(`Pengingat untuk ${child.name} sudah dikirim hari ini. Coba lagi besok, ya.`)
+        onSent()
+        onOpenChange(false)
       } else {
         alert("Gagal mengirim pengingat: " + res.error)
       }

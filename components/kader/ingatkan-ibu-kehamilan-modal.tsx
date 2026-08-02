@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { sendPengingatKehamilan } from "@/lib/actions/notifikasi"
+import { sendPengingatKehamilan, sendPengingatTugas } from "@/lib/actions/notifikasi"
 
 const ACCENT = "#52A9E3"
 
@@ -23,25 +23,48 @@ interface IngatkanIbuKehamilanModalProps {
     nama: string
     noHp: string | null
     posyanduName?: string
+    isHamil?: boolean
   }
+  /** nama tugas yang belum dicentang hari ini — memunculkan alasan "tugas harian" */
+  tugasBelum?: string[]
+  initialAlasan?: string
+  /** pengingat yang sudah terkirim hari ini, per jenis */
+  sudahDikirim?: { kehamilan?: boolean, tugas?: boolean }
   onSent: () => void
 }
 
-const ALASAN_OPTIONS = [
+const ALASAN_KEHAMILAN = [
   { id: "belum-diperiksa", label: "Belum periksa bulan ini" },
   { id: "jadwal-besok", label: "Jadwal posyandu besok" },
   { id: "lanjutan", label: "Pemeriksaan lanjutan" },
 ]
+const ALASAN_TUGAS = { id: "tugas", label: "Tugas harian belum selesai" }
 
-export function IngatkanIbuKehamilanModal({ open, onOpenChange, ibu, onSent }: IngatkanIbuKehamilanModalProps) {
-  const [alasan, setAlasan] = useState("belum-diperiksa")
+export function IngatkanIbuKehamilanModal({
+  open, onOpenChange, ibu, onSent,
+  tugasBelum = [], initialAlasan, sudahDikirim = {},
+}: IngatkanIbuKehamilanModalProps) {
+  const hamil = ibu.isHamil !== false
+  const options = [
+    ...(hamil ? ALASAN_KEHAMILAN : []),
+    ...(tugasBelum.length > 0 ? [ALASAN_TUGAS] : []),
+  ]
+  const defaultAlasan = initialAlasan ?? options[0]?.id ?? "belum-diperiksa"
+  const [alasan, setAlasan] = useState(defaultAlasan)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
 
   const bulanIni = new Date().toLocaleString("id-ID", { month: "long" })
+  const isTugas = alasan === "tugas"
+  const terkunci = isTugas ? !!sudahDikirim.tugas : !!sudahDikirim.kehamilan
 
   const getPreview = () => {
-    if (alasan === "belum-diperiksa") {
+    if (isTugas) {
+      return {
+        judul: "Tugas Harian Belum Selesai",
+        pesan: `Masih ada ${tugasBelum.length} tugas hari ini yang belum dicentang: ${tugasBelum.join(", ")}. Yuk diselesaikan, Bu.`,
+      }
+    } else if (alasan === "belum-diperiksa") {
       return { judul: "Pengingat Posyandu", pesan: `Kehamilan Ibu belum diperiksa bulan ${bulanIni}. Yuk kunjungi posyandu, Bu.` }
     } else if (alasan === "jadwal-besok") {
       return { judul: "Jadwal Posyandu Besok", pesan: `Jangan lupa periksa kehamilan besok di posyandu, ya Bu.` }
@@ -54,15 +77,19 @@ export function IngatkanIbuKehamilanModal({ open, onOpenChange, ibu, onSent }: I
     setSending(true)
     try {
       const { judul, pesan } = getPreview()
-      const res = await sendPengingatKehamilan({ ibuId: ibu.id, judul, pesan })
+      const kirim = isTugas ? sendPengingatTugas : sendPengingatKehamilan
+      const res = await kirim({ ibuId: ibu.id, judul, pesan })
       if (res.success) {
         setSent(true)
         setTimeout(() => {
           onSent()
           onOpenChange(false)
           setSent(false)
-          setAlasan("belum-diperiksa")
+          setAlasan(defaultAlasan)
         }, 2000)
+      } else if ("alreadySentToday" in res && res.alreadySentToday) {
+        alert("Pengingat jenis ini sudah dikirim ke Ibu hari ini. Coba lagi besok, ya.")
+        onSent()
       } else {
         alert("Gagal mengirim pengingat")
       }
@@ -102,34 +129,36 @@ export function IngatkanIbuKehamilanModal({ open, onOpenChange, ibu, onSent }: I
               <div>
                 <p className="text-[14px] font-semibold text-[#173753]">{ibu.nama}</p>
                 <p className="text-[12px] text-muted-foreground">
-                  Ibu Hamil
+                  {hamil ? "Ibu Hamil" : "Ibu"}
                 </p>
               </div>
             </div>
 
-            {/* Reason Selection */}
-            <div>
-              <p className="text-[12px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
-                Pilih Alasan Pengingat
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {ALASAN_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setAlasan(opt.id)}
-                    className={cn(
-                      "px-1 py-2 rounded-full text-[10.5px] font-bold border cursor-pointer transition-all text-center whitespace-nowrap truncate",
-                      alasan === opt.id
-                        ? "border-[#52A9E3] text-[#52A9E3] bg-transparent"
-                        : "border-gray-200 text-muted-foreground bg-transparent hover:border-gray-300 hover:text-gray-700"
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+            {/* Reason Selection — disembunyikan kalau cuma ada satu pilihan */}
+            {options.length > 1 && (
+              <div>
+                <p className="text-[12px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
+                  Pilih Alasan Pengingat
+                </p>
+                <div className={cn("grid gap-2", options.length > 3 ? "grid-cols-2" : "grid-cols-3")}>
+                  {options.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setAlasan(opt.id)}
+                      className={cn(
+                        "px-1 py-2 rounded-full text-[10.5px] font-bold border cursor-pointer transition-all text-center whitespace-nowrap truncate",
+                        alasan === opt.id
+                          ? "border-[#52A9E3] text-[#52A9E3] bg-transparent"
+                          : "border-gray-200 text-muted-foreground bg-transparent hover:border-gray-300 hover:text-gray-700"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Notification preview — matches what appears in the ibu's own notification bell */}
             <div>
@@ -150,7 +179,9 @@ export function IngatkanIbuKehamilanModal({ open, onOpenChange, ibu, onSent }: I
 
           {/* Footer */}
           <div className="flex items-center gap-[10px] px-6 py-[15px] border-t border-gray-100 bg-white">
-            <div className="flex-1" />
+            <p className="flex-1 text-[11.5px] text-muted-foreground leading-snug">
+              {terkunci ? "Sudah dikirim hari ini — bisa diulang besok." : "Maksimal satu pengingat per jenis, per hari."}
+            </p>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -160,18 +191,23 @@ export function IngatkanIbuKehamilanModal({ open, onOpenChange, ibu, onSent }: I
             </button>
             <button
               type="button"
-              disabled={sending || sent}
+              disabled={sending || sent || terkunci}
               onClick={handleSend}
               className={cn(
-                "h-9 px-5 rounded-full text-[13px] font-semibold text-white flex items-center gap-1.5 transition-all",
-                (sending || sent) ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
+                "h-9 px-5 rounded-full text-[13px] font-semibold text-white flex items-center gap-1.5 transition-all whitespace-nowrap",
+                (sending || sent || terkunci) ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
               )}
-              style={{ background: sent ? "#10B981" : `linear-gradient(to right, ${ACCENT}, #93D1F7)` }}
+              style={{ background: (sent || terkunci) ? "#10B981" : `linear-gradient(to right, ${ACCENT}, #93D1F7)` }}
             >
               {sent ? (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
                   Terkirim ke Notifikasi Ibu
+                </>
+              ) : terkunci ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  Sudah Diingatkan
                 </>
               ) : sending ? (
                 "Mengirim..."
