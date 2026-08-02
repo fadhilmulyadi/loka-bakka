@@ -479,6 +479,9 @@ export async function getChildDetail(id: string) {
     throw new Error("Unauthorized")
   }
 
+  const { start: todayStart, end: todayEnd } = getTodayRange()
+  const weekStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() - 6)
+
   const anakRow = await db.query.anak.findFirst({
     where: eq(anak.id, id),
     with: {
@@ -490,7 +493,16 @@ export async function getChildDetail(id: string) {
             where: (a, { ne }) => ne(a.id, id),
             with: { pengukurans: { orderBy: desc(pengukuran.tanggal), limit: 1 } },
           },
+          notifikasis: {
+            where: (n, { and, gte, eq: eqOp }) => and(gte(n.createdAt, todayStart), eqOp(n.templateCode, "R3")),
+            columns: { templateCode: true, createdAt: true, groupKey: true },
+          },
         },
+      },
+      // tugas harian anak ini saja, 7 hari terakhir
+      dailyTasks: {
+        where: (dt, { and, gte, lte }) => and(gte(dt.date, weekStart), lte(dt.date, todayEnd)),
+        columns: { taskId: true, completed: true, date: true, anakId: true },
       },
       pengukurans: {
         orderBy: desc(pengukuran.tanggal),
@@ -572,6 +584,8 @@ export async function getChildDetail(id: string) {
       examiner: p.kader.nama,
       latest: p.id === lastPengukuran?.id,
     })),
+    dailyTasks: anakRow.dailyTasks,
+    notifikasis: anakRow.ibu.notifikasis,
   }
 }
 
@@ -728,13 +742,14 @@ export async function getIbuById(id: string) {
       // tugas 7 hari terakhir — ikut di query yang sama, tidak menambah round trip
       dailyTasks: {
         where: (dt, { and, gte, lte }) => and(gte(dt.date, weekStart), lte(dt.date, todayEnd)),
-        columns: { taskId: true, completed: true, date: true },
+        columns: { taskId: true, completed: true, date: true, anakId: true },
       },
       // pengingat yang sudah dikirim hari ini, supaya tombolnya tetap "sudah
-      // diingatkan" walau halaman di-refresh
+      // diingatkan" walau halaman di-refresh. groupKey menyimpan scope-nya
+      // (R3-{anakId|ibuId}-{tanggal}), dipakai untuk memilah per anak.
       notifikasis: {
         where: (n, { and, gte, inArray }) => and(gte(n.createdAt, todayStart), inArray(n.templateCode, ["R2", "R3"])),
-        columns: { templateCode: true, createdAt: true },
+        columns: { templateCode: true, createdAt: true, groupKey: true },
       },
     },
   })

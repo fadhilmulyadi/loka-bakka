@@ -39,11 +39,19 @@ export const ibu = pgTable("Ibu", {
 export const dailyTask = pgTable("DailyTask", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   ibuId: text("ibuId").notNull().references(() => ibu.id, { onDelete: "cascade" }),
+  // null = tugas ibu (kehamilan); terisi = tugas untuk anak tertentu, supaya
+  // centangan anak satu tidak ikut mengubah saudaranya
+  anakId: text("anakId").references(() => anak.id, { onDelete: "cascade" }),
   taskId: integer("taskId").notNull(),
   completed: boolean("completed").notNull().default(false),
   date: timestamp("date", { mode: "date" }).notNull().defaultNow(),
 }, (table) => [
-  unique().on(table.ibuId, table.taskId, table.date),
+  // nullsNotDistinct: dua baris tugas ibu (anakId null) di hari & tugas yang
+  // sama tetap dianggap duplikat — tanpa ini Postgres menganggap NULL berbeda.
+  // Catatan: drizzle-kit tidak membaca NULLS NOT DISTINCT saat introspeksi, jadi
+  // `db:push` akan terus menawarkan menambah constraint ini dan bertanya apakah
+  // tabelnya mau di-truncate. Jawab TIDAK — constraint-nya sudah ada di database.
+  unique().on(table.ibuId, table.anakId, table.taskId, table.date).nullsNotDistinct(),
 ])
 
 export const anak = pgTable("Anak", {
@@ -198,11 +206,13 @@ export const ibuRelations = relations(ibu, ({ one, many }) => ({
 
 export const dailyTaskRelations = relations(dailyTask, ({ one }) => ({
   ibu: one(ibu, { fields: [dailyTask.ibuId], references: [ibu.id] }),
+  anak: one(anak, { fields: [dailyTask.anakId], references: [anak.id] }),
 }))
 
 export const anakRelations = relations(anak, ({ one, many }) => ({
   ibu: one(ibu, { fields: [anak.ibuId], references: [ibu.id] }),
   pengukurans: many(pengukuran),
+  dailyTasks: many(dailyTask),
 }))
 
 export const pengukuranRelations = relations(pengukuran, ({ one }) => ({

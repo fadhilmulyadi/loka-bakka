@@ -470,7 +470,25 @@ export default function IbuProfilePage() {
                   </CardContent>
                 </Card>
 
-                <TugasHarianCard ibu={ibu} onSent={loadIbu} />
+                {/* tugas kehamilan kalau sedang hamil, dan satu kartu per anak */}
+                {ibu.isHamil && (
+                  <TugasHarianCard
+                    ibu={ibu}
+                    dailyTasks={ibu.dailyTasks}
+                    notifikasis={ibu.notifikasis}
+                    onSent={loadIbu}
+                  />
+                )}
+                {ibu.anaks.map((anak) => (
+                  <TugasHarianCard
+                    key={anak.id}
+                    ibu={ibu}
+                    anak={{ id: anak.id, nama: anak.nama }}
+                    dailyTasks={ibu.dailyTasks}
+                    notifikasis={ibu.notifikasis}
+                    onSent={loadIbu}
+                  />
+                ))}
               </div>
             </div>
           </>
@@ -627,7 +645,25 @@ export default function IbuProfilePage() {
                   </CardContent>
                 </Card>
 
-                <TugasHarianCard ibu={ibu} onSent={loadIbu} />
+                {/* tugas kehamilan kalau sedang hamil, dan satu kartu per anak */}
+                {ibu.isHamil && (
+                  <TugasHarianCard
+                    ibu={ibu}
+                    dailyTasks={ibu.dailyTasks}
+                    notifikasis={ibu.notifikasis}
+                    onSent={loadIbu}
+                  />
+                )}
+                {ibu.anaks.map((anak) => (
+                  <TugasHarianCard
+                    key={anak.id}
+                    ibu={ibu}
+                    anak={{ id: anak.id, nama: anak.nama }}
+                    dailyTasks={ibu.dailyTasks}
+                    notifikasis={ibu.notifikasis}
+                    onSent={loadIbu}
+                  />
+                ))}
               </div>
             </div>
           </>

@@ -52,7 +52,7 @@ function DashboardContent() {
     setError(false)
 
     if (childId) {
-      Promise.all([getIbuAnakForDashboard(childId), getDailyTaskStats(), getIbuNotifications()])
+      Promise.all([getIbuAnakForDashboard(childId), getDailyTaskStats(childId), getIbuNotifications()])
         .then(([data, stats, notifs]) => {
           if (!mounted) return
           setChildData(data)

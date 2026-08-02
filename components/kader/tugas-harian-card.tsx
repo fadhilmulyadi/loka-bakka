@@ -7,36 +7,44 @@ import { cn } from "@/lib/utils"
 import { PREGNANCY_TASKS, CHILD_TASKS } from "@/lib/daily-tasks"
 import { IngatkanIbuKehamilanModal } from "@/components/kader/ingatkan-ibu-kehamilan-modal"
 
-// ponytail: DailyTask menyimpan taskId 0–4 tanpa penanda set, jadi satu ibu hanya
-// punya satu set tugas aktif per hari — ikut isHamil, sama seperti getDailyTaskStats().
 const DAY_ID = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"]
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 
+export type TugasRow = { taskId: number; completed: boolean; date: Date; anakId: string | null }
+export type PengingatRow = { templateCode: string; createdAt: Date; groupKey: string }
+
+/**
+ * Satu kartu = satu scope tugas. `anak` kosong berarti tugas kehamilan milik ibu,
+ * `anak` terisi berarti tugas anak tersebut. Baris tugas & pengingat boleh dikirim
+ * apa adanya dari query halaman; penyaringan scope dilakukan di sini.
+ */
 export function TugasHarianCard({
   ibu,
+  anak,
+  dailyTasks,
+  notifikasis,
   onSent,
 }: {
-  ibu: {
-    id: string
-    nama: string
-    noHp: string | null
-    isHamil: boolean
-    dailyTasks: { taskId: number; completed: boolean; date: Date }[]
-    notifikasis: { templateCode: string; createdAt: Date }[]
-  }
+  ibu: { id: string; nama: string; noHp: string | null; isHamil: boolean }
+  anak?: { id: string; nama: string } | null
+  dailyTasks: TugasRow[]
+  notifikasis: PengingatRow[]
   onSent: () => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
 
-  const pengingatTugas = ibu.notifikasis.find(n => n.templateCode === "R3")
-  const tasks = ibu.isHamil ? PREGNANCY_TASKS : CHILD_TASKS
+  const scopeId = anak?.id ?? ibu.id
+  const pengingatTugas = notifikasis.find(n => n.templateCode === "R3" && n.groupKey.startsWith(`R3-${scopeId}-`))
+  const tasks = anak ? CHILD_TASKS : PREGNANCY_TASKS
   const scoreOf = (ids: Iterable<number>) => {
     const set = new Set(ids)
     return tasks.reduce((acc, t) => acc + (set.has(t.id) ? t.pts : 0), 0)
   }
 
-  const selesai = ibu.dailyTasks.filter(t => t.completed).map(t => ({ ...t, date: new Date(t.date) }))
+  const selesai = dailyTasks
+    .filter(t => t.completed && (anak ? t.anakId === anak.id : t.anakId === null))
+    .map(t => ({ ...t, date: new Date(t.date) }))
   const today = new Date()
   const done = new Set(selesai.filter(t => dayKey(t.date) === dayKey(today)).map(t => t.taskId))
   const doneCount = tasks.filter(t => done.has(t.id)).length
@@ -54,8 +62,8 @@ export function TugasHarianCard({
     <>
     <Card className="ring-0 shadow-none bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
       <CardHeader className="px-5 pt-[18px] pb-3 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight">
-          Tugas Harian {ibu.isHamil ? "Ibu" : "Anak"}
+        <CardTitle className="text-[16px] font-semibold text-[#173753] leading-tight truncate">
+          Tugas Harian {anak ? anak.nama : "Ibu"}
         </CardTitle>
         <span className="text-[11px] font-bold text-[#52A9E3] bg-[#52A9E3]/10 rounded-full px-2.5 py-1 whitespace-nowrap">
           {score}%
@@ -147,6 +155,7 @@ export function TugasHarianCard({
       onOpenChange={setModalOpen}
       onSent={onSent}
       ibu={{ id: ibu.id, nama: ibu.nama, noHp: ibu.noHp, isHamil: ibu.isHamil }}
+      anak={anak ?? undefined}
       tugasBelum={belum.map(t => t.name)}
       initialAlasan="tugas"
       sudahDikirim={{ tugas: !!pengingatTugas }}

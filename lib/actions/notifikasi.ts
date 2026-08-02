@@ -195,10 +195,11 @@ const PENGINGAT_TEMPLATE = {
 async function insertPengingat(opts: {
   posyanduId: string
   ibuId: string
-  scopeId: string // anakId untuk R1, ibuId untuk R2/R3
+  scopeId: string // anakId untuk R1 & tugas anak, ibuId untuk tugas ibu
   templateCode: keyof typeof PENGINGAT_TEMPLATE
   judul: string
   pesan: string
+  actionUrl?: string
 }) {
   const { start } = getTodayRange()
   const day = `${start.getFullYear()}-${start.getMonth() + 1}-${start.getDate()}`
@@ -211,6 +212,7 @@ async function insertPengingat(opts: {
     judul: opts.judul,
     pesan: opts.pesan,
     ...PENGINGAT_TEMPLATE[opts.templateCode],
+    ...(opts.actionUrl ? { actionUrl: opts.actionUrl } : {}),
     groupKey: `${opts.templateCode}-${opts.scopeId}-${day}`,
     isRead: false,
   }).onConflictDoNothing({ target: notifikasi.groupKey }).returning({ id: notifikasi.id })
@@ -265,17 +267,20 @@ export async function sendPengingatKehamilan({ ibuId, judul, pesan }: { ibuId: s
 
 // Tidak menyentuh terakhirDiingatkanKehamilan: itu jejak pengingat posyandu,
 // bukan pengingat tugas harian.
-export async function sendPengingatTugas({ ibuId, judul, pesan }: { ibuId: string, judul: string, pesan: string }) {
+export async function sendPengingatTugas({ ibuId, anakId, judul, pesan }: { ibuId: string, anakId?: string, judul: string, pesan: string }) {
   const session = await auth()
   if (!session || session.user.role !== "kader") throw new Error("Unauthorized")
 
+  // discope ke anak kalau tugasnya tugas anak: satu pengingat per anak per hari,
+  // dan tautannya langsung membuka daftar tugas anak yang dimaksud
   const terkirim = await insertPengingat({
     posyanduId: session.user.posyanduId!,
     ibuId,
-    scopeId: ibuId,
+    scopeId: anakId ?? ibuId,
     templateCode: "R3",
     judul,
     pesan,
+    actionUrl: anakId ? `/ibu/tugas?child=${anakId}` : undefined,
   })
 
   return terkirim ? { success: true } : { success: false, alreadySentToday: true }

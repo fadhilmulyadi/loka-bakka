@@ -25,6 +25,8 @@ interface IngatkanIbuKehamilanModalProps {
     posyanduName?: string
     isHamil?: boolean
   }
+  /** kalau tugasnya tugas anak, bukan tugas kehamilan */
+  anak?: { id: string, nama: string }
   /** nama tugas yang belum dicentang hari ini — memunculkan alasan "tugas harian" */
   tugasBelum?: string[]
   initialAlasan?: string
@@ -42,11 +44,12 @@ const ALASAN_TUGAS = { id: "tugas", label: "Tugas harian belum selesai" }
 
 export function IngatkanIbuKehamilanModal({
   open, onOpenChange, ibu, onSent,
-  tugasBelum = [], initialAlasan, sudahDikirim = {},
+  anak, tugasBelum = [], initialAlasan, sudahDikirim = {},
 }: IngatkanIbuKehamilanModalProps) {
   const hamil = ibu.isHamil !== false
   const options = [
-    ...(hamil ? ALASAN_KEHAMILAN : []),
+    // kartu tugas anak hanya boleh mengirim pengingat tugas, bukan pengingat posyandu
+    ...(hamil && !anak ? ALASAN_KEHAMILAN : []),
     ...(tugasBelum.length > 0 ? [ALASAN_TUGAS] : []),
   ]
   const defaultAlasan = initialAlasan ?? options[0]?.id ?? "belum-diperiksa"
@@ -61,8 +64,8 @@ export function IngatkanIbuKehamilanModal({
   const getPreview = () => {
     if (isTugas) {
       return {
-        judul: "Tugas Harian Belum Selesai",
-        pesan: `Masih ada ${tugasBelum.length} tugas hari ini yang belum dicentang: ${tugasBelum.join(", ")}. Yuk diselesaikan, Bu.`,
+        judul: anak ? `Tugas Harian ${anak.nama} Belum Selesai` : "Tugas Harian Belum Selesai",
+        pesan: `Masih ada ${tugasBelum.length} tugas hari ini${anak ? ` untuk ${anak.nama}` : ""} yang belum dicentang: ${tugasBelum.join(", ")}. Yuk diselesaikan, Bu.`,
       }
     } else if (alasan === "belum-diperiksa") {
       return { judul: "Pengingat Posyandu", pesan: `Kehamilan Ibu belum diperiksa bulan ${bulanIni}. Yuk kunjungi posyandu, Bu.` }
@@ -77,8 +80,9 @@ export function IngatkanIbuKehamilanModal({
     setSending(true)
     try {
       const { judul, pesan } = getPreview()
-      const kirim = isTugas ? sendPengingatTugas : sendPengingatKehamilan
-      const res = await kirim({ ibuId: ibu.id, judul, pesan })
+      const res = isTugas
+        ? await sendPengingatTugas({ ibuId: ibu.id, anakId: anak?.id, judul, pesan })
+        : await sendPengingatKehamilan({ ibuId: ibu.id, judul, pesan })
       if (res.success) {
         setSent(true)
         setTimeout(() => {

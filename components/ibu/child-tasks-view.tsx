@@ -61,14 +61,14 @@ export default function ChildTasksView({ childId }: { childId?: string }) {
 
   useEffect(() => {
     setMounted(true)
-    getDailyTasks().then(tasks => {
+    getDailyTasks(childId).then(tasks => {
       const state: Record<number, boolean> = {}
       tasks.forEach(t => {
         state[t.taskId] = t.completed
       })
       setChecked(state)
     })
-  }, [])
+  }, [childId])
 
   useEffect(() => {
     const p = childId
@@ -86,7 +86,7 @@ export default function ChildTasksView({ childId }: { childId?: string }) {
     
     startTransition(async () => {
       try {
-        await toggleDailyTask(id)
+        await toggleDailyTask(id, childId)
       } catch (error) {
         // Rollback on error
         setChecked(prev => ({ ...prev, [id]: !nextValue }))

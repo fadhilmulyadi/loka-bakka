@@ -35,6 +35,7 @@ import { CatatKunjunganModal } from "@/components/kader/catat-kunjungan-modal"
 import { IngatkanIbuModal } from "@/components/kader/ingatkan-ibu-modal"
 import { EditDataAnakModal } from "@/components/kader/edit-data-anak-modal"
 import { ResetPasswordModal } from "@/components/kader/reset-password-modal"
+import { TugasHarianCard, type TugasRow, type PengingatRow } from "@/components/kader/tugas-harian-card"
 import { heightForAgeBoys, heightForAgeGirls } from "@/lib/growth-standards/height-for-age"
 
 import {
@@ -109,6 +110,8 @@ interface ChildDetail {
   daysUntilNextCheck: number | null
   siblings: Sibling[]
   visits: Visit[]
+  dailyTasks: TugasRow[]
+  notifikasis: PengingatRow[]
 }
 
 function GrowthTooltip({ active, payload, label }: {
@@ -540,6 +543,19 @@ export default function ChildDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <TugasHarianCard
+              ibu={{
+                id: childDataState.parent.id,
+                nama: childDataState.parent.mother,
+                noHp: childDataState.parent.phone === "-" ? null : childDataState.parent.phone,
+                isHamil: childDataState.parent.isHamil,
+              }}
+              anak={{ id: childDataState.id, nama: childDataState.name }}
+              dailyTasks={childDataState.dailyTasks}
+              notifikasis={childDataState.notifikasis}
+              onSent={loadChild}
+            />
 
             <Card className="ring-0 bg-white rounded-xl border-none overflow-hidden py-0 gap-0">
               <CardHeader className="px-5 pt-[18px]">
